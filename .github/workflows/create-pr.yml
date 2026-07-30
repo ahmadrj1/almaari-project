@@ -1,0 +1,63 @@
+name: Auto Create PR
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate PR body
+        run: node scripts/generate-pr.js
+
+      - name: Check existing PR
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        run: |
+          PR=$(gh pr list \
+          --head "${{ github.ref_name }}" \
+          --json number \
+          --jq '.[0].number')
+
+          echo "pr=$PR" >> $GITHUB_OUTPUT
+
+      - name: Create PR
+        if: steps.check.outputs.pr == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        run: |
+          gh pr create \
+          --base wip \
+          --head "${{ github.ref_name }}" \
+          --title "Auto PR: ${{ github.ref_name }}" \
+          --body-file pr-body.md
+
+      - name: Update existing PR
+        if: steps.check.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        run: |
+          gh pr edit \
+          ${{ steps.check.outputs.pr }} \
+          --body-file pr-body.md

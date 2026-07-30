@@ -1,0 +1,6 @@
+{
+  "projectName": "Cart Attack",
+  "framework": "NextJS",
+  "database": "PostgreSQL",
+  "mainBranch": "wip"
+}
