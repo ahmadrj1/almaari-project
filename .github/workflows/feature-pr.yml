@@ -26,6 +26,8 @@ jobs:
           node-version: 22
 
       - name: Generate PR body
+        env:
+          PR_BASE: wip
         run: node scripts/generate-pr.js
 
       - name: Check existing PR
