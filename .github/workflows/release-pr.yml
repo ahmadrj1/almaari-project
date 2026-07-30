@@ -1,20 +1,20 @@
-name: Auto Create PR
+name: Create Release PR
 
 on:
   push:
-    branches-ignore:
-      - main
+    branches:
+      - wip
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  create-pr:
+  release-pr:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -34,25 +34,26 @@ jobs:
 
         run: |
           PR=$(gh pr list \
-          --head "${{ github.ref_name }}" \
+          --head wip \
+          --base main \
           --json number \
           --jq '.[0].number')
 
           echo "pr=$PR" >> $GITHUB_OUTPUT
 
-      - name: Create PR
+      - name: Create Release PR
         if: steps.check.outputs.pr == ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
         run: |
           gh pr create \
-          --base wip \
-          --head "${{ github.ref_name }}" \
-          --title "Auto PR: ${{ github.ref_name }}" \
+          --base main \
+          --head wip \
+          --title "Release: wip → main" \
           --body-file pr-body.md
 
-      - name: Update existing PR
+      - name: Update Release PR
         if: steps.check.outputs.pr != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
