@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   description: "Modern E-commerce application",
 };
 
+import { ToastProvider } from "@/hooks/use-toast";
+import { ToastContainer } from "@/components/ui/toast-container";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -22,7 +25,12 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-[#F5F7FA]">
+        <ToastProvider>
+          {children}
+          <ToastContainer />
+        </ToastProvider>
+      </body>
     </html>
   );
 }
