@@ -1,0 +1,66 @@
+name: Create Release PR
+
+on:
+  push:
+    branches:
+      - wip
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate PR body
+        env:
+          PR_BASE: main
+        run: node scripts/generate-pr.js
+
+      - name: Check existing PR
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        run: |
+          PR=$(gh pr list \
+          --head wip \
+          --base main \
+          --json number \
+          --jq '.[0].number')
+
+          echo "pr=$PR" >> $GITHUB_OUTPUT
+
+      - name: Create Release PR
+        if: steps.check.outputs.pr == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        run: |
+          gh pr create \
+          --base main \
+          --head wip \
+          --title "Release: wip → main" \
+          --body-file pr-body.md
+
+      - name: Update Release PR
+        if: steps.check.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        run: |
+          gh pr edit \
+          ${{ steps.check.outputs.pr }} \
+          --body-file pr-body.md

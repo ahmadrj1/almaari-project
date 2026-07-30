@@ -1,0 +1,67 @@
+name: Create Feature PR
+
+on:
+  push:
+    branches-ignore:
+      - wip
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate PR body
+        env:
+          PR_BASE: wip
+        run: node scripts/generate-pr.js
+
+      - name: Check existing PR
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        run: |
+          PR=$(gh pr list \
+          --head "${{ github.ref_name }}" \
+          --base wip \
+          --json number \
+          --jq '.[0].number')
+
+          echo "pr=$PR" >> $GITHUB_OUTPUT
+
+      - name: Create PR
+        if: steps.check.outputs.pr == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        run: |
+          gh pr create \
+          --base wip \
+          --head "${{ github.ref_name }}" \
+          --title "Feature: ${{ github.ref_name }}" \
+          --body-file pr-body.md
+
+      - name: Update PR
+        if: steps.check.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        run: |
+          gh pr edit \
+          ${{ steps.check.outputs.pr }} \
+          --body-file pr-body.md
