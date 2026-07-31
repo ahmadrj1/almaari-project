@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Search } from "lucide-react"
 
-export interface SearchBarProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+export type SearchBarProps = React.InputHTMLAttributes<HTMLInputElement>
 
 export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
   ({ className, ...props }, ref) => {
