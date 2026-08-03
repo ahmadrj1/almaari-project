@@ -4,10 +4,11 @@ import * as React from "react"
 import Link from "next/link"
 import { ShoppingCart, Bell } from "lucide-react"
 import { UserMenu } from "./user-menu"
+import { useSession } from "next-auth/react"
 
 export function Navbar() {
-  // In a real app, we'd get this from useSession
-  const isAuthenticated = false 
+  const { data: session, status } = useSession()
+  const isAuthenticated = status === "authenticated"
   const cartCount = 3
 
   return (
