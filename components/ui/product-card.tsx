@@ -39,7 +39,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           <Button
             size="sm"
             onClick={() => onAddToCart?.(product.id, quantity)}
-            className="text-[10px] sm:text-xs md:text-sm h-7 sm:h-8 px-2 sm:px-3 flex-1 sm:flex-initial"
+            className="whitespace-nowrap text-[10px] sm:text-xs md:text-sm h-7 sm:h-8 px-2 sm:px-3 flex-1 sm:flex-initial"
           >
             Add to Cart
           </Button>
