@@ -25,7 +25,7 @@ export default async function HomePage() {
           <h1 className="text-2xl font-bold text-[#2979FF] sm:text-3xl">Our Products</h1>
           <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center md:w-auto">
             <SearchBar placeholder="Search by user & order ID" />
-            <div className="w-full sm:w-36">
+            <div className="w-full sm:w-48">
               <SortDropdown
                 options={[
                   { label: "Sort by:", value: "" },

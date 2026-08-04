@@ -141,9 +141,9 @@ export default function RegisterPage() {
       </form>
       
       <div className="text-center text-sm">
-        <Link href="/login" className="text-gray-600 hover:text-[#2979FF]">
-          Already have an account! <span className="font-medium text-[#2979FF]">Login</span>
-        </Link>
+        <span className="text-gray-600">Already have an account!
+          <Link href="/login" className="font-medium whitespace-pre text-[#2979FF] hover:text-[#2979FF]"> Login</Link>
+        </span>
       </div>
     </div>
   );

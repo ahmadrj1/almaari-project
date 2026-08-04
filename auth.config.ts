@@ -10,8 +10,18 @@ export default {
       const isAuthPage = ["/login", "/register", "/forgot-password", "/reset-password"].some((p) =>
         nextUrl.pathname.startsWith(p)
       );
-      if (isAuthPage && isLoggedIn) return Response.redirect(new URL("/", nextUrl));
-      if (!isAuthPage && !isLoggedIn) return false;
+
+      const protectedRoutes = ["/cart", "/checkout", "/profile", "/orders", "/notifications"];
+      const isProtectedRoute = protectedRoutes.some((p) => nextUrl.pathname.startsWith(p));
+
+      if (isAuthPage && isLoggedIn) {
+        return Response.redirect(new URL("/", nextUrl));
+      }
+
+      if (isProtectedRoute && !isLoggedIn) {
+        return false;
+      }
+
       return true;
     },
   },
