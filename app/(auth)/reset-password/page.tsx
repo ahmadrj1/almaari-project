@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, Suspense, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -11,18 +11,7 @@ import {
 } from "@/lib/validations/auth";
 
 function ResetPasswordForm() {
-  const searchParams = useSearchParams();
   const router = useRouter();
-
-  const [token, setToken] = useState("");
-
-  useEffect(() => {
-    const urlToken = searchParams.get("token");
-    if (urlToken) {
-      setToken(urlToken);
-      window.history.replaceState(null, "", "/reset-password");
-    }
-  }, [searchParams]);
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -37,13 +26,7 @@ function ResetPasswordForm() {
     e.preventDefault();
     setErrors({});
 
-    if (!token) {
-      showToast("error", "Missing reset token.");
-      return;
-    }
-
     const result = resetPasswordSchema.safeParse({
-      token,
       password,
       confirmPassword,
     });
@@ -58,7 +41,7 @@ function ResetPasswordForm() {
       const res = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password, confirmPassword }),
+        body: JSON.stringify({ password, confirmPassword }),
       });
 
       const data = await res.json();
