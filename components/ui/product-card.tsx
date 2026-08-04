@@ -21,6 +21,8 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         <Image
           src={product.image}
           alt={product.title}
+          loading="eager"
+          sizes="50vw"
           fill
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
