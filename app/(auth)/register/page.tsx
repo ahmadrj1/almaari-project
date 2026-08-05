@@ -122,6 +122,7 @@ export default function RegisterPage() {
           error={errors.password?.[0]}
           placeholder="••••••••"
           disabled={isLoading}
+          showPasswordToggle
         />
         
         <Input
@@ -133,6 +134,7 @@ export default function RegisterPage() {
           error={errors.confirmPassword?.[0]}
           placeholder="••••••••"
           disabled={isLoading}
+          showPasswordToggle
         />
 
         <Button type="submit" fullWidth loading={isLoading}>

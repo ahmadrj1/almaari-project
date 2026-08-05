@@ -80,6 +80,7 @@ function ResetPasswordForm() {
           onChange={(e) => setPassword(e.target.value)}
           error={errors.password?.[0]}
           disabled={loading}
+          showPasswordToggle
         />
 
         <Input
@@ -92,6 +93,7 @@ function ResetPasswordForm() {
           onChange={(e) => setConfirmPassword(e.target.value)}
           error={errors.confirmPassword?.[0]}
           disabled={loading}
+          showPasswordToggle
         />
 
         <div className="pt-2">

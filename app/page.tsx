@@ -1,52 +1,189 @@
-import * as React from "react";
-import { prisma } from "@/lib/db";
-import { Navbar } from "@/components/layout/navbar";
-import { Footer } from "@/components/layout/footer";
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ShoppingBag } from "lucide-react";
+import { ProductCard } from "@/components/ui/product-card";
+import { ProductCardSkeleton } from "@/components/ui/product-card-skeleton";
 import { SearchBar } from "@/components/ui/search-bar";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
-import { ProductGrid } from "@/components/features/product-grid";
+import { Pagination } from "@/components/ui/pagination";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/hooks/use-toast";
+import { useCartCount } from "@/hooks/use-cart-count";
+import { useSession } from "next-auth/react";
+import { SORT_OPTIONS, PRODUCTS_PER_PAGE_DEFAULT, DEFAULT_SORT } from "@/lib/constants";
+import { useDebounce } from "@/hooks/use-debounce";
+import { Navbar } from "@/components/layout/navbar";
+import { Footer } from "@/components/layout/footer";
 
-export default async function HomePage() {
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+type Product = {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  image: string;
+  stock: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
-  const raw = await prisma.product.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 15,
-  });
+type Pagination = { page: number; totalPages: number; total: number };
 
-  const products = raw.map((p) => ({
-    ...p,
-    price: p.price.toNumber(),
-  }));
+import { Suspense } from "react";
+
+function HomeContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { status } = useSession();
+  const { showToast } = useToast();
+  const { refresh } = useCartCount();
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, totalPages: 1, total: 0 });
+  const [loading, setLoading] = useState(true);
+
+  const searchParam = searchParams.get("search") || "";
+  const sort = searchParams.get("sort") || DEFAULT_SORT;
+  const page = parseInt(searchParams.get("page") || "1");
+
+  const [localSearch, setLocalSearch] = useState(searchParam);
+  const debouncedSearch = useDebounce(localSearch);
+
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      await new Promise((r) => setTimeout(r, 1000));
+      const params = new URLSearchParams({ search: searchParam, sort, page: String(page), limit: String(PRODUCTS_PER_PAGE_DEFAULT) });
+      const res = await fetch(`/api/products?${params}`, { method: "GET" });
+      
+      if (!res.ok) {
+        throw new Error("Failed to fetch products");
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setProducts(data.data.products);
+        setPagination(data.data.pagination);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [searchParam, sort, page]);
+
+  useEffect(() => { 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchProducts(); 
+  }, [fetchProducts]);
+
+  const updateParams = useCallback((updates: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([k, v]) => {
+      if (v) params.set(k, v); else params.delete(k);
+    });
+    if (!updates.page) params.set("page", "1");
+    router.push(`?${params.toString()}`);
+  }, [searchParams, router]);
+
+  useEffect(() => {
+    if (debouncedSearch !== searchParam) {
+      updateParams({ search: debouncedSearch, page: "1" });
+    }
+  }, [debouncedSearch, searchParam, updateParams]);
+
+  const handleAddToCart = async (productId: string, quantity: number) => {
+    if (status !== "authenticated") {
+      showToast("info", "Please log in to place an order");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, quantity }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const product = products.find((p) => p.id === productId);
+        const price = Number(product?.price ?? 0) * quantity;
+        showToast("success", `Added to cart! Total: PKR ${price.toLocaleString()}`);
+        refresh();
+      } else {
+        showToast("error", data.error || "Failed to add to cart");
+      }
+    } catch {
+      showToast("error", "Failed to add to cart");
+    }
+  };
 
   return (
     <>
       <Navbar />
       <main className="container mx-auto flex-1 px-4 py-6 sm:py-8">
-        <div className="mb-6 flex flex-col gap-4 sm:mb-8 md:flex-row md:items-center md:justify-between">
-          <h1 className="text-2xl font-bold text-[#2979FF] sm:text-3xl">
-            Our Products
-          </h1>
-          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center md:w-auto">
-            <SearchBar placeholder="Search by user & order ID" />
-            <div className="w-full sm:w-48">
-              <SortDropdown
-                options={[
-                  { label: "Sort by:", value: "" },
-                  { label: "Newest", value: "newest" },
-                  { label: "Price: Low to High", value: "price_asc" },
-                  { label: "Price: High to Low", value: "price_desc" },
-                  { label: "Name: A–Z", value: "title_asc" },
-                  { label: "Name: Z–A", value: "title_desc" },
-                ]}
-              />
-            </div>
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-bold text-[#2979FF]">Our Products</h1>
+          <div className="flex gap-3 w-full sm:w-auto">
+            <SearchBar
+              placeholder="Search products..."
+              className="w-full sm:w-100"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+            />
+            <SortDropdown
+              options={SORT_OPTIONS}
+              value={sort}
+              onChange={(e) => updateParams({ sort: e.target.value })}
+            />
           </div>
         </div>
 
-        <ProductGrid initialProducts={products} />
+        {loading ? (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: PRODUCTS_PER_PAGE_DEFAULT }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : products.length === 0 ? (
+          <EmptyState
+            icon={<ShoppingBag className="w-12 h-12 text-gray-400" />}
+            title="No products found"
+            description={searchParam ? `No results for "${searchParam}". Try clearing the search.` : "No products available."}
+          />
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAddToCart={handleAddToCart}
+                />
+              ))}
+            </div>
+            <div className="mt-8 flex justify-center">
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                onPageChange={(p) => updateParams({ page: String(p) })}
+              />
+            </div>
+          </>
+        )}
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2979FF]"></div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }

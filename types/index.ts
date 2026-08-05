@@ -18,7 +18,6 @@ export type CartItemWithProduct = {
     title: string;
     price: number | string | null;
     image: string;
-    color: string | null;
-    size: string | null;
+    stock: number;
   };
 };

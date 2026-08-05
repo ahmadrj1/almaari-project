@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { ORDERS_PER_PAGE_DEFAULT, TAX_PERCENTAGE } from "@/lib/constants";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const session = await auth();
     const userId = session?.user?.id;
     if (!userId) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+
+    const body = await req.json();
+    const addressId = body.addressId;
+    if (!addressId) return NextResponse.json({ success: false, error: "Address is required" }, { status: 400 });
+
+    const address = await prisma.address.findFirst({ where: { id: addressId, userId } });
+    if (!address) return NextResponse.json({ success: false, error: "Invalid address" }, { status: 400 });
 
     const cartItems = await prisma.cartItem.findMany({
       where: { userId },
@@ -22,13 +30,14 @@ export async function POST() {
       subTotal += Number(item.product.price) * item.quantity;
     });
 
-    const tax = subTotal * 0.1; // 10% tax
+    const tax = subTotal * TAX_PERCENTAGE;
     const total = subTotal + tax;
 
     const order = await prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
         data: {
           userId,
+          addressId,
           subTotal,
           tax,
           total,
@@ -41,6 +50,18 @@ export async function POST() {
           },
         },
       });
+
+      // Update product stock
+      for (const item of cartItems) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              decrement: item.quantity,
+            },
+          },
+        });
+      }
 
       await tx.cartItem.deleteMany({
         where: { userId },
@@ -63,7 +84,7 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const page = parseInt(url.searchParams.get("page") || "1");
-    const limit = parseInt(url.searchParams.get("limit") || "10");
+    const limit = parseInt(url.searchParams.get("limit") || String(ORDERS_PER_PAGE_DEFAULT));
     const skip = (page - 1) * limit;
 
     const [orders, total] = await Promise.all([

@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     const token = url.searchParams.get("token");
 
     if (!token) {
-      return NextResponse.redirect(new URL("/login?error=Missing reset token", req.url));
+      return NextResponse.redirect(new URL("/reset-link-expired", req.url));
     }
 
     const user = await prisma.user.findFirst({
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     });
 
     if (!user) {
-      return NextResponse.redirect(new URL("/login?error=Invalid or expired reset token", req.url));
+      return NextResponse.redirect(new URL("/reset-link-expired", req.url));
     }
 
     const cookieStore = await cookies();

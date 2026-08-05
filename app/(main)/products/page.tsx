@@ -11,14 +11,9 @@ import { Pagination } from "@/components/ui/pagination";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { useCartCount } from "@/hooks/use-cart-count";
-
-const SORT_OPTIONS = [
-  { label: "Newest", value: "newest" },
-  { label: "Price: Low to High", value: "price_asc" },
-  { label: "Price: High to Low", value: "price_desc" },
-  { label: "Name: A–Z", value: "title_asc" },
-  { label: "Name: Z–A", value: "title_desc" },
-];
+import { useSession } from "next-auth/react";
+import { SORT_OPTIONS, PRODUCTS_PER_PAGE_DEFAULT, DEFAULT_SORT } from "@/lib/constants";
+import { useDebounce } from "@/hooks/use-debounce";
 
 type Product = {
   id: string;
@@ -26,8 +21,6 @@ type Product = {
   description: string;
   price: number;
   image: string;
-  color: string | null;
-  size: string | null;
   stock: number;
   createdAt: Date;
   updatedAt: Date;
@@ -35,26 +28,37 @@ type Product = {
 
 type Pagination = { page: number; totalPages: number; total: number };
 
-export default function ProductsPage() {
+import { Suspense } from "react";
+
+function ProductsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { status } = useSession();
   const { showToast } = useToast();
-  const { increment } = useCartCount();
+  const { refresh } = useCartCount();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, totalPages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
-  const [addingToCart, setAddingToCart] = useState<string | null>(null);
 
-  const search = searchParams.get("search") || "";
-  const sort = searchParams.get("sort") || "newest";
+  const searchParam = searchParams.get("search") || "";
+  const sort = searchParams.get("sort") || DEFAULT_SORT;
   const page = parseInt(searchParams.get("page") || "1");
+
+  const [localSearch, setLocalSearch] = useState(searchParam);
+  const debouncedSearch = useDebounce(localSearch);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ search, sort, page: String(page), limit: "12" });
-      const res = await fetch(`/api/products?${params}`);
+      await new Promise((r) => setTimeout(r, 1000));
+      const params = new URLSearchParams({ search: searchParam, sort, page: String(page), limit: String(PRODUCTS_PER_PAGE_DEFAULT) });
+      const res = await fetch(`/api/products?${params}`, { method: "GET" });
+      
+      if (!res.ok) {
+        throw new Error("Failed to fetch products");
+      }
+
       const data = await res.json();
       if (data.success) {
         setProducts(data.data.products);
@@ -63,21 +67,34 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, sort, page]);
+  }, [searchParam, sort, page]);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  useEffect(() => { 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchProducts(); 
+  }, [fetchProducts]);
 
-  const updateParams = (updates: Record<string, string>) => {
+  const updateParams = useCallback((updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([k, v]) => {
       if (v) params.set(k, v); else params.delete(k);
     });
     if (!updates.page) params.set("page", "1");
     router.push(`?${params.toString()}`);
-  };
+  }, [searchParams, router]);
+
+  useEffect(() => {
+    if (debouncedSearch !== searchParam) {
+      updateParams({ search: debouncedSearch, page: "1" });
+    }
+  }, [debouncedSearch, searchParam, updateParams]);
 
   const handleAddToCart = async (productId: string, quantity: number) => {
-    setAddingToCart(productId);
+    if (status !== "authenticated") {
+      showToast("info", "Please log in to place an order");
+      return;
+    }
+
     try {
       const res = await fetch("/api/cart", {
         method: "POST",
@@ -89,14 +106,12 @@ export default function ProductsPage() {
         const product = products.find((p) => p.id === productId);
         const price = Number(product?.price ?? 0) * quantity;
         showToast("success", `Added to cart! Total: PKR ${price.toLocaleString()}`);
-        increment();
+        refresh();
       } else {
         showToast("error", data.error || "Failed to add to cart");
       }
     } catch {
       showToast("error", "Failed to add to cart");
-    } finally {
-      setAddingToCart(null);
     }
   };
 
@@ -107,9 +122,9 @@ export default function ProductsPage() {
         <div className="flex gap-3 w-full sm:w-auto">
           <SearchBar
             placeholder="Search products..."
-            className="w-full sm:w-64"
-            defaultValue={search}
-            onChange={(e) => updateParams({ search: e.target.value })}
+            className="w-full sm:w-80"
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
           />
           <SortDropdown
             options={SORT_OPTIONS}
@@ -121,7 +136,7 @@ export default function ProductsPage() {
 
       {loading ? (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 12 }).map((_, i) => (
+          {Array.from({ length: PRODUCTS_PER_PAGE_DEFAULT }).map((_, i) => (
             <ProductCardSkeleton key={i} />
           ))}
         </div>
@@ -129,7 +144,7 @@ export default function ProductsPage() {
         <EmptyState
           icon={<ShoppingBag className="w-12 h-12 text-gray-400" />}
           title="No products found"
-          description={search ? `No results for "${search}". Try clearing the search.` : "No products available."}
+          description={searchParam ? `No results for "${searchParam}". Try clearing the search.` : "No products available."}
         />
       ) : (
         <>
@@ -150,5 +165,17 @@ export default function ProductsPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-8 max-w-7xl flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2979FF]"></div>
+      </div>
+    }>
+      <ProductsContent />
+    </Suspense>
   );
 }

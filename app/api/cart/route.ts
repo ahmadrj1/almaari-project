@@ -42,15 +42,23 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { productId, quantity } = cartItemSchema.parse(body);
 
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 });
+
     const existingItem = await prisma.cartItem.findUnique({
       where: { userId_productId: { userId: session.user.id, productId } },
     });
+
+    const newQuantity = (existingItem?.quantity || 0) + quantity;
+    if (newQuantity > product.stock) {
+      return NextResponse.json({ success: false, error: `Only ${product.stock} items available in stock` }, { status: 400 });
+    }
 
     let item;
     if (existingItem) {
       item = await prisma.cartItem.update({
         where: { id: existingItem.id },
-        data: { quantity: existingItem.quantity + quantity },
+        data: { quantity: newQuantity },
         include: { product: true },
       });
     } else {
@@ -74,9 +82,16 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     const { cartItemId, quantity } = patchCartItemSchema.parse(body);
 
-    const existing = await prisma.cartItem.findUnique({ where: { id: cartItemId } });
+    const existing = await prisma.cartItem.findUnique({ 
+      where: { id: cartItemId },
+      include: { product: true }
+    });
     if (!existing || existing.userId !== session.user.id) {
       return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
+    }
+
+    if (quantity > existing.product.stock) {
+      return NextResponse.json({ success: false, error: `Only ${existing.product.stock} items available in stock` }, { status: 400 });
     }
 
     if (quantity <= 0) {

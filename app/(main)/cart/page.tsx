@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,6 +16,15 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import type { CartItemWithProduct } from "@/types";
 import { useCartCount } from "@/hooks/use-cart-count";
+import { TAX_PERCENTAGE } from "@/lib/constants";
+
+type SavedAddress = {
+  id: string;
+  street: string;
+  city?: string;
+  country?: string;
+  zipCode?: string;
+};
 
 export default function CartPage() {
   const [items, setItems] = useState<CartItemWithProduct[]>([]);
@@ -23,16 +32,17 @@ export default function CartPage() {
   const [submitting, setSubmitting] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-  const [address, setAddress] = useState("");
+  const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
+  const [addresses, setAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newAddress, setNewAddress] = useState({ street: "", city: "", country: "", zipCode: "" });
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
   const router = useRouter();
   const { showToast } = useToast();
   const { decrement, refresh } = useCartCount();
 
-  useEffect(() => {
-    fetchCart();
-  }, []);
-
-  const fetchCart = async () => {
+  const fetchCart = useCallback(async () => {
     try {
       const res = await fetch("/api/cart");
       const data = await res.json();
@@ -45,7 +55,12 @@ export default function CartPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchCart();
+  }, [fetchCart]);
 
   const updateQuantity = async (cartItemId: string, quantity: number) => {
     try {
@@ -93,25 +108,76 @@ export default function CartPage() {
     }
   };
 
+  const fetchAddresses = async () => {
+    setLoadingAddresses(true);
+    try {
+      const res = await fetch("/api/addresses");
+      const data = await res.json();
+      if (data.success) {
+        setAddresses(data.data);
+        if (data.data.length > 0) setSelectedAddressId(data.data[0].id);
+        else setIsAddingNew(true);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingAddresses(false);
+    }
+  };
+
+  const openAddressModal = () => {
+    setIsAddressModalOpen(true);
+    fetchAddresses();
+  };
+
   const handlePlaceOrder = async () => {
-    if (!address.trim()) {
-      showToast("error", "Please enter delivery address");
+    let finalAddressId = selectedAddressId;
+
+    if (isAddingNew) {
+      if (!newAddress.street.trim()) {
+        showToast("error", "Please enter street address");
+        return;
+      }
+      setSubmitting(true);
+      try {
+        const res = await fetch("/api/addresses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newAddress),
+        });
+        const data = await res.json();
+        if (data.success) {
+          finalAddressId = data.data.id;
+        } else {
+          showToast("error", data.error || "Failed to add address");
+          setSubmitting(false);
+          return;
+        }
+      } catch (err) {
+        showToast("error", "Failed to add address");
+        setSubmitting(false);
+        return;
+      }
+    } else if (!finalAddressId) {
+      showToast("error", "Please select an address");
       return;
     }
+
     setSubmitting(true);
     try {
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address }),
+        body: JSON.stringify({ addressId: finalAddressId }),
       });
       const data = await res.json();
       if (data.success) {
-        setItems([]);
-        setIsAddressModalOpen(false);
-        setAddress("");
         refresh();
-        showToast("success", "Awesome, Your order has been placed successfully.");
+        setIsAddressModalOpen(false);
+        setSubmitting(true);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        setSubmitting(false);
+        setSuccessOrderId(data.data.id);
       } else {
         showToast("error", data.error || "Failed to place order");
       }
@@ -155,7 +221,7 @@ export default function CartPage() {
     (sum, item) => sum + Number(item.product.price) * item.quantity,
     0
   );
-  const tax = subTotal * 0.1;
+  const tax = subTotal * TAX_PERCENTAGE;
   const total = subTotal + tax;
 
   return (
@@ -172,47 +238,39 @@ export default function CartPage() {
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-500">
-                <th className="p-4 w-12"><input type="checkbox" className="rounded text-blue-600 focus:ring-blue-500" /></th>
                 <th className="p-4">Product</th>
-                <th className="p-4">Color</th>
-                <th className="p-4">Size</th>
                 <th className="p-4">Qty</th>
-                <th className="p-4">Price</th>
+                <th className="p-4">Rate</th>
+                <th className="p-4">Total Price</th>
                 <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {items.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="p-4">
-                    <input type="checkbox" className="rounded text-blue-600 focus:ring-blue-500" />
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="relative w-12 h-12 rounded bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
-                        {item.product.image ? (
-                          <Image src={item.product.image} alt={item.product.title} fill className="object-cover" />
-                        ) : null}
+              {items.map((item) => {
+                const rate = Number(item.product.price);
+                const lineTotal = rate * item.quantity;
+                return (
+                  <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-12 h-12 rounded bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
+                          {item.product.image ? (
+                            <Image src={item.product.image} alt={item.product.title} fill className="object-cover" />
+                          ) : null}
+                        </div>
+                        <span className="font-medium text-gray-800 line-clamp-2">{item.product.title}</span>
                       </div>
-                      <span className="font-medium text-gray-800 line-clamp-2">{item.product.title}</span>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <span className="w-3 h-3 rounded-full bg-gray-300 border border-gray-400"></span>
-                      {item.product.color || "Default"}
-                    </div>
-                  </td>
-                  <td className="p-4 text-sm text-gray-600">{item.product.size || "Large"}</td>
-                  <td className="p-4">
-                    <QuantitySelector
-                      value={item.quantity}
-                      onChange={(newQty) => updateQuantity(item.id, newQty)}
-                      min={1}
-                      max={99}
-                    />
-                  </td>
-                  <td className="p-4 font-medium text-gray-800">{formatCurrency(item.product.price)}</td>
+                    </td>
+                    <td className="p-4">
+                      <QuantitySelector
+                        value={item.quantity}
+                        onChange={(newQty) => updateQuantity(item.id, newQty)}
+                        min={1}
+                        max={item.product.stock ?? 99}
+                      />
+                    </td>
+                    <td className="p-4 font-medium text-gray-600">{formatCurrency(rate)}</td>
+                    <td className="p-4 font-bold text-gray-900">{formatCurrency(lineTotal)}</td>
                   <td className="p-4 text-center">
                     <button
                       onClick={() => setItemToDelete(item.id)}
@@ -222,8 +280,9 @@ export default function CartPage() {
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -244,7 +303,7 @@ export default function CartPage() {
             <span className="font-bold text-gray-900">{formatCurrency(total)}</span>
           </div>
           <div className="pt-4">
-            <Button className="w-full" size="lg" onClick={() => setIsAddressModalOpen(true)}>
+            <Button className="w-full" size="lg" onClick={openAddressModal}>
               Place Order
             </Button>
           </div>
@@ -265,14 +324,73 @@ export default function CartPage() {
       <Modal isOpen={isAddressModalOpen} onClose={() => setIsAddressModalOpen(false)} title="Delivery Address">
         <div className="space-y-4">
           <p className="text-sm text-gray-500">Please provide your delivery address to place the order.</p>
-          <Input
-            id="address"
-            name="address"
-            label="Address"
-            placeholder="123 Main St, City, Country"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-          />
+          
+          {loadingAddresses ? (
+            <div className="flex justify-center p-4"><Spinner size="sm" /></div>
+          ) : (
+            <div className="space-y-4">
+              {!isAddingNew && addresses.length > 0 && (
+                <div className="space-y-2">
+                  {addresses.map(addr => (
+                    <label key={addr.id} className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50">
+                      <input 
+                        type="radio" 
+                        name="addressId" 
+                        value={addr.id}
+                        checked={selectedAddressId === addr.id}
+                        onChange={(e) => setSelectedAddressId(e.target.value)}
+                        className="mt-1"
+                      />
+                      <div className="text-sm">
+                        <p className="font-medium">{addr.street}</p>
+                        <p className="text-gray-500">{[addr.city, addr.zipCode, addr.country].filter(Boolean).join(", ")}</p>
+                      </div>
+                    </label>
+                  ))}
+                  <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => setIsAddingNew(true)}>
+                    + Add New Address
+                  </Button>
+                </div>
+              )}
+
+              {isAddingNew && (
+                <div className="space-y-3">
+                  <Input
+                    label="Street Address *"
+                    placeholder="123 Main St"
+                    value={newAddress.street}
+                    onChange={(e) => setNewAddress({...newAddress, street: e.target.value})}
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      label="City"
+                      placeholder="New York"
+                      value={newAddress.city}
+                      onChange={(e) => setNewAddress({...newAddress, city: e.target.value})}
+                    />
+                    <Input
+                      label="Zip Code"
+                      placeholder="10001"
+                      value={newAddress.zipCode}
+                      onChange={(e) => setNewAddress({...newAddress, zipCode: e.target.value})}
+                    />
+                  </div>
+                  <Input
+                    label="Country"
+                    placeholder="United States"
+                    value={newAddress.country}
+                    onChange={(e) => setNewAddress({...newAddress, country: e.target.value})}
+                  />
+                  {addresses.length > 0 && (
+                    <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => setIsAddingNew(false)}>
+                      Cancel Adding New Address
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-3 justify-end pt-4">
             <Button variant="outline" onClick={() => setIsAddressModalOpen(false)}>
               Cancel
@@ -283,6 +401,41 @@ export default function CartPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Processing overlay */}
+      {submitting && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4 shadow-2xl">
+            <Spinner size="lg" />
+            <p className="text-gray-700 font-medium">Processing your order…</p>
+          </div>
+        </div>
+      )}
+
+      {/* Success dialog */}
+      {successOrderId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 flex flex-col items-center gap-6 shadow-2xl">
+            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
+              <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-gray-900 mb-1">Order Placed!</h2>
+              <p className="text-sm text-gray-500">Your order has been successfully placed.</p>
+            </div>
+            <div className="flex flex-col gap-3 w-full">
+              <Button className="w-full" onClick={() => router.push(`/orders/${successOrderId}`)}>
+                Check Order Details
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => router.push("/")}>
+                Return to Home
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

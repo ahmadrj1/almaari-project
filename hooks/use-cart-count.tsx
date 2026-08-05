@@ -32,7 +32,10 @@ export function CartCountProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, [status]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refresh(); 
+  }, [refresh]);
 
   const increment = useCallback(() => setCount((c) => c + 1), []);
   const decrement = useCallback(() => setCount((c) => Math.max(0, c - 1)), []);
