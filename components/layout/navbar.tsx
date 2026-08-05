@@ -5,11 +5,12 @@ import Link from "next/link"
 import { ShoppingCart, Bell } from "lucide-react"
 import { UserMenu } from "./user-menu"
 import { useSession } from "next-auth/react"
+import { useCartCount } from "@/hooks/use-cart-count"
 
 export function Navbar() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const isAuthenticated = status === "authenticated"
-  const cartCount = 3
+  const { count: cartCount } = useCartCount()
 
   return (
     <nav className="sticky top-0 z-40 w-full border-b border-gray-100 bg-white/80 backdrop-blur-md">
