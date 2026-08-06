@@ -13,6 +13,7 @@ model User {
   email          String    @unique
   phone          String
   passwordHash   String
+  role           Role      @default(USER)
   resetToken     String?
   resetTokenExp  DateTime?
   createdAt      DateTime  @default(now())
@@ -21,6 +22,11 @@ model User {
   cartItems      CartItem[]
   orders         Order[]
   addresses      Address[]
+}
+
+enum Role {
+  USER
+  ADMIN
 }
 
 model Product {

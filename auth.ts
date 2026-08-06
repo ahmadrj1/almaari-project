@@ -26,13 +26,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user.id, 
           name: user.fullName, 
           email: user.email,
+          role: user.role,
           rememberMe: credentials.rememberMe === "true"
         };
       },
     }),
   ],
   callbacks: {
-    ...authConfig.callbacks,
     async signIn({ user, account }) {
       if (account?.provider === "google") {
         if (!user.email) return false;
@@ -55,6 +55,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.role = user.role;
         const isRemember = (user as { rememberMe?: boolean }).rememberMe ?? false;
         const expiryDuration = isRemember ? SESSION_EXPIRY_REMEMBER_ME : SESSION_EXPIRY_DEFAULT;
         token.exp = Math.floor(Date.now() / 1000) + expiryDuration;
@@ -66,6 +67,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
         if (dbUser) {
           token.id = dbUser.id;
+          token.role = dbUser.role;
         }
       }
       return token;
@@ -73,6 +75,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (token.id) {
         session.user.id = token.id as string;
+        session.user.role = token.role as any;
       }
       return session;
     },

@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 8px;">
         <h2 style="color: #2979FF; text-align: center;">Reset Your Password</h2>
         <p style="color: #333; font-size: 16px;">Hello ${user.fullName},</p>
-        <p style="color: #333; font-size: 16px;">You requested a password reset for your Cart Attack account. Click the button below to reset your password. This link is valid for a limited time.</p>
+        <p style="color: #333; font-size: 16px;">You requested a password reset for your Almaari account. Click the button below to reset your password. This link is valid for a limited time.</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${resetLink}" style="background-color: #2979FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">Reset Password</a>
         </div>
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     await transporter.sendMail({
       from: process.env.SMTP_USER,
       to: email,
-      subject: "Password Reset - Cart Attack",
+      subject: "Password Reset - Almaari",
       html: htmlTemplate,
     });
 
