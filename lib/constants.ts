@@ -1,3 +1,5 @@
+export const APP_NAME = "Almaari";
+
 export const RESET_TOKEN_EXPIRY_MS = 900000; // 15 minutes in milliseconds
 export const SESSION_EXPIRY_REMEMBER_ME = 7 * 24 * 60 * 60; // 7 days in seconds
 export const SESSION_EXPIRY_DEFAULT = 24 * 60 * 60; // 1 day in seconds

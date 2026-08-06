@@ -49,8 +49,8 @@ export default function ForgotPasswordPage() {
           showToast("error", data.error || "An error occurred");
         }
       }
-    } catch (error) {
-      showToast("error", "Failed to send reset link");
+    } catch {
+      showToast("error", "Something went wrong.");
     } finally {
       setLoading(false);
     }

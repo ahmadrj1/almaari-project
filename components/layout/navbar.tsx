@@ -7,6 +7,7 @@ import { UserMenu } from "./user-menu"
 import { useSession } from "next-auth/react"
 import { useCartCount } from "@/hooks/use-cart-count"
 import { useToast } from "@/hooks/use-toast"
+import { APP_NAME } from "@/lib/constants"
 
 export function Navbar() {
   const { status } = useSession()
@@ -19,7 +20,7 @@ export function Navbar() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-xl font-bold tracking-tight text-[#2979FF]">
-            Almaari
+            {APP_NAME}
           </Link>
         </div>
 

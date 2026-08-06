@@ -24,7 +24,7 @@ export interface ProductCardProps {
 
 export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const [quantity, setQuantity] = React.useState(1)
-  const variants = product.variants || []
+  const variants = React.useMemo(() => product.variants || [], [product.variants])
 
   // Extract unique colors and sizes
   const colors = React.useMemo(() => {
@@ -48,12 +48,10 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const isOutOfStock = !selectedVariant || selectedVariant.stock <= 0
   const maxStock = selectedVariant?.stock || 0
 
-  // Reset quantity if it exceeds new max stock
   React.useEffect(() => {
-    if (quantity > maxStock) {
-      setQuantity(Math.max(1, maxStock))
-    }
-  }, [maxStock, quantity])
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setQuantity(prev => Math.min(prev, maxStock > 0 ? maxStock : 1))
+  }, [maxStock])
 
   return (
     <div className={`group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white transition-shadow hover:shadow-lg ${isOutOfStock ? "opacity-75" : ""}`}>

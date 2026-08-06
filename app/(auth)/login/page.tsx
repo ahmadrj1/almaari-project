@@ -2,19 +2,18 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { loginSchema, LoginInput } from "@/lib/validations/auth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
-  const router = useRouter();
-  
   const [formData, setFormData] = useState<LoginInput>({
     email: "",
     password: "",
   });
+  const { showToast } = useToast();
   const [errors, setErrors] = useState<Partial<Record<keyof LoginInput, string[]>>>({});
   const [globalError, setGlobalError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -61,8 +60,8 @@ export default function LoginPage() {
           window.location.href = "/";
         }
       }
-    } catch (err) {
-      setGlobalError("An unexpected error occurred. Please try again.");
+    } catch {
+      showToast("error", "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }

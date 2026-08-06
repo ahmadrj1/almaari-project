@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Search, ArrowUpRight, ClipboardList, Box, Banknote } from "lucide-react";
 
@@ -12,19 +12,27 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED:  "bg-red-100 text-red-700",
 };
 
+interface OrderSummary {
+  id: string;
+  createdAt: string;
+  total: number | string;
+  status: string;
+  user: {
+    id: string;
+    fullName: string;
+  } | null;
+  items: { quantity: number }[];
+}
+
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [stats, setStats] = useState({ totalOrders: 0, totalUnits: 0, totalAmount: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [page, search]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/orders?page=${page}&limit=10&search=${encodeURIComponent(search)}`);
@@ -39,7 +47,12 @@ export default function AdminOrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchOrders();
+  }, [fetchOrders]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
@@ -111,7 +124,7 @@ export default function AdminOrdersPage() {
                       <div className="text-xs text-gray-400">{order.user?.id?.slice(0, 8)}...</div>
                     </td>
                     <td className="py-4 text-gray-600">
-                      {order.items.reduce((sum: number, item: any) => sum + item.quantity, 0)}
+                      {order.items.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0)}
                     </td>
                     <td className="py-4 text-gray-800 font-medium">Rs. {Number(order.total).toFixed(2)}</td>
                     <td className="py-4">

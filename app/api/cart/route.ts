@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const cartItemSchema = z.object({
   productId: z.string(),
@@ -31,6 +32,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: items });
   } catch (error) {
+    logger.error({ err: error }, "Failed to fetch cart");
     return NextResponse.json({ success: false, error: "Failed to fetch cart" }, { status: 500 });
   }
 }
@@ -73,7 +75,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: item });
   } catch (error) {
-    console.error("Cart API POST error:", error);
+    logger.error({ err: error }, "Cart API POST error");
     return NextResponse.json({ success: false, error: "Failed to add item to cart" }, { status: 500 });
   }
 }
@@ -111,6 +113,7 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ success: true, data: item });
   } catch (error) {
+    logger.error({ err: error }, "Failed to update item");
     return NextResponse.json({ success: false, error: "Failed to update item" }, { status: 500 });
   }
 }
@@ -131,6 +134,7 @@ export async function DELETE(req: Request) {
     await prisma.cartItem.delete({ where: { id: cartItemId } });
     return NextResponse.json({ success: true, data: { deleted: true } });
   } catch (error) {
+    logger.error({ err: error }, "Failed to delete item");
     return NextResponse.json({ success: false, error: "Failed to delete item" }, { status: 500 });
   }
 }

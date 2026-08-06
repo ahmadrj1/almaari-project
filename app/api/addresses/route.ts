@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const addressSchema = z.object({
   street: z.string().min(1, "Street is required"),
@@ -23,6 +24,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: addresses });
   } catch (error) {
+    logger.error({ err: error }, "Failed to fetch addresses");
     return NextResponse.json({ success: false, error: "Failed to fetch addresses" }, { status: 500 });
   }
 }
@@ -45,6 +47,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: address });
   } catch (error) {
+    logger.error({ err: error }, "Failed to add address");
     return NextResponse.json({ success: false, error: "Failed to add address" }, { status: 500 });
   }
 }

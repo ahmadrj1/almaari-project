@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { ORDERS_PER_PAGE_DEFAULT, TAX_PERCENTAGE } from "@/lib/constants";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
@@ -74,6 +75,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: order });
   } catch (error) {
+    logger.error({ err: error }, "Failed to place order");
     return NextResponse.json({ success: false, error: "Failed to place order" }, { status: 500 });
   }
 }
@@ -105,6 +107,7 @@ export async function GET(req: Request) {
       data: { orders, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } },
     });
   } catch (error) {
+    logger.error({ err: error }, "Failed to fetch orders");
     return NextResponse.json({ success: false, error: "Failed to fetch orders" }, { status: 500 });
   }
 }

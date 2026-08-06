@@ -56,8 +56,8 @@ function ResetPasswordForm() {
           showToast("error", data.error || "An error occurred");
         }
       }
-    } catch (error) {
-      showToast("error", "Failed to reset password");
+    } catch {
+      showToast("error", "Something went wrong.");
     } finally {
       setLoading(false);
     }

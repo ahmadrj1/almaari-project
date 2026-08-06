@@ -1,30 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Edit, Trash2 } from "lucide-react";
 import DeleteProductModal from "@/components/admin/DeleteProductModal";
 
+interface ProductSummary {
+  id: string;
+  title: string;
+  price: number | string;
+  image: string;
+  totalStock: number;
+}
+
 export default function AdminProductsPage() {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<ProductSummary[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Pagination state
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
 
   // Delete modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchProducts(page);
-  }, [page]);
-
-  const fetchProducts = async (p: number) => {
+  const fetchProducts = useCallback(async (p: number) => {
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/products?page=${p}&limit=10`);
@@ -32,14 +35,18 @@ export default function AdminProductsPage() {
       if (data.success) {
         setProducts(data.data.products);
         setTotalPages(data.data.pagination.totalPages);
-        setTotal(data.data.pagination.total);
       }
     } catch (error) {
       console.error("Failed to fetch products:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchProducts(page);
+  }, [page, fetchProducts]);
 
   const openDeleteModal = (id: string) => {
     setProductToDelete(id);
