@@ -5,10 +5,23 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import authConfig from "./auth.config";
 import { SESSION_EXPIRY_REMEMBER_ME, SESSION_EXPIRY_DEFAULT } from "@/lib/constants";
+import { logger } from "@/lib/logger";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   session: { strategy: "jwt", maxAge: SESSION_EXPIRY_REMEMBER_ME },
+  logger: {
+    error(error) {
+      const code = (error as { type?: string }).type ?? error.name;
+      if (code === "CredentialsSignin") {
+        logger.warn({ code }, "Invalid credentials attempt");
+      } else {
+        logger.error({ err: error, code }, "Auth error");
+      }
+    },
+    warn(code) { logger.warn({ code }, "Auth warning"); },
+    debug(code, metadata) { logger.debug({ code, metadata }, "Auth debug"); },
+  },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -75,7 +88,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (token.id) {
         session.user.id = token.id as string;
-        session.user.role = token.role as any;
+        (session.user as { role?: string }).role = token.role as string;
       }
       return session;
     },

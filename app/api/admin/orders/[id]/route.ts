@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { Role, OrderStatus } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -24,6 +25,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    logger.error({ err: error }, "Failed to update order status");
     return NextResponse.json({ success: false, error: "Failed to update order status" }, { status: 500 });
   }
 }
@@ -58,6 +60,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     return NextResponse.json({ success: true, data: order });
   } catch (error) {
+    logger.error({ err: error }, "Failed to fetch order details");
     return NextResponse.json({ success: false, error: "Failed to fetch order details" }, { status: 500 });
   }
 }

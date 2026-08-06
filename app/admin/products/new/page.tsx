@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -13,10 +13,14 @@ export default function AddProductPage() {
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState(""); // Overall quantity/stock
   
-  const [colors, setColors] = useState<any[]>([]);
-  const [sizes, setSizes] = useState<any[]>([]);
+  interface Color { id: string; name: string; hexCode: string; }
+  interface Size { id: string; name: string; }
+  interface Variant { id: string; colorId: string; sizeId: string; stock: string | number; colorName?: string; sizeName?: string; }
+
+  const [colors, setColors] = useState<Color[]>([]);
+  const [sizes, setSizes] = useState<Size[]>([]);
   
-  const [variants, setVariants] = useState<any[]>([]);
+  const [variants, setVariants] = useState<Variant[]>([]);
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [variantQty, setVariantQty] = useState("");
@@ -28,11 +32,7 @@ export default function AddProductPage() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    fetchColorsAndSizes();
-  }, []);
-
-  const fetchColorsAndSizes = async () => {
+  const fetchColorsAndSizes = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/colors-sizes");
       const data = await res.json();
@@ -43,7 +43,12 @@ export default function AddProductPage() {
     } catch (error) {
       console.error("Failed to fetch colors and sizes:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchColorsAndSizes();
+  }, [fetchColorsAndSizes]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

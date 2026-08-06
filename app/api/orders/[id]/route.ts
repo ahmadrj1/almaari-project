@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 export async function GET(
   req: Request,
@@ -30,6 +31,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: order });
   } catch (error) {
+    logger.error({ err: error }, "Failed to fetch order details");
     return NextResponse.json({ success: false, error: "Failed to fetch order details" }, { status: 500 });
   }
 }

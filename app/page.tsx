@@ -122,7 +122,7 @@ function HomeContent() {
       <Navbar />
       <main className="container mx-auto flex-1 px-4 py-6 sm:py-8">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold text-[#2979FF]">Our Products</h1>
+          <h1 className="text-2xl font-bold text-primary">Our Products</h1>
           <div className="flex gap-3 w-full sm:w-auto">
             <SearchBar
               placeholder="Search products..."
@@ -180,7 +180,7 @@ export default function HomePage() {
   return (
     <Suspense fallback={
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2979FF]"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     }>
       <HomeContent />

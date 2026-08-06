@@ -101,7 +101,7 @@ export default function CartPage() {
         decrement();
         showToast("success", "Item removed from cart");
       }
-    } catch (error) {
+    } catch {
       showToast("error", "Failed to remove item");
     } finally {
       setItemToDelete(null);
@@ -118,8 +118,8 @@ export default function CartPage() {
         if (data.data.length > 0) setSelectedAddressId(data.data[0].id);
         else setIsAddingNew(true);
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      showToast("error", "Failed to fetch addresses");
     } finally {
       setLoadingAddresses(false);
     }
@@ -153,7 +153,7 @@ export default function CartPage() {
           setSubmitting(false);
           return;
         }
-      } catch (err) {
+      } catch {
         showToast("error", "Failed to add address");
         setSubmitting(false);
         return;
@@ -181,7 +181,7 @@ export default function CartPage() {
       } else {
         showToast("error", data.error || "Failed to place order");
       }
-    } catch (error) {
+    } catch {
       showToast("error", "Failed to place order");
     } finally {
       setSubmitting(false);

@@ -61,8 +61,8 @@ export default function RegisterPage() {
         showToast("success", "Registration successful. Please login.");
         router.push("/login");
       }
-    } catch (err) {
-      setGlobalError("Something went wrong. Please try again.");
+    } catch {
+      showToast("error", "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }

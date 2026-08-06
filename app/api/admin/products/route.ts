@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { Role, Prisma } from "@prisma/client";
 import { PRODUCTS_PER_PAGE_DEFAULT } from "@/lib/constants";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: Request) {
   try {
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
       data: { products: productsWithStock, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } },
     });
   } catch (error) {
-    console.error("Admin Products API Error:", error);
+    logger.error({ err: error }, "Admin Products API Error");
     return NextResponse.json({ success: false, error: "Failed to fetch products" }, { status: 500 });
   }
 }
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
           price,
           image,
           variants: {
-            create: variants.map((v: any) => ({
+            create: variants.map((v: { colorId: string; sizeId: string; stock: string | number }) => ({
               colorId: v.colorId,
               sizeId: v.sizeId,
               stock: Number(v.stock)
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: newProduct });
   } catch (error) {
-    console.error("Admin Products Create API Error:", error);
+    logger.error({ err: error }, "Admin Products Create API Error");
     return NextResponse.json({ success: false, error: "Failed to create product" }, { status: 500 });
   }
 }

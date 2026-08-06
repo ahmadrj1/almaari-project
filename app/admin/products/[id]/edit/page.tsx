@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -15,10 +15,14 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
   
-  const [colors, setColors] = useState<any[]>([]);
-  const [sizes, setSizes] = useState<any[]>([]);
+  interface Color { id: string; name: string; hexCode: string; }
+  interface Size { id: string; name: string; }
+  interface Variant { id: string; colorId: string; sizeId: string; stock: string | number; colorName?: string; sizeName?: string; }
   
-  const [variants, setVariants] = useState<any[]>([]);
+  const [colors, setColors] = useState<Color[]>([]);
+  const [sizes, setSizes] = useState<Size[]>([]);
+  
+  const [variants, setVariants] = useState<Variant[]>([]);
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [variantQty, setVariantQty] = useState("");
@@ -32,12 +36,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    fetchColorsAndSizes();
-    fetchProduct();
-  }, [id]);
-
-  const fetchColorsAndSizes = async () => {
+  const fetchColorsAndSizes = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/colors-sizes");
       const data = await res.json();
@@ -48,9 +47,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     } catch (error) {
       console.error("Failed to fetch colors and sizes:", error);
     }
-  };
+  }, []);
 
-  const fetchProduct = async () => {
+  const fetchProduct = useCallback(async () => {
     try {
       const res = await fetch(`/api/admin/products/${id}`);
       const data = await res.json();
@@ -62,10 +61,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         setImagePreview(p.image);
         
         // Calculate total quantity from variants
-        const totalStock = p.variants.reduce((sum: number, v: any) => sum + v.stock, 0);
+        const totalStock = p.variants.reduce((sum: number, v: { stock: number }) => sum + v.stock, 0);
         setQuantity(totalStock.toString());
         
-        setVariants(p.variants.map((v: any) => ({
+        setVariants(p.variants.map((v: { id: string; colorId: string; sizeId: string; stock: number; color: { name: string }; size: { name: string } }) => ({
           id: v.id,
           colorId: v.colorId,
           sizeId: v.sizeId,
@@ -79,7 +78,15 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchColorsAndSizes();
+      fetchProduct();
+    }
+  }, [id, fetchColorsAndSizes, fetchProduct]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

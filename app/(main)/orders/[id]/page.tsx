@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -45,29 +45,33 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function OrderDetailsPage() {
   const params = useParams();
+  const id = params.id as string;
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
 
-  useEffect(() => {
-    const fetchOrder = async () => {
-      await new Promise((r) => setTimeout(r, 1000));
-      try {
-        const res = await fetch(`/api/orders/${params.id}`);
-        const data = await res.json();
-        if (data.success) {
-          setOrder(data.data);
-        } else {
-          showToast("error", "Order not found");
-        }
-      } catch {
-        showToast("error", "Failed to fetch order details");
-      } finally {
-        setLoading(false);
+  const fetchOrder = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/orders/${id}`);
+      const data = await res.json();
+      if (data.success) {
+        setOrder(data.data);
+      } else {
+        showToast("error", "Order not found");
       }
-    };
-    if (params.id) fetchOrder();
-  }, [params.id]);
+    } catch {
+      showToast("error", "Failed to fetch order details");
+    } finally {
+      setLoading(false);
+    }
+  }, [id, showToast]);
+
+  useEffect(() => {
+    if (id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchOrder();
+    }
+  }, [id, fetchOrder]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-64"><Spinner size="lg" /></div>;

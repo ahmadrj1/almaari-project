@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +23,7 @@ export default function OrdersPage() {
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
   const { showToast } = useToast();
 
-  const fetchOrders = async (page = 1) => {
+  const fetchOrders = useCallback(async (page = 1) => {
     setLoading(true);
     try {
       await new Promise((r) => setTimeout(r, 1000));
@@ -40,12 +40,12 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-64"><Spinner size="lg" /></div>;

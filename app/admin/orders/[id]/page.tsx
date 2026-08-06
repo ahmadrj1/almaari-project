@@ -1,10 +1,42 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import React from "react";
+
+interface OrderItem {
+  id: string;
+  quantity: number;
+  price: number | string;
+  colorName: string;
+  sizeName: string;
+  product: {
+    title: string;
+    image: string;
+    price: number | string;
+    variants: {
+      color?: { name: string };
+      size?: { name: string };
+      stock: number;
+    }[];
+  } | null;
+}
+
+interface OrderDetail {
+  id: string;
+  createdAt: string;
+  subTotal: number | string;
+  tax: number | string;
+  total: number | string;
+  status: string;
+  user: {
+    id: string;
+    fullName: string;
+  } | null;
+  items: OrderItem[];
+}
 
 const ORDER_STATUSES = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
 
@@ -17,16 +49,12 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const id = React.use(params).id;
 
-  useEffect(() => {
-    fetchOrder();
-  }, [id]);
-
-  const fetchOrder = async () => {
+  const fetchOrder = useCallback(async () => {
     try {
       const res = await fetch(`/api/admin/orders/${id}`);
       const data = await res.json();
@@ -36,7 +64,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchOrder();
+  }, [fetchOrder]);
 
   const handleStatusChange = async (status: string) => {
     setUpdatingStatus(true);
@@ -48,7 +81,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       });
       const data = await res.json();
       if (data.success) {
-        setOrder((prev: any) => ({ ...prev, status }));
+        setOrder((prev) => prev ? { ...prev, status } : prev);
       }
     } catch (error) {
       console.error("Failed to update status:", error);
@@ -63,7 +96,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   if (loading) return <div className="p-8 text-center text-gray-500">Loading...</div>;
   if (!order) return <div className="p-8 text-center text-red-500">Order not found.</div>;
 
-  const totalProducts = order.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+  const totalProducts = order.items.reduce((sum: number, item: OrderItem) => sum + item.quantity, 0);
 
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm min-h-[calc(100vh-8rem)]">
@@ -136,13 +169,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </tr>
           </thead>
           <tbody className="text-sm">
-            {order.items.map((item: any) => {
+            {order.items.map((item: OrderItem) => {
               const variant = item.product?.variants?.find(
-                (v: any) => v.color?.name === item.colorName && v.size?.name === item.sizeName
+                (v) => v.color?.name === item.colorName && v.size?.name === item.sizeName
               );
               const stock = variant
                 ? variant.stock
-                : item.product?.variants?.reduce((sum: number, v: any) => sum + v.stock, 0) || 0;
+                : item.product?.variants?.reduce((sum: number, v) => sum + v.stock, 0) || 0;
 
               return (
                 <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50/50">
