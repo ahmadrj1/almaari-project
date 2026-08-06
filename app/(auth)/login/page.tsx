@@ -53,7 +53,13 @@ export default function LoginPage() {
       if (result?.error) {
         setGlobalError("Invalid email or password");
       } else if (result?.ok) {
-        router.push("/");
+        const sessionRes = await fetch("/api/auth/session");
+        const sessionData = await sessionRes.json();
+        if (sessionData?.user?.role === "ADMIN") {
+          window.location.href = "/admin/products";
+        } else {
+          window.location.href = "/";
+        }
       }
     } catch (err) {
       setGlobalError("An unexpected error occurred. Please try again.");
@@ -130,7 +136,7 @@ export default function LoginPage() {
         variant="outline"
         fullWidth
         disabled={isLoading}
-        onClick={() => signIn("google", { callbackUrl: "/" })}
+        onClick={() => signIn("google", { callbackUrl: "/login" })}
       >
         <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
           <path fill="#4285F4" d="M488 261.8c0-16.7-1.5-32.9-4.3-48.5H248v91.8h134.8c-5.8 31.3-23.4 57.8-50 75.6v62.8h81c47.4-43.6 74.2-107.8 74.2-181.7z"></path>

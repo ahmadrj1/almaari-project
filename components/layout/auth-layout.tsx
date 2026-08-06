@@ -7,7 +7,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
       <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-8 shadow-xl">
         <div className="text-center">
           <Link href="/" className="text-3xl font-bold tracking-tight text-[#2979FF]">
-            Cart Attack
+            Almaar
           </Link>
         </div>
         {children}

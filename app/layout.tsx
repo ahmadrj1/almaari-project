@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Cart Attack | E-commerce",
+  title: "Almaari",
   description: "Modern E-commerce application",
 };
 
