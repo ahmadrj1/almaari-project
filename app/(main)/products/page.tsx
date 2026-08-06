@@ -21,9 +21,9 @@ type Product = {
   description: string;
   price: number;
   image: string;
-  stock: number;
   createdAt: Date;
   updatedAt: Date;
+  variants: import("@/components/ui/product-card").Variant[];
 };
 
 type Pagination = { page: number; totalPages: number; total: number };
@@ -89,7 +89,7 @@ function ProductsContent() {
     }
   }, [debouncedSearch, searchParam, updateParams]);
 
-  const handleAddToCart = async (productId: string, quantity: number) => {
+  const handleAddToCart = async (productId: string, variantId: string, quantity: number) => {
     if (status !== "authenticated") {
       showToast("info", "Please log in to place an order");
       return;
@@ -99,7 +99,7 @@ function ProductsContent() {
       const res = await fetch("/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, quantity }),
+        body: JSON.stringify({ productId, variantId, quantity }),
       });
       const data = await res.json();
       if (data.success) {

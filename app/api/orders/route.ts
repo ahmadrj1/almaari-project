@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
     const cartItems = await prisma.cartItem.findMany({
       where: { userId },
-      include: { product: true },
+      include: { product: true, variant: { include: { color: true, size: true } } },
     });
 
     if (cartItems.length === 0) {
@@ -46,15 +46,17 @@ export async function POST(req: Request) {
               quantity: item.quantity,
               price: item.product.price,
               productId: item.productId,
+              colorName: item.variant.color.name,
+              sizeName: item.variant.size.name,
             })),
           },
         },
       });
 
-      // Update product stock
+      // Update variant stock
       for (const item of cartItems) {
-        await tx.product.update({
-          where: { id: item.productId },
+        await tx.productVariant.update({
+          where: { id: item.variantId },
           data: {
             stock: {
               decrement: item.quantity,

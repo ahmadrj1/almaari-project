@@ -11,6 +11,7 @@ export type CartItemWithProduct = {
   quantity: number;
   userId: string;
   productId: string;
+  variantId: string;
   createdAt: Date;
   updatedAt: Date;
   product: {
@@ -18,6 +19,11 @@ export type CartItemWithProduct = {
     title: string;
     price: number | string | null;
     image: string;
+  };
+  variant: {
+    id: string;
     stock: number;
+    color: { id: string; name: string; hexCode: string };
+    size: { id: string; name: string };
   };
 };

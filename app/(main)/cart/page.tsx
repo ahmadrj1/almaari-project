@@ -239,6 +239,8 @@ export default function CartPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-500">
                 <th className="p-4">Product</th>
+                <th className="p-4">Color</th>
+                <th className="p-4">Size</th>
                 <th className="p-4">Qty</th>
                 <th className="p-4">Rate</th>
                 <th className="p-4">Total Price</th>
@@ -262,11 +264,25 @@ export default function CartPage() {
                       </div>
                     </td>
                     <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <span 
+                          className="w-4 h-4 rounded-full border border-gray-200" 
+                          style={{ backgroundColor: item.variant.color.hexCode }} 
+                        />
+                        <span className="text-sm text-gray-700">{item.variant.color.name}</span>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-md">
+                        {item.variant.size.name}
+                      </span>
+                    </td>
+                    <td className="p-4">
                       <QuantitySelector
                         value={item.quantity}
                         onChange={(newQty) => updateQuantity(item.id, newQty)}
                         min={1}
-                        max={item.product.stock ?? 99}
+                        max={item.variant.stock ?? 99}
                       />
                     </td>
                     <td className="p-4 font-medium text-gray-600">{formatCurrency(rate)}</td>

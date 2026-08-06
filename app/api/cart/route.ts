@@ -5,6 +5,7 @@ import { z } from "zod";
 
 const cartItemSchema = z.object({
   productId: z.string(),
+  variantId: z.string(),
   quantity: z.number().min(1),
 });
 
@@ -24,7 +25,7 @@ export async function GET() {
 
     const items = await prisma.cartItem.findMany({
       where: { userId: session.user.id },
-      include: { product: true },
+      include: { product: true, variant: { include: { color: true, size: true } } },
       orderBy: { createdAt: "desc" },
     });
 
@@ -40,18 +41,20 @@ export async function POST(req: Request) {
     if (!session?.user?.id) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { productId, quantity } = cartItemSchema.parse(body);
+    const { productId, variantId, quantity } = cartItemSchema.parse(body);
 
-    const product = await prisma.product.findUnique({ where: { id: productId } });
-    if (!product) return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 });
+    const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
+    if (!variant || variant.productId !== productId) {
+      return NextResponse.json({ success: false, error: "Variant not found" }, { status: 404 });
+    }
 
     const existingItem = await prisma.cartItem.findUnique({
-      where: { userId_productId: { userId: session.user.id, productId } },
+      where: { userId_productId_variantId: { userId: session.user.id, productId, variantId } },
     });
 
     const newQuantity = (existingItem?.quantity || 0) + quantity;
-    if (newQuantity > product.stock) {
-      return NextResponse.json({ success: false, error: `Only ${product.stock} items available in stock` }, { status: 400 });
+    if (newQuantity > variant.stock) {
+      return NextResponse.json({ success: false, error: `Only ${variant.stock} items available in stock` }, { status: 400 });
     }
 
     let item;
@@ -59,17 +62,18 @@ export async function POST(req: Request) {
       item = await prisma.cartItem.update({
         where: { id: existingItem.id },
         data: { quantity: newQuantity },
-        include: { product: true },
+        include: { product: true, variant: { include: { color: true, size: true } } },
       });
     } else {
       item = await prisma.cartItem.create({
-        data: { userId: session.user.id, productId, quantity },
-        include: { product: true },
+        data: { userId: session.user.id, productId, variantId, quantity },
+        include: { product: true, variant: { include: { color: true, size: true } } },
       });
     }
 
     return NextResponse.json({ success: true, data: item });
   } catch (error) {
+    console.error("Cart API POST error:", error);
     return NextResponse.json({ success: false, error: "Failed to add item to cart" }, { status: 500 });
   }
 }
@@ -84,14 +88,14 @@ export async function PATCH(req: Request) {
 
     const existing = await prisma.cartItem.findUnique({ 
       where: { id: cartItemId },
-      include: { product: true }
+      include: { product: true, variant: true }
     });
     if (!existing || existing.userId !== session.user.id) {
       return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
     }
 
-    if (quantity > existing.product.stock) {
-      return NextResponse.json({ success: false, error: `Only ${existing.product.stock} items available in stock` }, { status: 400 });
+    if (quantity > existing.variant.stock) {
+      return NextResponse.json({ success: false, error: `Only ${existing.variant.stock} items available in stock` }, { status: 400 });
     }
 
     if (quantity <= 0) {
@@ -102,7 +106,7 @@ export async function PATCH(req: Request) {
     const item = await prisma.cartItem.update({
       where: { id: cartItemId },
       data: { quantity },
-      include: { product: true },
+      include: { product: true, variant: { include: { color: true, size: true } } },
     });
 
     return NextResponse.json({ success: true, data: item });

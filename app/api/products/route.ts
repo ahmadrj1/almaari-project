@@ -26,11 +26,22 @@ export async function GET(req: Request) {
       : {};
 
     if (inStock) {
-      where.stock = { gt: 0 };
+      where.variants = { some: { stock: { gt: 0 } } };
     }
 
     const [products, total] = await Promise.all([
-      prisma.product.findMany({ where, orderBy, skip, take: limit }),
+      prisma.product.findMany({ 
+        where, 
+        orderBy, 
+        skip, 
+        take: limit,
+        include: {
+          variants: {
+            include: { color: true, size: true },
+            orderBy: [{ color: { name: 'asc' } }, { size: { sortOrder: 'asc' } }]
+          }
+        }
+      }),
       prisma.product.count({ where }),
     ]);
 

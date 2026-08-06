@@ -20,6 +20,8 @@ type OrderDetail = {
     id: string;
     quantity: number;
     price: string | number;
+    colorName: string;
+    sizeName: string;
     product: {
       title: string;
       image: string;
@@ -145,6 +147,8 @@ export default function OrderDetailsPage() {
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
                 <th className="px-6 py-3">Product</th>
+                <th className="px-6 py-3">Color</th>
+                <th className="px-6 py-3">Size</th>
                 <th className="px-6 py-3">Rate</th>
                 <th className="px-6 py-3">Qty</th>
                 <th className="px-6 py-3 text-right">Total Price</th>
@@ -165,6 +169,8 @@ export default function OrderDetailsPage() {
                       </span>
                     </div>
                   </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{item.colorName}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{item.sizeName}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{formatCurrency(Number(item.price))}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{item.quantity}</td>
                   <td className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
