@@ -4,10 +4,11 @@ import * as React from "react"
 import Link from "next/link"
 import { ShoppingCart, Bell } from "lucide-react"
 import { UserMenu } from "./user-menu"
+import { useSession } from "next-auth/react"
 
 export function Navbar() {
-  // In a real app, we'd get this from useSession
-  const isAuthenticated = false 
+  const { data: session, status } = useSession()
+  const isAuthenticated = status === "authenticated"
   const cartCount = 3
 
   return (
@@ -15,7 +16,7 @@ export function Navbar() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-xl font-bold tracking-tight text-[#2979FF]">
-            Cart Attack
+            E-commerce
           </Link>
         </div>
 

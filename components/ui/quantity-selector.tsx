@@ -20,23 +20,25 @@ export function QuantitySelector({ value, onChange, min = 1, max = 99 }: Quantit
   }
 
   return (
-    <div className="inline-flex items-center rounded-md border border-gray-200 bg-white">
+    <div className="inline-flex items-center gap-0.5 sm:gap-1">
       <button
         onClick={handleDecrement}
         disabled={value <= min}
-        className="flex h-8 w-8 items-center justify-center text-gray-500 hover:text-gray-900 disabled:opacity-50"
+        aria-label="Decrease quantity"
+        className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded border border-[#2979FF] text-[#2979FF] hover:bg-blue-50 disabled:opacity-40"
       >
-        <Minus className="h-4 w-4" />
+        <Minus className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
       </button>
-      <span className="flex h-8 min-w-[2rem] items-center justify-center text-sm font-medium">
-        {value}
+      <span className="flex h-6 sm:h-8 min-w-[1.5rem] sm:min-w-[2rem] items-center justify-center rounded border border-gray-200 text-[10px] sm:text-sm font-medium">
+        {String(value).padStart(2, "0")}
       </span>
       <button
         onClick={handleIncrement}
         disabled={value >= max}
-        className="flex h-8 w-8 items-center justify-center text-gray-500 hover:text-gray-900 disabled:opacity-50"
+        aria-label="Increase quantity"
+        className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded border border-[#2979FF] text-[#2979FF] hover:bg-blue-50 disabled:opacity-40"
       >
-        <Plus className="h-4 w-4" />
+        <Plus className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
       </button>
     </div>
   )
