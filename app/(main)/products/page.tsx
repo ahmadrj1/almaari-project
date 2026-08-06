@@ -14,8 +14,6 @@ import { useCartCount } from "@/hooks/use-cart-count";
 import { useSession } from "next-auth/react";
 import { SORT_OPTIONS, PRODUCTS_PER_PAGE_DEFAULT, DEFAULT_SORT } from "@/lib/constants";
 import { useDebounce } from "@/hooks/use-debounce";
-import { Navbar } from "@/components/layout/navbar";
-import { Footer } from "@/components/layout/footer";
 
 type Product = {
   id: string;
@@ -32,7 +30,7 @@ type Pagination = { page: number; totalPages: number; total: number };
 
 import { Suspense } from "react";
 
-function HomeContent() {
+function ProductsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status } = useSession();
@@ -118,72 +116,66 @@ function HomeContent() {
   };
 
   return (
-    <>
-      <Navbar />
-      <main className="container mx-auto flex-1 px-4 py-6 sm:py-8">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold text-[#2979FF]">Our Products</h1>
-          <div className="flex gap-3 w-full sm:w-auto">
-            <SearchBar
-              placeholder="Search products..."
-              className="w-full sm:w-100"
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-            />
-            <SortDropdown
-              options={SORT_OPTIONS}
-              value={sort}
-              onChange={(e) => updateParams({ sort: e.target.value })}
-            />
-          </div>
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold text-[#2979FF]">Our Products</h1>
+        <div className="flex gap-3 w-full sm:w-auto">
+          <SearchBar
+            placeholder="Search products..."
+            className="w-full sm:w-80"
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+          />
+          <SortDropdown
+            options={SORT_OPTIONS}
+            value={sort}
+            onChange={(e) => updateParams({ sort: e.target.value })}
+          />
         </div>
+      </div>
 
-        {loading ? (
+      {loading ? (
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: PRODUCTS_PER_PAGE_DEFAULT }).map((_, i) => (
+            <ProductCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : products.length === 0 ? (
+        <EmptyState
+          icon={<ShoppingBag className="w-12 h-12 text-gray-400" />}
+          title="No products found"
+          description={searchParam ? `No results for "${searchParam}". Try clearing the search.` : "No products available."}
+        />
+      ) : (
+        <>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {Array.from({ length: PRODUCTS_PER_PAGE_DEFAULT }).map((_, i) => (
-              <ProductCardSkeleton key={i} />
+            {products.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onAddToCart={handleAddToCart}
+              />
             ))}
           </div>
-        ) : products.length === 0 ? (
-          <EmptyState
-            icon={<ShoppingBag className="w-12 h-12 text-gray-400" />}
-            title="No products found"
-            description={searchParam ? `No results for "${searchParam}". Try clearing the search.` : "No products available."}
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={(p) => updateParams({ page: String(p) })}
           />
-        ) : (
-          <>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAddToCart={handleAddToCart}
-                />
-              ))}
-            </div>
-            <div className="mt-8 flex justify-center">
-              <Pagination
-                currentPage={pagination.page}
-                totalPages={pagination.totalPages}
-                onPageChange={(p) => updateParams({ page: String(p) })}
-              />
-            </div>
-          </>
-        )}
-      </main>
-      <Footer />
-    </>
+        </>
+      )}
+    </div>
   );
 }
 
-export default function HomePage() {
+export default function ProductsPage() {
   return (
     <Suspense fallback={
-      <div className="flex justify-center items-center h-64">
+      <div className="container mx-auto px-4 py-8 max-w-7xl flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2979FF]"></div>
       </div>
     }>
-      <HomeContent />
+      <ProductsContent />
     </Suspense>
   );
 }

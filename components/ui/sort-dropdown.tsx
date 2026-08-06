@@ -8,7 +8,7 @@ export interface Option {
 }
 
 export interface SortDropdownProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  options: Option[]
+  options: readonly Option[]
 }
 
 export const SortDropdown = React.forwardRef<HTMLSelectElement, SortDropdownProps>(
@@ -16,7 +16,7 @@ export const SortDropdown = React.forwardRef<HTMLSelectElement, SortDropdownProp
     return (
       <select
         ref={ref}
-        className="block w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm focus:border-[#2979FF] focus:outline-none focus:ring-1 focus:ring-[#2979FF] disabled:cursor-not-allowed disabled:opacity-50"
+        className={`block w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm focus:border-[#2979FF] focus:outline-none focus:ring-1 focus:ring-[#2979FF] disabled:cursor-not-allowed disabled:opacity-50 ${className || ""}`}
         {...props}
       >
         {options.map((option) => (

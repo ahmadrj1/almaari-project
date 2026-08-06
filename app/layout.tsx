@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 import { ToastProvider } from "@/hooks/use-toast";
 import { ToastContainer } from "@/components/ui/toast-container";
 import { SessionProvider } from "next-auth/react";
+import { CartCountProvider } from "@/hooks/use-cart-count";
 
 export default function RootLayout({
   children,
@@ -29,8 +30,10 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-[#F5F7FA]">
         <SessionProvider>
           <ToastProvider>
-            {children}
-            <ToastContainer />
+            <CartCountProvider>
+              {children}
+              <ToastContainer />
+            </CartCountProvider>
           </ToastProvider>
         </SessionProvider>
       </body>

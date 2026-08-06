@@ -3,6 +3,7 @@ import { forgotPasswordSchema } from "@/lib/validations/auth";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
+import { RESET_TOKEN_EXPIRY_MS } from "@/lib/constants";
 
 export async function POST(req: Request) {
   try {
@@ -30,8 +31,7 @@ export async function POST(req: Request) {
     }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const tokenExpMs = parseInt(process.env.RESET_TOKEN_EXP || "3600000", 10);
-    const resetTokenExp = new Date(Date.now() + tokenExpMs);
+    const resetTokenExp = new Date(Date.now() + RESET_TOKEN_EXPIRY_MS);
 
     await prisma.user.update({
       where: { email },

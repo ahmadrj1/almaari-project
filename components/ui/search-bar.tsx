@@ -11,7 +11,7 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
       <div className={`relative w-full ${className || ""}`}>
         <input
           type="search"
-          className="block w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-11 text-sm placeholder:text-gray-400 focus:border-[#2979FF] focus:outline-none focus:ring-1 focus:ring-[#2979FF]"
+          className="block w-full rounded-md border border-gray-300 bg-white py-2.5 pl-4 pr-12 text-sm placeholder:text-gray-400 focus:border-[#2979FF] focus:outline-none focus:ring-1 focus:ring-[#2979FF]"
           ref={ref}
           {...props}
         />

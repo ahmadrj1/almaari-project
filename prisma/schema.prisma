@@ -20,6 +20,7 @@ model User {
 
   cartItems      CartItem[]
   orders         Order[]
+  addresses      Address[]
 }
 
 model Product {
@@ -28,14 +29,42 @@ model Product {
   description String
   price       Decimal  @db.Decimal(10, 2)
   image       String
-  color       String?
-  size        String?
-  stock       Int      @default(100)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  variants    ProductVariant[]
   cartItems   CartItem[]
   orderItems  OrderItem[]
+}
+
+model Color {
+  id       String           @id @default(uuid())
+  name     String           @unique
+  hexCode  String
+  variants ProductVariant[]
+}
+
+model Size {
+  id        String           @id @default(uuid())
+  name      String           @unique
+  sortOrder Int              @default(0)
+  variants  ProductVariant[]
+}
+
+model ProductVariant {
+  id        String   @id @default(uuid())
+  productId String
+  colorId   String
+  sizeId    String
+  stock     Int      @default(0)
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color     Color    @relation(fields: [colorId], references: [id])
+  size      Size     @relation(fields: [sizeId], references: [id])
+
+  cartItems  CartItem[]
+
+  @@unique([productId, colorId, sizeId])
 }
 
 model CartItem {
@@ -43,13 +72,15 @@ model CartItem {
   quantity  Int      @default(1)
   userId    String
   productId String
+  variantId String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, productId])
+  @@unique([userId, productId, variantId])
 }
 
 model Order {
@@ -61,9 +92,11 @@ model Order {
   total     Decimal     @db.Decimal(10, 2)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+  addressId String
 
-  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items OrderItem[]
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address Address     @relation(fields: [addressId], references: [id])
+  items   OrderItem[]
 }
 
 model OrderItem {
@@ -72,6 +105,8 @@ model OrderItem {
   price     Decimal @db.Decimal(10, 2)
   orderId   String
   productId String
+  colorName String
+  sizeName  String
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -83,4 +118,18 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELLED
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String
+  street    String
+  city      String?
+  country   String?
+  zipCode   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
 }

@@ -4,10 +4,11 @@ import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import authConfig from "./auth.config";
+import { SESSION_EXPIRY_REMEMBER_ME, SESSION_EXPIRY_DEFAULT } from "@/lib/constants";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: SESSION_EXPIRY_REMEMBER_ME },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -21,7 +22,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!user) return null;
         const valid = await bcrypt.compare(credentials.password as string, user.passwordHash);
         if (!valid) return null;
-        return { id: user.id, name: user.fullName, email: user.email };
+        return { 
+          id: user.id, 
+          name: user.fullName, 
+          email: user.email,
+          rememberMe: credentials.rememberMe === "true"
+        };
       },
     }),
   ],
@@ -49,6 +55,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        const isRemember = (user as { rememberMe?: boolean }).rememberMe ?? false;
+        const expiryDuration = isRemember ? SESSION_EXPIRY_REMEMBER_ME : SESSION_EXPIRY_DEFAULT;
+        token.exp = Math.floor(Date.now() / 1000) + expiryDuration;
       }
       // If logging in via Google, user.id might be the Google provider's sub ID, so we look up the DB user id
       if (!token.id && token.email) {

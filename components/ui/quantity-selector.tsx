@@ -8,9 +8,10 @@ export interface QuantitySelectorProps {
   onChange: (value: number) => void
   min?: number
   max?: number
+  disabled?: boolean
 }
 
-export function QuantitySelector({ value, onChange, min = 1, max = 99 }: QuantitySelectorProps) {
+export function QuantitySelector({ value, onChange, min = 1, max = 99, disabled = false }: QuantitySelectorProps) {
   const handleDecrement = () => {
     if (value > min) onChange(value - 1)
   }
@@ -20,10 +21,10 @@ export function QuantitySelector({ value, onChange, min = 1, max = 99 }: Quantit
   }
 
   return (
-    <div className="inline-flex items-center gap-0.5 sm:gap-1">
+    <div className={`inline-flex items-center gap-0.5 sm:gap-1 ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
       <button
         onClick={handleDecrement}
-        disabled={value <= min}
+        disabled={disabled || value <= min}
         aria-label="Decrease quantity"
         className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded border border-[#2979FF] text-[#2979FF] hover:bg-blue-50 disabled:opacity-40"
       >
@@ -34,7 +35,7 @@ export function QuantitySelector({ value, onChange, min = 1, max = 99 }: Quantit
       </span>
       <button
         onClick={handleIncrement}
-        disabled={value >= max}
+        disabled={disabled || value >= max}
         aria-label="Increase quantity"
         className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded border border-[#2979FF] text-[#2979FF] hover:bg-blue-50 disabled:opacity-40"
       >

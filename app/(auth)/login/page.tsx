@@ -47,6 +47,7 @@ export default function LoginPage() {
         redirect: false,
         email: validation.data.email,
         password: validation.data.password,
+        rememberMe: String(rememberMe),
       });
 
       if (result?.error) {
@@ -94,6 +95,7 @@ export default function LoginPage() {
           error={errors.password?.[0]}
           placeholder="••••••••"
           disabled={isLoading}
+          showPasswordToggle
         />
         
         <div className="flex items-center justify-between text-sm">
