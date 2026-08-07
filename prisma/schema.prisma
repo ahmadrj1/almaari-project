@@ -35,12 +35,23 @@ model Product {
   description String
   price       Decimal  @db.Decimal(10, 2)
   image       String
+  categoryId  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   variants    ProductVariant[]
   cartItems   CartItem[]
   orderItems  OrderItem[]
+  images      ProductImage[]
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
 }
 
 model Color {
@@ -48,6 +59,18 @@ model Color {
   name     String           @unique
   hexCode  String
   variants ProductVariant[]
+  images   ProductImage[]
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  colorId   String?
+  url       String
+  sortOrder Int      @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color   Color?   @relation(fields: [colorId], references: [id], onDelete: SetNull)
 }
 
 model Size {

@@ -20,10 +20,20 @@ export async function GET(req: Request) {
       { createdAt: "desc" };
 
     const inStock = url.searchParams.get("inStock") === "true";
+    const categoryId = url.searchParams.get("categoryId");
 
-    const where: Prisma.ProductWhereInput = search
-      ? { title: { contains: search, mode: "insensitive" } }
-      : {};
+    const where: Prisma.ProductWhereInput = {};
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { category: { name: { contains: search, mode: "insensitive" } } }
+      ];
+    }
+
+    if (categoryId) {
+      where.categoryId = categoryId;
+    }
 
     if (inStock) {
       where.variants = { some: { stock: { gt: 0 } } };
@@ -36,6 +46,10 @@ export async function GET(req: Request) {
         skip, 
         take: limit,
         include: {
+          category: true,
+          images: {
+            orderBy: { sortOrder: 'asc' }
+          },
           variants: {
             include: { color: true, size: true },
             orderBy: [{ color: { name: 'asc' } }, { size: { sortOrder: 'asc' } }]

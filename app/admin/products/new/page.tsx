@@ -6,6 +6,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Upload, Plus, Trash2 } from "lucide-react";
 
+interface Color { id: string; name: string; hexCode: string; }
+interface Size { id: string; name: string; }
+interface Variant { id: string; colorId: string; sizeId: string; stock: string | number; colorName?: string; sizeName?: string; }
+interface Category { id: string; name: string; }
+interface ProductImageUpload {
+  id: string;
+  file?: File;
+  previewUrl: string;
+  colorId: string; // empty means global
+}
+
 export default function AddProductPage() {
   const router = useRouter();
   
@@ -13,67 +24,139 @@ export default function AddProductPage() {
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState(""); // Overall quantity/stock
   
-  interface Color { id: string; name: string; hexCode: string; }
-  interface Size { id: string; name: string; }
-  interface Variant { id: string; colorId: string; sizeId: string; stock: string | number; colorName?: string; sizeName?: string; }
-
   const [colors, setColors] = useState<Color[]>([]);
   const [sizes, setSizes] = useState<Size[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   
+  const [categoryId, setCategoryId] = useState("");
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+
   const [variants, setVariants] = useState<Variant[]>([]);
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [variantQty, setVariantQty] = useState("");
   
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [productImages, setProductImages] = useState<ProductImageUpload[]>([]);
   
   const [saving, setSaving] = useState(false);
-  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchColorsAndSizes = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/colors-sizes");
-      const data = await res.json();
-      if (data.success) {
-        setColors(data.data.colors);
-        setSizes(data.data.sizes);
+      const [resCS, resCat] = await Promise.all([
+        fetch("/api/admin/colors-sizes"),
+        fetch("/api/categories")
+      ]);
+      const dataCS = await resCS.json();
+      const dataCat = await resCat.json();
+      
+      if (dataCS.success) {
+        setColors(dataCS.data.colors);
+        setSizes(dataCS.data.sizes);
+      }
+      if (dataCat.success) {
+        setCategories(dataCat.data);
       }
     } catch (error) {
-      console.error("Failed to fetch colors and sizes:", error);
+      console.error("Failed to fetch colors, sizes, and categories:", error);
     }
   }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchColorsAndSizes();
-  }, [fetchColorsAndSizes]);
+    fetchData();
+  }, [fetchData]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    setIsCreatingCategory(true);
+    try {
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCategoryName }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCategories((prev) => [...prev, data.data]);
+        setCategoryId(data.data.id);
+        setNewCategoryName("");
+      } else {
+        alert(data.error || "Failed to create category");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error creating category");
+    } finally {
+      setIsCreatingCategory(false);
     }
+  };
+
+  const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      const newImages = files.map((file) => ({
+        id: Math.random().toString(36).substr(2, 9),
+        file,
+        previewUrl: URL.createObjectURL(file),
+        colorId: "",
+      }));
+      setProductImages((prev) => [...prev, ...newImages]);
+    }
+  };
+
+  const handleImageColorChange = (id: string, colorId: string) => {
+    setProductImages((prev) =>
+      prev.map((img) => (img.id === id ? { ...img, colorId } : img))
+    );
+  };
+
+  const handleRemoveImage = (id: string) => {
+    setProductImages((prev) => prev.filter((img) => img.id !== id));
   };
 
   const addVariant = () => {
     if (!selectedColor || !selectedSize || !variantQty) return;
-    
-    const colorObj = colors.find(c => c.id === selectedColor);
-    const sizeObj = sizes.find(s => s.id === selectedSize);
-    
-    setVariants([...variants, {
-      id: Date.now().toString(), // temporary id
-      colorId: selectedColor,
-      sizeId: selectedSize,
-      stock: variantQty,
-      colorName: colorObj?.name,
-      sizeName: sizeObj?.name
-    }]);
-    
-    // reset variant inputs
+
+    const colorObj = colors.find((c) => c.id === selectedColor);
+    const sizeObj = sizes.find((s) => s.id === selectedSize);
+
+    const qtyToAdd = Number(variantQty);
+
+    const existingVariant = variants.find(
+      (v) =>
+        v.colorId === selectedColor &&
+        v.sizeId === selectedSize
+    );
+
+    if (existingVariant) {
+      // Merge duplicate variant stock
+      setVariants((prev) =>
+        prev.map((v) =>
+          v.id === existingVariant.id
+            ? {
+                ...v,
+                stock: Number(v.stock) + qtyToAdd,
+              }
+            : v
+        )
+      );
+    } else {
+      // Add new variant
+      setVariants((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          colorId: selectedColor,
+          sizeId: selectedSize,
+          stock: qtyToAdd,
+          colorName: colorObj?.name,
+          sizeName: sizeObj?.name,
+        },
+      ]);
+    }
+
     setSelectedColor("");
     setSelectedSize("");
     setVariantQty("");
@@ -89,31 +172,39 @@ export default function AddProductPage() {
       return;
     }
     
-    if (!imageFile && !imagePreview) {
-      alert("Please upload an image.");
+    if (productImages.length === 0) {
+      alert("Please upload at least one image.");
       return;
     }
 
     setSaving(true);
     try {
-      let imagePath = "";
-      
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("file", imageFile);
-        formData.append("title", title);
-        
-        const uploadRes = await fetch("/api/admin/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const uploadData = await uploadRes.json();
-        if (uploadData.success) {
-          imagePath = uploadData.imagePath;
-        } else {
-          throw new Error("Image upload failed");
+      const uploadedImages: { url: string; colorId: string | null }[] = [];
+
+      for (const img of productImages) {
+        if (img.file) {
+          const formData = new FormData();
+          formData.append("file", img.file);
+          formData.append("title", `${title}-${img.colorId || "default"}`);
+          
+          const uploadRes = await fetch("/api/admin/upload", {
+            method: "POST",
+            body: formData,
+          });
+          const uploadData = await uploadRes.json();
+          if (uploadData.success) {
+            uploadedImages.push({
+              url: uploadData.imagePath,
+              colorId: img.colorId || null,
+            });
+          } else {
+            throw new Error("Image upload failed");
+          }
         }
       }
+
+      // First image or first default image will be primary
+      const primaryImage = uploadedImages[0]?.url || "";
 
       const res = await fetch("/api/admin/products", {
         method: "POST",
@@ -121,8 +212,10 @@ export default function AddProductPage() {
         body: JSON.stringify({
           title,
           price: Number(price),
-          image: imagePath,
-          variants: variants.map(v => ({ colorId: v.colorId, sizeId: v.sizeId, stock: v.stock }))
+          image: primaryImage,
+          categoryId: categoryId || null,
+          variants: variants.map(v => ({ colorId: v.colorId, sizeId: v.sizeId, stock: v.stock })),
+          images: uploadedImages, // Include multi-image array
         }),
       });
 
@@ -149,35 +242,48 @@ export default function AddProductPage() {
       </div>
 
       <div className="flex flex-col md:flex-row gap-8">
-        {/* Left: Image Upload */}
+        {/* Left: Multi-Image Upload */}
         <div className="w-full md:w-1/3 flex flex-col gap-4">
+          <label className="block text-sm font-medium text-gray-700">Product Images</label>
           <div 
-            className="border-2 border-dashed border-gray-200 rounded-lg h-64 flex flex-col items-center justify-center p-4 bg-gray-50 relative overflow-hidden"
-          >
-            {imagePreview ? (
-              <Image src={imagePreview} alt="Preview" fill className="object-contain" unoptimized />
-            ) : (
-              <div className="flex flex-col items-center justify-center text-gray-400">
-                <div className="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mb-4">
-                  <Upload size={24} />
-                </div>
-                <span className="text-sm">Click upload to select</span>
-              </div>
-            )}
-          </div>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleImageChange} 
-            className="hidden" 
-            accept="image/*" 
-          />
-          <button 
+            className="border-2 border-dashed border-gray-200 rounded-lg p-4 bg-gray-50 flex flex-col items-center justify-center min-h-[150px] cursor-pointer hover:bg-gray-100 transition-colors"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full bg-blue-500 text-white font-medium py-2.5 rounded hover:bg-blue-600 transition-colors"
           >
-            Upload
-          </button>
+            <Upload size={24} className="text-gray-400 mb-2" />
+            <span className="text-xs text-gray-500">Upload multiple images</span>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleAddImage} 
+              className="hidden" 
+              accept="image/*" 
+              multiple
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 max-h-[400px] overflow-y-auto pr-1">
+            {productImages.map((img) => (
+              <div key={img.id} className="border border-gray-100 p-2 rounded-lg bg-white shadow-sm flex flex-col gap-2 relative">
+                <button 
+                  onClick={() => handleRemoveImage(img.id)}
+                  className="absolute top-1 right-1 w-6 h-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors z-10"
+                >
+                  &times;
+                </button>
+                <div className="relative aspect-video w-full bg-gray-100 rounded-md overflow-hidden">
+                  <Image src={img.previewUrl} alt="Preview" fill className="object-contain" unoptimized />
+                </div>
+                <select
+                  value={img.colorId}
+                  onChange={(e) => handleImageColorChange(img.id, e.target.value)}
+                  className="w-full border border-gray-200 rounded p-1 text-xs bg-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">Global (Default)</option>
+                  {colors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Right: Form */}
@@ -217,8 +323,39 @@ export default function AddProductPage() {
             </div>
           </div>
 
+          {/* Category selection */}
+          <div className="border-t border-gray-100 pt-4">
+            <label className="block text-sm text-gray-700 mb-1 font-medium">Category</label>
+            <div className="flex gap-3 items-center">
+              <select 
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="flex-1 border border-gray-200 rounded p-2.5 text-sm bg-white focus:outline-none focus:border-blue-500"
+              >
+                <option value="">Select Category</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <span className="text-gray-400 text-sm">or</span>
+              <input 
+                type="text"
+                placeholder="New Category Name"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="flex-1 border border-gray-200 rounded p-2.5 text-sm focus:outline-none focus:border-blue-500"
+              />
+              <button 
+                onClick={handleCreateCategory}
+                disabled={isCreatingCategory || !newCategoryName.trim()}
+                className="bg-blue-500 text-white px-4 py-2.5 rounded text-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+
           {/* Variants section */}
-          <div className="space-y-3">
+          <div className="space-y-3 border-t border-gray-100 pt-4">
+            <label className="block text-sm text-gray-700 mb-1 font-medium">Add Product Variants</label>
             <div className="flex items-center gap-3">
               <select 
                 value={selectedColor}

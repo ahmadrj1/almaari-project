@@ -1,25 +1,27 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { ShoppingCart, Home, Bell } from "lucide-react"
-import { UserMenu } from "./user-menu"
-import { useSession } from "next-auth/react"
-import { useCartCount } from "@/hooks/use-cart-count"
-import { useToast } from "@/hooks/use-toast"
-import { APP_NAME } from "@/lib/constants"
+import Link from "next/link";
+import { ShoppingCart, Bell } from "lucide-react";
+import { UserMenu } from "./user-menu";
+import { useSession } from "next-auth/react";
+import { useCartCount } from "@/hooks/use-cart-count";
+import { useToast } from "@/hooks/use-toast";
+import { APP_NAME } from "@/lib/constants";
 
 export function Navbar() {
-  const { status } = useSession()
-  const isAuthenticated = status === "authenticated"
-  const { count: cartCount } = useCartCount()
-  const { showToast } = useToast()
+  const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
+  const { count: cartCount } = useCartCount();
+  const { showToast } = useToast();
 
   return (
     <nav className="sticky top-0 z-40 w-full border-b border-gray-100 bg-white/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-6">
-          <Link href="/" className="text-xl font-bold tracking-tight text-[#2979FF]">
+          <Link
+            href="/"
+            className="text-xl font-bold tracking-tight text-[#2979FF]"
+          >
             {APP_NAME}
           </Link>
         </div>
@@ -32,13 +34,6 @@ export function Navbar() {
           >
             <Bell className="h-5 w-5" />
           </button>
-          <Link
-            href="/"
-            className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
-            title="Homepage"
-          >
-            <Home className="h-5 w-5" />
-          </Link>
           <Link
             href="/cart"
             className="relative rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
@@ -64,5 +59,5 @@ export function Navbar() {
         </div>
       </div>
     </nav>
-  )
+  );
 }

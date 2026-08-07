@@ -18,9 +18,57 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ success: false, error: "Invalid status" }, { status: 400 });
     }
 
-    const updated = await prisma.order.update({
-      where: { id },
-      data: { status },
+    const updated = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id },
+        include: { items: true }
+      });
+
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      const isCancelling = status === OrderStatus.CANCELLED && order.status !== OrderStatus.CANCELLED;
+      const isRestoring = status !== OrderStatus.CANCELLED && order.status === OrderStatus.CANCELLED;
+
+      if (isCancelling) {
+        for (const item of order.items) {
+          const variant = await tx.productVariant.findFirst({
+            where: {
+              productId: item.productId,
+              color: { name: item.colorName },
+              size: { name: item.sizeName }
+            }
+          });
+          if (variant) {
+            await tx.productVariant.update({
+              where: { id: variant.id },
+              data: { stock: { increment: item.quantity } }
+            });
+          }
+        }
+      } else if (isRestoring) {
+        for (const item of order.items) {
+          const variant = await tx.productVariant.findFirst({
+            where: {
+              productId: item.productId,
+              color: { name: item.colorName },
+              size: { name: item.sizeName }
+            }
+          });
+          if (variant) {
+            await tx.productVariant.update({
+              where: { id: variant.id },
+              data: { stock: { decrement: item.quantity } }
+            });
+          }
+        }
+      }
+
+      return await tx.order.update({
+        where: { id },
+        data: { status },
+      });
     });
 
     return NextResponse.json({ success: true, data: updated });

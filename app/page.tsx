@@ -23,9 +23,11 @@ type Product = {
   description: string;
   price: number;
   image: string;
+  categoryId: string | null;
   createdAt: Date;
   updatedAt: Date;
   variants: import("@/components/ui/product-card").Variant[];
+  images?: { id: string; url: string; colorId: string | null }[];
 };
 
 type Pagination = { page: number; totalPages: number; total: number };
@@ -40,21 +42,39 @@ function HomeContent() {
   const { refresh } = useCartCount();
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, totalPages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
 
   const searchParam = searchParams.get("search") || "";
   const sort = searchParams.get("sort") || DEFAULT_SORT;
+  const categoryId = searchParams.get("categoryId") || "";
   const page = parseInt(searchParams.get("page") || "1");
 
   const [localSearch, setLocalSearch] = useState(searchParam);
   const debouncedSearch = useDebounce(localSearch);
 
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetch("/api/categories");
+      const data = await res.json();
+      if (data.success) {
+        setCategories(data.data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   const fetchProducts = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
       await new Promise((r) => setTimeout(r, 1000));
-      const params = new URLSearchParams({ search: searchParam, sort, page: String(page), limit: String(PRODUCTS_PER_PAGE_DEFAULT) });
+      const paramsParams: Record<string, string> = { search: searchParam, sort, page: String(page), limit: String(PRODUCTS_PER_PAGE_DEFAULT) };
+      if (categoryId) {
+        paramsParams.categoryId = categoryId;
+      }
+      const params = new URLSearchParams(paramsParams);
       const res = await fetch(`/api/products?${params}`, { method: "GET" });
       
       if (!res.ok) {
@@ -69,7 +89,12 @@ function HomeContent() {
     } finally {
       setLoading(false);
     }
-  }, [searchParam, sort, page]);
+  }, [searchParam, sort, page, categoryId]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchCategories();
+  }, [fetchCategories]);
 
   useEffect(() => { 
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -123,18 +148,32 @@ function HomeContent() {
       <main className="container mx-auto flex-1 px-4 py-6 sm:py-8">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold text-primary">Our Products</h1>
-          <div className="flex gap-3 w-full sm:w-auto">
-            <SearchBar
-              placeholder="Search products..."
-              className="w-full sm:w-100"
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-            />
-            <SortDropdown
-              options={SORT_OPTIONS}
-              value={sort}
-              onChange={(e) => updateParams({ sort: e.target.value })}
-            />
+          <div className="flex flex-row items-center gap-3 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-none shrink-0">
+            <select
+              value={categoryId}
+              onChange={(e) => updateParams({ categoryId: e.target.value })}
+              className="h-11 rounded-lg border-1 border-[#E1E7EF] bg-white px-3 text-sm text-[#98A4C4] outline-none hover:border-primary focus:ring-0"
+            >
+              <option value="">All Categories</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <div className="shrink-0 w-48 sm:w-80">
+              <SearchBar
+                placeholder="Search products..."
+                className="w-full"
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
+              />
+            </div>
+            <div className="shrink-0">
+              <SortDropdown
+                options={SORT_OPTIONS}
+                value={sort}
+                onChange={(e) => updateParams({ sort: e.target.value })}
+              />
+            </div>
           </div>
         </div>
 

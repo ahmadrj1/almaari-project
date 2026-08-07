@@ -18,6 +18,7 @@ export interface ProductCardProps {
   product: Omit<Product, "price"> & { 
     price: number | { toNumber(): number; toString(): string },
     variants?: Variant[]
+    images?: { id: string; url: string; colorId: string | null }[]
   }
   onAddToCart?: (productId: string, variantId: string, quantity: number) => void
 }
@@ -25,6 +26,7 @@ export interface ProductCardProps {
 export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const [quantity, setQuantity] = React.useState(1)
   const variants = React.useMemo(() => product.variants || [], [product.variants])
+  const scrollRef = React.useRef<HTMLDivElement>(null)
 
   // Extract unique colors and sizes
   const colors = React.useMemo(() => {
@@ -53,17 +55,54 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     setQuantity(prev => Math.min(prev, maxStock > 0 ? maxStock : 1))
   }, [maxStock])
 
+  const displayImages = React.useMemo(() => {
+    if (product.images && product.images.length > 0) {
+      return product.images;
+    }
+    return [{ id: "default", url: product.image, colorId: null }];
+  }, [product.images, product.image]);
+
+  const handleColorSelect = (colorId: string) => {
+    setSelectedColorId(colorId);
+    if (!scrollRef.current) return;
+    
+    const targetElement = scrollRef.current.querySelector(`[data-color-id="${colorId}"]`) as HTMLElement;
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+    } else {
+      const firstElement = scrollRef.current.firstElementChild as HTMLElement;
+      if (firstElement) {
+        firstElement.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+      }
+    }
+  };
+
   return (
     <div className={`group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white transition-shadow hover:shadow-lg ${isOutOfStock ? "opacity-75" : ""}`}>
       <div className="relative aspect-square overflow-hidden bg-gray-100">
-        <Image
-          src={product.image}
-          alt={product.title}
-          loading="eager"
-          sizes="50vw"
-          fill
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
-        />
+        <div 
+          ref={scrollRef}
+          className="flex h-full w-full overflow-x-auto scrollbar-none snap-x snap-mandatory"
+          style={{ scrollSnapType: "x mandatory", scrollBehavior: "smooth" }}
+        >
+          {displayImages.map((img, idx) => (
+            <div 
+              key={img.id || idx} 
+              data-color-id={img.colorId || ""} 
+              className="relative h-full w-full flex-shrink-0 snap-start snap-always"
+            >
+              <Image
+                src={img.url}
+                alt={product.title}
+                loading="eager"
+                sizes="50vw"
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                unoptimized
+              />
+            </div>
+          ))}
+        </div>
         {isOutOfStock && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/30">
             <span className="rounded-md bg-white/90 px-3 py-1 text-sm font-bold text-red-600">Out of Stock</span>
@@ -85,7 +124,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               {colors.map(color => (
                 <button
                   key={color.id}
-                  onClick={() => setSelectedColorId(color.id)}
+                  onClick={() => handleColorSelect(color.id)}
                   title={color.name}
                   className={`w-6 h-6 rounded-full border-2 focus:outline-none transition-all ${
                     selectedColorId === color.id ? "border-[#2979FF] scale-110" : "border-transparent"
