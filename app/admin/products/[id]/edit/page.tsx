@@ -6,35 +6,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Upload, Plus, Trash2 } from "lucide-react";
 import React from "react";
-
-interface Color {
-  id: string;
-  name: string;
-  hexCode: string;
-}
-interface Size {
-  id: string;
-  name: string;
-}
-interface Variant {
-  id: string;
-  colorId: string;
-  sizeId: string;
-  stock: string | number;
-  colorName?: string;
-  sizeName?: string;
-}
-interface Category {
-  id: string;
-  name: string;
-}
-interface ProductImageUpload {
-  id: string;
-  file?: File;
-  previewUrl: string;
-  colorId: string;
-  isExisting?: boolean;
-}
+import { Color, Size, Variant, Category, ProductImageUpload } from "@/types";
+import { MAX_UPLOAD_SIZE } from "@/lib/constants";
+import { useToast } from "@/hooks/use-toast";
 
 export default function EditProductPage({
   params,
@@ -43,6 +17,7 @@ export default function EditProductPage({
 }) {
   const router = useRouter();
   const id = React.use(params).id;
+  const { showToast } = useToast();
 
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
@@ -157,11 +132,11 @@ export default function EditProductPage({
         setCategoryId(data.data.id);
         setNewCategoryName("");
       } else {
-        alert(data.error || "Failed to create category");
+        showToast("error", data.error || "Failed to create category");
       }
     } catch (e) {
       console.error(e);
-      alert("Error creating category");
+      showToast("error", "Error creating category");
     } finally {
       setIsCreatingCategory(false);
     }
@@ -170,7 +145,12 @@ export default function EditProductPage({
   const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      const newImages = files.map((file) => ({
+      const invalidFiles = files.filter((f) => f.size > MAX_UPLOAD_SIZE);
+      if (invalidFiles.length > 0) {
+        showToast("error", "Image upload size is max 10MB.");
+      }
+      const validFiles = files.filter((f) => f.size <= MAX_UPLOAD_SIZE);
+      const newImages = validFiles.map((file) => ({
         id: Math.random().toString(36).substr(2, 9),
         file,
         previewUrl: URL.createObjectURL(file),
@@ -242,12 +222,12 @@ export default function EditProductPage({
 
   const handleUpdate = async () => {
     if (!title || !price || variants.length === 0) {
-      alert("Please fill required fields and add at least one variant.");
+      showToast("error", "Please fill required fields and add at least one variant.");
       return;
     }
 
     if (productImages.length === 0) {
-      alert("Please upload at least one image.");
+      showToast("error", "Please upload at least one image.");
       return;
     }
 
@@ -308,7 +288,7 @@ export default function EditProductPage({
       }
     } catch (error) {
       console.error(error);
-      alert("Error updating product");
+      showToast("error", "Error updating product");
     } finally {
       setSaving(false);
     }

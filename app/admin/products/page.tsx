@@ -6,29 +6,7 @@ import Link from "next/link";
 import { Edit, Trash2, Eye } from "lucide-react";
 import DeleteProductModal from "@/components/admin/DeleteProductModal";
 import ViewProductModal from "@/components/admin/ViewProductModal";
-
-interface Category {
-  id: string;
-  name: string;
-}
-
-interface ProductSummary {
-  id: string;
-  title: string;
-  price: number | string;
-  image: string;
-  totalStock: number;
-  categoryId: string | null;
-  variants: {
-    id: string;
-    stock: number;
-    color: {
-      id: string;
-      name: string;
-      hexCode: string;
-    };
-  }[];
-}
+import { Category, ProductSummary } from "@/types";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductSummary[]>([]);

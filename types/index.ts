@@ -38,23 +38,17 @@ export type OrderDetail = {
   subTotal: string | number;
   tax: string | number;
   total: string | number;
-  items: {
-    id: string;
-    quantity: number;
-    price: string | number;
-    colorName: string;
-    sizeName: string;
-    product: {
-      title: string;
-      image: string;
-    };
-  }[];
+  items: OrderItem[];
   address?: {
     street: string;
     city?: string;
     zipCode?: string;
     country?: string;
   };
+  user: {
+    id: string;
+    fullName: string;
+  } | null;
 };
 
 export type NotificationType = "ORDER_PLACED" | "ORDER_STATUS_UPDATED" | "NEW_PRODUCT" | string;
@@ -131,4 +125,69 @@ export interface ToastData {
   id: string
   type: "success" | "error" | "info"
   message: string
+}
+
+export interface Color {
+  id: string;
+  name: string;
+  hexCode: string;
+}
+export interface Size {
+  id: string;
+  name: string;
+}
+export interface Variant {
+  id: string;
+  colorId: string;
+  sizeId: string;
+  stock: string | number;
+  colorName?: string;
+  sizeName?: string;
+}
+export interface Category {
+  id: string;
+  name: string;
+}
+export interface ProductImageUpload {
+  id: string;
+  file?: File;
+  previewUrl: string;
+  colorId: string;
+  isExisting?: boolean;
+}
+
+export interface ProductSummary {
+  id: string;
+  title: string;
+  price: number | string;
+  image: string;
+  totalStock: number;
+  categoryId: string | null;
+  variants: {
+    id: string;
+    stock: number;
+    color: {
+      id: string;
+      name: string;
+      hexCode: string;
+    };
+  }[];
+}
+
+export interface OrderItem {
+  id: string;
+  quantity: number;
+  price: number | string;
+  colorName: string;
+  sizeName: string;
+  product: {
+    title: string;
+    image: string;
+    price: number | string;
+    variants: {
+      color?: { name: string };
+      size?: { name: string };
+      stock: number;
+    }[];
+  } | null;
 }

@@ -5,50 +5,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import React from "react";
+import { STATUS_COLORS, ORDER_STATUSES } from "@/lib/constants";
+import { OrderDetail, OrderItem } from "@/types";
 
-interface OrderItem {
-  id: string;
-  quantity: number;
-  price: number | string;
-  colorName: string;
-  sizeName: string;
-  product: {
-    title: string;
-    image: string;
-    price: number | string;
-    variants: {
-      color?: { name: string };
-      size?: { name: string };
-      stock: number;
-    }[];
-  } | null;
-}
-
-interface OrderDetail {
-  id: string;
-  createdAt: string;
-  subTotal: number | string;
-  tax: number | string;
-  total: number | string;
-  status: string;
-  user: {
-    id: string;
-    fullName: string;
-  } | null;
-  items: OrderItem[];
-}
-
-const ORDER_STATUSES = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
-
-const STATUS_COLORS: Record<string, string> = {
-  PENDING:    "bg-yellow-100 text-yellow-700",
-  PROCESSING: "bg-blue-100 text-blue-700",
-  SHIPPED:    "bg-indigo-100 text-indigo-700",
-  DELIVERED:  "bg-green-100 text-green-700",
-  CANCELLED:  "bg-red-100 text-red-700",
-};
-
-export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function OrderDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -81,7 +45,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       });
       const data = await res.json();
       if (data.success) {
-        setOrder((prev) => prev ? { ...prev, status } : prev);
+        setOrder((prev) => (prev ? { ...prev, status } : prev));
       }
     } catch (error) {
       console.error("Failed to update status:", error);
@@ -91,17 +55,29 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   };
 
   const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
+    new Date(dateStr).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading...</div>;
-  if (!order) return <div className="p-8 text-center text-red-500">Order not found.</div>;
+  if (loading)
+    return <div className="p-8 text-center text-gray-500">Loading...</div>;
+  if (!order)
+    return <div className="p-8 text-center text-red-500">Order not found.</div>;
 
-  const totalProducts = order.items.reduce((sum: number, item: OrderItem) => sum + item.quantity, 0);
+  const totalProducts = order.items.reduce(
+    (sum: number, item: OrderItem) => sum + item.quantity,
+    0,
+  );
 
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm min-h-[calc(100vh-8rem)]">
       <div className="flex items-center gap-4 border-b border-gray-200 pb-4 mb-6">
-        <Link href="/admin/orders" className="text-blue-500 hover:text-blue-700">
+        <Link
+          href="/admin/orders"
+          className="text-blue-500 hover:text-blue-700"
+        >
           <ArrowLeft size={20} />
         </Link>
         <h1 className="text-2xl font-semibold text-slate-800">Order Detail</h1>
@@ -111,36 +87,52 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       <div className="grid grid-cols-2 md:grid-cols-8 gap-4 mb-10 pb-6 border-b border-gray-100 items-start">
         <div>
           <p className="text-sm text-gray-500 mb-1">Date</p>
-          <p className="font-medium text-gray-800">{formatDate(order.createdAt)}</p>
+          <p className="font-medium text-gray-800">
+            {formatDate(order.createdAt)}
+          </p>
         </div>
         <div>
           <p className="text-sm text-gray-500 mb-1">Order #</p>
-          <p className="font-medium text-gray-800 font-mono text-xs">{order.id.slice(0, 8)}</p>
+          <p className="font-medium text-gray-800 font-mono text-xs">
+            {order.id.slice(0, 8)}
+          </p>
         </div>
         <div>
           <p className="text-sm text-gray-500 mb-1">User</p>
-          <p className="font-medium text-gray-800">{order.user?.fullName || "Unknown"}</p>
+          <p className="font-medium text-gray-800">
+            {order.user?.fullName || "Unknown"}
+          </p>
         </div>
         <div>
           <p className="text-sm text-gray-500 mb-1">Products</p>
-          <p className="font-medium text-gray-800">{String(totalProducts).padStart(2, "0")}</p>
+          <p className="font-medium text-gray-800">
+            {String(totalProducts).padStart(2, "0")}
+          </p>
         </div>
         <div>
           <p className="text-sm text-gray-500 mb-1">Sub Total</p>
-          <p className="font-medium text-gray-800">Rs. {Number(order.subTotal).toFixed(2)}</p>
+          <p className="font-medium text-gray-800">
+            Rs. {Number(order.subTotal).toFixed(2)}
+          </p>
         </div>
         <div>
           <p className="text-sm text-gray-500 mb-1">Tax</p>
-          <p className="font-medium text-gray-800">Rs. {Number(order.tax).toFixed(2)}</p>
+          <p className="font-medium text-gray-800">
+            Rs. {Number(order.tax).toFixed(2)}
+          </p>
         </div>
         <div>
           <p className="text-sm text-gray-500 mb-1">Total</p>
-          <p className="font-medium text-gray-800">Rs. {Number(order.total).toFixed(2)}</p>
+          <p className="font-medium text-gray-800">
+            Rs. {Number(order.total).toFixed(2)}
+          </p>
         </div>
         {/* Status with change control */}
         <div>
           <p className="text-sm text-gray-500 mb-1">Status</p>
-          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mb-2 ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}>
+          <span
+            className={`inline-block px-2 py-1 rounded-full text-xs font-medium mb-2 ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}
+          >
             {order.status}
           </span>
           <select
@@ -150,13 +142,17 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             className="block w-full text-xs border border-gray-200 rounded p-1.5 bg-white focus:outline-none focus:border-blue-500 disabled:opacity-50"
           >
             {ORDER_STATUSES.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
           </select>
         </div>
       </div>
 
-      <h2 className="text-xl font-semibold text-slate-800 mb-4">Product Information</h2>
+      <h2 className="text-xl font-semibold text-slate-800 mb-4">
+        Product Information
+      </h2>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
@@ -171,14 +167,22 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <tbody className="text-sm">
             {order.items.map((item: OrderItem) => {
               const variant = item.product?.variants?.find(
-                (v) => v.color?.name === item.colorName && v.size?.name === item.sizeName
+                (v) =>
+                  v.color?.name === item.colorName &&
+                  v.size?.name === item.sizeName,
               );
               const stock = variant
                 ? variant.stock
-                : item.product?.variants?.reduce((sum: number, v) => sum + v.stock, 0) || 0;
+                : item.product?.variants?.reduce(
+                    (sum: number, v) => sum + v.stock,
+                    0,
+                  ) || 0;
 
               return (
-                <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                <tr
+                  key={item.id}
+                  className="border-b border-gray-100 hover:bg-gray-50/50"
+                >
                   <td className="py-4 px-4 flex items-center gap-4">
                     <div className="w-12 h-12 relative flex-shrink-0 bg-gray-100 rounded overflow-hidden">
                       <Image
@@ -193,9 +197,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       {item.product?.title || "Deleted Product"}
                     </span>
                   </td>
-                  <td className="py-4 px-4 text-gray-600">Rs. {Number(item.price).toFixed(2)}</td>
-                  <td className="py-4 px-4 text-gray-600">{String(item.quantity).padStart(2, "0")}</td>
-                  <td className="py-4 px-4 text-gray-600">{String(stock).padStart(2, "0")}</td>
+                  <td className="py-4 px-4 text-gray-600">
+                    Rs. {Number(item.price).toFixed(2)}
+                  </td>
+                  <td className="py-4 px-4 text-gray-600">
+                    {String(item.quantity).padStart(2, "0")}
+                  </td>
+                  <td className="py-4 px-4 text-gray-600">
+                    {String(stock).padStart(2, "0")}
+                  </td>
                 </tr>
               );
             })}

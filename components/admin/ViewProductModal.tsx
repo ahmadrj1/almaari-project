@@ -13,13 +13,16 @@ interface ViewProductModalProps {
 export default function ViewProductModal({ productId, onClose }: ViewProductModalProps) {
   const [product, setProduct] = React.useState<FullProduct | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [prevProductId, setPrevProductId] = React.useState<string | null>(null);
+
+  if (productId !== prevProductId) {
+    setPrevProductId(productId);
+    setProduct(null);
+    setLoading(productId !== null);
+  }
 
   React.useEffect(() => {
-    if (!productId) {
-      setProduct(null);
-      return;
-    }
-    setLoading(true);
+    if (!productId) return;
     fetch(`/api/admin/products/${productId}`)
       .then((r) => r.json())
       .then((data) => {
