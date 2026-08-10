@@ -9,13 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PackageSearch } from "lucide-react";
 import { ORDERS_PER_PAGE_DEFAULT } from "@/lib/constants";
-
-type Order = {
-  id: string;
-  createdAt: string;
-  status: string;
-  total: string | number;
-};
+import type { Order } from "@/types";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);

@@ -1,16 +1,7 @@
 "use client";
 
 import * as React from "react";
-
-export interface Option {
-  label: string;
-  value: string;
-}
-
-export interface SortDropdownProps
-  extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  options: readonly Option[];
-}
+import type { SortDropdownProps } from "@/types";
 
 export const SortDropdown = React.forwardRef<
   HTMLSelectElement,

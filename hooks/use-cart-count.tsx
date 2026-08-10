@@ -2,14 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
-
-interface CartCountContextValue {
-  count: number;
-  increment: () => void;
-  decrement: () => void;
-  setCount: (n: number) => void;
-  refresh: () => void;
-}
+import { CartCountContextValue } from "@/types";
 
 const CartCountContext = createContext<CartCountContextValue>({
   count: 0,

@@ -16,19 +16,7 @@ import { SORT_OPTIONS, PRODUCTS_PER_PAGE_DEFAULT, DEFAULT_SORT } from "@/lib/con
 import { useDebounce } from "@/hooks/use-debounce";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-
-type Product = {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  image: string;
-  categoryId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  variants: import("@/components/ui/product-card").Variant[];
-  images?: { id: string; url: string; colorId: string | null }[];
-};
+import type { Product } from "@/types";
 
 type Pagination = { page: number; totalPages: number; total: number };
 

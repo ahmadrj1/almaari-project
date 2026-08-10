@@ -19,9 +19,11 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  cartItems      CartItem[]
-  orders         Order[]
-  addresses      Address[]
+  cartItems          CartItem[]
+  orders             Order[]
+  addresses          Address[]
+  notifications      Notification[]
+  notificationReads  NotificationRead[]
 }
 
 enum Role {
@@ -161,4 +163,30 @@ model Address {
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders Order[]
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String?
+  type      String   // ORDER_PLACED, ORDER_STATUS_UPDATED, NEW_PRODUCT
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reads NotificationRead[]
+}
+
+model NotificationRead {
+  id             String   @id @default(uuid())
+  userId         String
+  notificationId String
+  createdAt      DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationId])
 }

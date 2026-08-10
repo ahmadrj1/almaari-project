@@ -2,12 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { Role } from "@prisma/client";
-import { z } from "zod";
 import { logger } from "@/lib/logger";
-
-const categorySchema = z.object({
-  name: z.string().min(1, "Category name is required"),
-});
+import { categorySchema } from "@/lib/validations/main";
 
 export async function GET() {
   try {

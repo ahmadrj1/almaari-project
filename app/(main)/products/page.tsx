@@ -18,19 +18,7 @@ import {
   DEFAULT_SORT,
 } from "@/lib/constants";
 import { useDebounce } from "@/hooks/use-debounce";
-
-type Product = {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  image: string;
-  categoryId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  variants: import("@/components/ui/product-card").Variant[];
-  images?: { id: string; url: string; colorId: string | null }[];
-};
+import type { Product } from "@/types";
 
 type Pagination = { page: number; totalPages: number; total: number };
 

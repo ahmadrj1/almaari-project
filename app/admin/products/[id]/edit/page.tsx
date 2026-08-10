@@ -32,7 +32,7 @@ interface ProductImageUpload {
   id: string;
   file?: File;
   previewUrl: string;
-  colorId: string; // empty means global
+  colorId: string;
   isExisting?: boolean;
 }
 
@@ -291,7 +291,7 @@ export default function EditProductPage({
           title,
           price: Number(price),
           image: primaryImage,
-          categoryId: categoryId || null,
+          categoryId: categoryId && categoryId !== "create_new" ? categoryId : null,
           variants: variants.map((v) => ({
             colorId: v.colorId,
             sizeId: v.sizeId,
@@ -440,7 +440,12 @@ export default function EditProductPage({
             <div className="flex gap-3 items-center">
               <select
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
+                onChange={(e) => {
+                  setCategoryId(e.target.value);
+                  if (e.target.value !== "create_new") {
+                    setNewCategoryName("");
+                  }
+                }}
                 className="flex-1 border border-gray-200 rounded p-2.5 text-sm bg-white focus:outline-none focus:border-blue-500"
               >
                 <option value="">Select Category</option>
@@ -449,22 +454,28 @@ export default function EditProductPage({
                     {c.name}
                   </option>
                 ))}
+                <option value="create_new" className="font-semibold text-blue-600">+ Create New Category</option>
               </select>
-              <span className="text-gray-400 text-sm">or</span>
-              <input
-                type="text"
-                placeholder="New Category Name"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                className="flex-1 border border-gray-200 rounded p-2.5 text-sm focus:outline-none focus:border-blue-500"
-              />
-              <button
-                onClick={handleCreateCategory}
-                disabled={isCreatingCategory || !newCategoryName.trim()}
-                className="bg-blue-500 text-white px-4 py-2.5 rounded text-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
-              >
-                Create
-              </button>
+              
+              {categoryId === "create_new" && (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Category name…"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    className="animate-slide-in flex-1 border border-gray-200 rounded p-2.5 text-sm bg-white focus:outline-none focus:border-blue-500"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleCreateCategory}
+                    disabled={isCreatingCategory || !newCategoryName.trim()}
+                    className="animate-slide-in bg-blue-500 text-white px-4 py-2.5 rounded text-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
+                  >
+                    Create
+                  </button>
+                </>
+              )}
             </div>
           </div>
 

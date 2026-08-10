@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { Role, OrderStatus } from "@prisma/client";
 import { logger } from "@/lib/logger";
+import { createNotification } from "@/lib/notifications";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -70,6 +71,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         data: { status },
       });
     });
+
+    // Fire notification asynchronously
+    createNotification(
+      updated.userId,
+      "ORDER_STATUS_UPDATED",
+      "Order Status Updated",
+      `Your order #${id.slice(0, 8)} is now ${status.toLowerCase()}.`,
+      { orderId: id, status }
+    );
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {

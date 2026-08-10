@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Eye } from "lucide-react";
 import DeleteProductModal from "@/components/admin/DeleteProductModal";
+import ViewProductModal from "@/components/admin/ViewProductModal";
 
 interface Category {
   id: string;
@@ -46,6 +47,9 @@ export default function AdminProductsPage() {
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+
+  // View product modal state
+  const [viewProductId, setViewProductId] = useState<string | null>(null);
 
   const fetchProducts = useCallback(async (p: number, search: string, catId: string) => {
     setLoading(true);
@@ -201,11 +205,18 @@ export default function AdminProductsPage() {
                   <td className="py-4 text-gray-600">
                     <div className="flex flex-wrap gap-2 items-center">
                       <span className="font-semibold text-gray-800 mr-2">{product.totalStock}</span>
-                      <span className="text-gray-500">({product.variants?.length} Varients)</span>
+                      <span className="text-gray-500">({product.variants?.length} {product.variants?.length === 1 ? "Variant" : "Variants"})</span>
                     </div>
                   </td>
                   <td className="py-4">
                     <div className="flex gap-3">
+                      <button
+                        onClick={() => setViewProductId(product.id)}
+                        className="text-gray-500 hover:text-gray-700 transition-colors p-1"
+                        title="View product"
+                      >
+                        <Eye size={18} />
+                      </button>
                       <Link
                         href={`/admin/products/${product.id}/edit`}
                         className="text-blue-500 hover:text-blue-700 transition-colors p-1"
@@ -267,6 +278,11 @@ export default function AdminProductsPage() {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDelete}
         isDeleting={isDeleting}
+      />
+
+      <ViewProductModal
+        productId={viewProductId}
+        onClose={() => setViewProductId(null)}
       />
     </div>
   );

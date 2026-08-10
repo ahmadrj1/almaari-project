@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { Role, Prisma } from "@prisma/client";
 import { PRODUCTS_PER_PAGE_DEFAULT } from "@/lib/constants";
 import { logger } from "@/lib/logger";
+import { createBroadcastNotification } from "@/lib/notifications";
 
 export async function GET(req: Request) {
   try {
@@ -102,6 +103,14 @@ export async function POST(req: Request) {
       });
       return product;
     });
+
+    // Fire broadcast notification asynchronously
+    createBroadcastNotification(
+      "NEW_PRODUCT",
+      "New Product Available!",
+      `${title} is now available in our store.`,
+      { productId: newProduct.id }
+    );
 
     return NextResponse.json({ success: true, data: newProduct });
   } catch (error) {

@@ -1,12 +1,7 @@
 "use client"
 
 import * as React from "react"
-
-export interface ToastData {
-  id: string
-  type: "success" | "error" | "info"
-  message: string
-}
+import { ToastData } from "@/types"
 
 interface ToastContextType {
   toasts: ToastData[]

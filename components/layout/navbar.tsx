@@ -1,18 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, Bell } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { UserMenu } from "./user-menu";
 import { useSession } from "next-auth/react";
 import { useCartCount } from "@/hooks/use-cart-count";
-import { useToast } from "@/hooks/use-toast";
 import { APP_NAME } from "@/lib/constants";
+import { NotificationBell } from "./notification-bell";
 
 export function Navbar() {
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
   const { count: cartCount } = useCartCount();
-  const { showToast } = useToast();
 
   return (
     <nav className="sticky top-0 z-40 w-full border-b border-gray-100 bg-white/80 backdrop-blur-md">
@@ -27,13 +26,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => showToast("info", "Coming soon")}
-            className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
-            title="Notifications"
-          >
-            <Bell className="h-5 w-5" />
-          </button>
+          {isAuthenticated && <NotificationBell />}
           <Link
             href="/cart"
             className="relative rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
