@@ -1,30 +1,48 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Search } from "lucide-react"
+import * as React from "react";
+import { Search } from "lucide-react";
 
-export type SearchBarProps = React.InputHTMLAttributes<HTMLInputElement>
+export type SearchBarProps =
+  React.InputHTMLAttributes<HTMLInputElement>;
 
-export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
-  ({ className, ...props }, ref) => {
-    return (
-      <div className={`relative w-full ${className || ""}`}>
-        <input
-          type="search"
-          className="block w-full rounded-md border border-gray-300 bg-white py-2.5 pl-4 pr-12 text-sm placeholder:text-gray-400 focus:border-[#2979FF] focus:outline-none focus:ring-1 focus:ring-[#2979FF]"
-          ref={ref}
-          {...props}
+export const SearchBar = React.forwardRef<
+  HTMLInputElement,
+  SearchBarProps
+>(({ className, ...props }, ref) => {
+  return (
+    <div className={`group relative w-full ${className || ""}`}>
+      <input
+        ref={ref}
+        type="search"
+        className="block h-11 w-full rounded-lg border-1 border-[#E1E7EF] bg-white pl-4 pr-12 text-sm text-black outline-none placeholder:text-[#98A4C4] hover:border-primary focus:border-primary focus:ring-0"
+        {...props}
+      />
+
+      <div
+        className="
+          pointer-events-none absolute right-0 top-0
+          flex h-11 w-11 items-center justify-center
+          rounded-r-lg
+          bg-[#F7F8FA]
+          transition-colors duration-150
+          group-hover:bg-primary
+          group-focus-within:bg-primary
+        "
+      >
+        <Search
+          className="
+            h-5 w-5
+            text-[#003B4D]
+            transition-colors duration-150
+            group-hover:text-white
+            group-focus-within:text-white
+          "
+          strokeWidth={2.5}
         />
-        <div className="absolute inset-y-0 right-0 flex items-center pr-1">
-          <button
-            type="button"
-            className="flex h-8 w-8 items-center justify-center rounded bg-[#2979FF] text-white hover:bg-blue-600"
-          >
-            <Search className="h-4 w-4" />
-          </button>
-        </div>
       </div>
-    )
-  }
-)
-SearchBar.displayName = "SearchBar"
+    </div>
+  );
+});
+
+SearchBar.displayName = "SearchBar";

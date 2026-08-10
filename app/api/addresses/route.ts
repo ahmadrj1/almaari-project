@@ -1,15 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { z } from "zod";
 import { logger } from "@/lib/logger";
-
-const addressSchema = z.object({
-  street: z.string().min(1, "Street is required"),
-  city: z.string().optional(),
-  country: z.string().optional(),
-  zipCode: z.string().optional(),
-});
+import { addressSchema } from "@/lib/validations/main";
 
 export async function GET() {
   try {

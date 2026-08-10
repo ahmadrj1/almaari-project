@@ -36,9 +36,15 @@ export async function GET(req: Request) {
         include: { user: true, items: true },
       }),
       prisma.order.count({ where }),
-      prisma.order.count(), // For summary card
-      prisma.order.aggregate({ _sum: { total: true } }), // For summary card
-      prisma.orderItem.aggregate({ _sum: { quantity: true } }) // For summary card
+      prisma.order.count({ where: { status: { not: "CANCELLED" } } }), // For summary card
+      prisma.order.aggregate({
+        where: { status: { not: "CANCELLED" } },
+        _sum: { total: true }
+      }), // For summary card
+      prisma.orderItem.aggregate({
+        where: { order: { status: { not: "CANCELLED" } } },
+        _sum: { quantity: true }
+      }) // For summary card
     ]);
 
     const stats = {

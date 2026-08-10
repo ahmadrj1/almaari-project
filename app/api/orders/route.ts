@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { ORDERS_PER_PAGE_DEFAULT, TAX_PERCENTAGE } from "@/lib/constants";
+import { ORDERS_PER_PAGE_DEFAULT, TAX_PERCENTAGE, CART_ITEM_EXPIRY_MS } from "@/lib/constants";
 import { logger } from "@/lib/logger";
+import { createNotification } from "@/lib/notifications";
 
 export async function POST(req: Request) {
   try {
@@ -26,6 +27,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Cart is empty" }, { status: 400 });
     }
 
+    const now = Date.now();
+    const hasExpiredItems = cartItems.some(
+      (item) => now - new Date(item.updatedAt).getTime() > CART_ITEM_EXPIRY_MS
+    );
+    if (hasExpiredItems) {
+      return NextResponse.json(
+        { success: false, error: "Some items in your cart have expired. Please refresh the page to update your cart." },
+        { status: 400 }
+      );
+    }
+
     let subTotal = 0;
     cartItems.forEach((item) => {
       subTotal += Number(item.product.price) * item.quantity;
@@ -35,6 +47,18 @@ export async function POST(req: Request) {
     const total = subTotal + tax;
 
     const order = await prisma.$transaction(async (tx) => {
+      for (const item of cartItems) {
+        const [variant] = await tx.$queryRaw<Array<{ stock: number }>>`
+          SELECT stock FROM "ProductVariant" WHERE id = ${item.variantId} FOR UPDATE
+        `;
+        if (!variant || variant.stock < item.quantity) {
+          throw Object.assign(
+            new Error(`Insufficient stock for "${item.product.title}"`),
+            { statusCode: 400 }
+          );
+        }
+      }
+
       const newOrder = await tx.order.create({
         data: {
           userId,
@@ -54,27 +78,33 @@ export async function POST(req: Request) {
         },
       });
 
-      // Update variant stock
       for (const item of cartItems) {
         await tx.productVariant.update({
           where: { id: item.variantId },
-          data: {
-            stock: {
-              decrement: item.quantity,
-            },
-          },
+          data: { stock: { decrement: item.quantity } },
         });
       }
 
-      await tx.cartItem.deleteMany({
-        where: { userId },
-      });
+      await tx.cartItem.deleteMany({ where: { userId } });
 
       return newOrder;
     });
 
+    // Fire notification asynchronously
+    createNotification(
+      userId,
+      "ORDER_PLACED",
+      "Order Placed Successfully",
+      `Your order #${order.id.slice(0, 8)} has been placed.`,
+      { orderId: order.id }
+    );
+
     return NextResponse.json({ success: true, data: order });
   } catch (error) {
+    const err = error as Error & { statusCode?: number };
+    if (err.statusCode === 400) {
+      return NextResponse.json({ success: false, error: err.message }, { status: 400 });
+    }
     logger.error({ err: error }, "Failed to place order");
     return NextResponse.json({ success: false, error: "Failed to place order" }, { status: 500 });
   }

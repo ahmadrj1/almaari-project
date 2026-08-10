@@ -16,6 +16,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const product = await prisma.product.findUnique({
       where: { id },
       include: {
+        category: true,
+        images: true,
         variants: {
           include: { color: true, size: true }
         }
@@ -42,7 +44,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const { id } = await params;
     const body = await req.json();
-    const { title, description, price, image, variants } = body;
+    const { title, description, price, image, categoryId, variants, images } = body;
 
     if (!title || !price || !variants || variants.length === 0) {
       return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
@@ -56,12 +58,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           title,
           description: description || "",
           price,
+          categoryId: categoryId || null,
           ...(image && { image }),
         },
       });
 
-      // Handle variants (naive approach: delete all existing, recreate)
-      // A more robust approach would be to update existing ones, but this is simpler for MVP
+      // Handle variants
       await tx.productVariant.deleteMany({
         where: { productId: id }
       });
@@ -75,9 +77,28 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }))
       });
 
+      // Handle images (delete all existing and recreate)
+      if (images) {
+        await tx.productImage.deleteMany({
+          where: { productId: id }
+        });
+        await tx.productImage.createMany({
+          data: images.map((img: { url: string; colorId: string | null }, idx: number) => ({
+            productId: id,
+            colorId: img.colorId || null,
+            url: img.url,
+            sortOrder: idx
+          }))
+        });
+      }
+
       return await tx.product.findUnique({
         where: { id },
-        include: { variants: { include: { color: true, size: true } } }
+        include: {
+          category: true,
+          images: true,
+          variants: { include: { color: true, size: true } }
+        }
       });
     });
 

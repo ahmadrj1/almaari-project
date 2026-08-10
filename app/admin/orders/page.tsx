@@ -3,29 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Search, ArrowUpRight, ClipboardList, Box, Banknote } from "lucide-react";
-
-const STATUS_COLORS: Record<string, string> = {
-  PENDING:    "bg-yellow-100 text-yellow-700",
-  PROCESSING: "bg-blue-100 text-blue-700",
-  SHIPPED:    "bg-indigo-100 text-indigo-700",
-  DELIVERED:  "bg-green-100 text-green-700",
-  CANCELLED:  "bg-red-100 text-red-700",
-};
-
-interface OrderSummary {
-  id: string;
-  createdAt: string;
-  total: number | string;
-  status: string;
-  user: {
-    id: string;
-    fullName: string;
-  } | null;
-  items: { quantity: number }[];
-}
+import { STATUS_COLORS } from "@/lib/constants";
+import { Order } from "@/types";
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<OrderSummary[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState({ totalOrders: 0, totalUnits: 0, totalAmount: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");

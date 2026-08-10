@@ -1,22 +1,17 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
+import type { SortDropdownProps } from "@/types";
 
-export interface Option {
-  label: string
-  value: string
-}
-
-export interface SortDropdownProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  options: readonly Option[]
-}
-
-export const SortDropdown = React.forwardRef<HTMLSelectElement, SortDropdownProps>(
-  ({ className, options, ...props }, ref) => {
-    return (
+export const SortDropdown = React.forwardRef<
+  HTMLSelectElement,
+  SortDropdownProps
+>(({ className, options, ...props }, ref) => {
+  return (
+    <div className={`relative ${className || ""}`}>
       <select
         ref={ref}
-        className={`block w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm focus:border-[#2979FF] focus:outline-none focus:ring-1 focus:ring-[#2979FF] disabled:cursor-not-allowed disabled:opacity-50 ${className || ""}`}
+        className="block h-11 w-full appearance-none rounded-lg border-1 border-[#E1E7EF] bg-white px-3 pr-10 text-sm text-[#98A4C4] outline-none hover:border-primary focus:ring-0"
         {...props}
       >
         {options.map((option) => (
@@ -25,7 +20,12 @@ export const SortDropdown = React.forwardRef<HTMLSelectElement, SortDropdownProp
           </option>
         ))}
       </select>
-    )
-  }
-)
-SortDropdown.displayName = "SortDropdown"
+
+      <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+        <div className="h-0 w-0 border-l-[7px] border-r-[7px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#4B5158]" />
+      </div>
+    </div>
+  );
+});
+
+SortDropdown.displayName = "SortDropdown";

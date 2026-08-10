@@ -14,17 +14,11 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
-import type { CartItemWithProduct } from "@/types";
+import type { CartItemWithProduct, SavedAddress } from "@/types";
 import { useCartCount } from "@/hooks/use-cart-count";
-import { TAX_PERCENTAGE } from "@/lib/constants";
+import { TAX_PERCENTAGE, CART_ITEM_EXPIRY_MS } from "@/lib/constants";
 
-type SavedAddress = {
-  id: string;
-  street: string;
-  city?: string;
-  country?: string;
-  zipCode?: string;
-};
+const getTimestamp = () => Date.now();
 
 export default function CartPage() {
   const [items, setItems] = useState<CartItemWithProduct[]>([]);
@@ -41,6 +35,14 @@ export default function CartPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const { decrement, refresh } = useCartCount();
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick((t) => t + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchCart = useCallback(async () => {
     try {
@@ -233,6 +235,29 @@ export default function CartPage() {
         Your Shopping Bag
       </h1>
 
+      {items.length > 0 && (() => {
+        const earliestItem = [...items].sort((a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime())[0];
+        if (!earliestItem) return null;
+        
+        const expiryTime = new Date(earliestItem.updatedAt).getTime() + CART_ITEM_EXPIRY_MS;
+        const timeLeft = Math.max(0, expiryTime - getTimestamp());
+        
+        if (timeLeft <= 0) return null;
+
+        const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+        
+        return (
+          <p className="text-sm text-gray-500 mb-4">
+            Items in your cart are reserved. The earliest item will expire in{" "}
+            <span className="font-medium text-gray-700">
+              {hours}h {minutes}m {seconds}s
+            </span>
+          </p>
+        );
+      })()}
+
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
@@ -257,7 +282,7 @@ export default function CartPage() {
                       <div className="flex items-center gap-3">
                         <div className="relative w-12 h-12 rounded bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
                           {item.product.image ? (
-                            <Image src={item.product.image} alt={item.product.title} fill className="object-cover" />
+                            <Image src={item.product.image} alt={item.product.title} fill sizes="64px" className="object-cover" />
                           ) : null}
                         </div>
                         <span className="font-medium text-gray-800 line-clamp-2">{item.product.title}</span>

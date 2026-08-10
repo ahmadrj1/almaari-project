@@ -8,40 +8,8 @@ import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Spinner } from "@/components/ui/spinner";
 import { ArrowLeft } from "lucide-react";
-
-type OrderDetail = {
-  id: string;
-  status: string;
-  createdAt: string;
-  subTotal: string | number;
-  tax: string | number;
-  total: string | number;
-  items: {
-    id: string;
-    quantity: number;
-    price: string | number;
-    colorName: string;
-    sizeName: string;
-    product: {
-      title: string;
-      image: string;
-    };
-  }[];
-  address?: {
-    street: string;
-    city?: string;
-    zipCode?: string;
-    country?: string;
-  };
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  DELIVERED: "bg-green-100 text-green-800",
-  CANCELLED: "bg-red-100 text-red-800",
-  SHIPPED: "bg-purple-100 text-purple-800",
-  PROCESSING: "bg-yellow-100 text-yellow-800",
-  PENDING: "bg-blue-100 text-blue-800",
-};
+import { STATUS_COLORS } from "@/lib/constants";
+import type { OrderDetail } from "@/types";
 
 export default function OrderDetailsPage() {
   const params = useParams();

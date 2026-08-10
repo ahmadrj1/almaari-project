@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { Role, Prisma } from "@prisma/client";
 import { PRODUCTS_PER_PAGE_DEFAULT } from "@/lib/constants";
 import { logger } from "@/lib/logger";
+import { createBroadcastNotification } from "@/lib/notifications";
 
 export async function GET(req: Request) {
   try {
@@ -14,13 +15,20 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const search = url.searchParams.get("search") || "";
+    const categoryId = url.searchParams.get("categoryId") || "";
     const page = parseInt(url.searchParams.get("page") || "1");
     const limit = parseInt(url.searchParams.get("limit") || String(PRODUCTS_PER_PAGE_DEFAULT));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.ProductWhereInput = search
-      ? { title: { contains: search, mode: "insensitive" } }
-      : {};
+    const where: Prisma.ProductWhereInput = {};
+    
+    if (search) {
+      where.title = { contains: search, mode: "insensitive" };
+    }
+    
+    if (categoryId) {
+      where.categoryId = categoryId;
+    }
 
     const [products, total] = await Promise.all([
       prisma.product.findMany({ 
@@ -29,7 +37,11 @@ export async function GET(req: Request) {
         skip, 
         take: limit,
         include: {
-          variants: true
+          variants: {
+            include: {
+              color: true
+            }
+          }
         }
       }),
       prisma.product.count({ where }),
@@ -58,7 +70,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { title, description, price, image, variants } = body;
+    const { title, description, price, image, categoryId, variants, images } = body;
 
     if (!title || !price || !image || !variants || variants.length === 0) {
       return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
@@ -71,18 +83,34 @@ export async function POST(req: Request) {
           description: description || "",
           price,
           image,
+          categoryId: categoryId || null,
           variants: {
             create: variants.map((v: { colorId: string; sizeId: string; stock: string | number }) => ({
               colorId: v.colorId,
               sizeId: v.sizeId,
               stock: Number(v.stock)
             }))
-          }
+          },
+          images: images ? {
+            create: images.map((img: { url: string; colorId: string | null }, idx: number) => ({
+              colorId: img.colorId || null,
+              url: img.url,
+              sortOrder: idx
+            }))
+          } : undefined
         },
-        include: { variants: true }
+        include: { variants: true, images: true }
       });
       return product;
     });
+
+    // Fire broadcast notification asynchronously
+    createBroadcastNotification(
+      "NEW_PRODUCT",
+      "New Product Available!",
+      `${title} is now available in our store.`,
+      { productId: newProduct.id }
+    );
 
     return NextResponse.json({ success: true, data: newProduct });
   } catch (error) {

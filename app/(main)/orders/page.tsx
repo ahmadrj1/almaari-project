@@ -9,13 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PackageSearch } from "lucide-react";
 import { ORDERS_PER_PAGE_DEFAULT } from "@/lib/constants";
-
-type Order = {
-  id: string;
-  createdAt: string;
-  status: string;
-  total: string | number;
-};
+import type { Order } from "@/types";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -69,41 +63,43 @@ export default function OrdersPage() {
       <h1 className="text-2xl font-semibold text-[#2979FF] mb-8">My Orders</h1>
       
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm mb-6">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <th className="px-6 py-4">Order ID</th>
-              <th className="px-6 py-4">Date</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Total</th>
-              <th className="px-6 py-4 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {orders.map((order) => (
-              <tr key={order.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
-                <td className="px-6 py-5 text-sm font-semibold text-gray-800 font-mono">{order.id.slice(0, 8).toUpperCase()}</td>
-                <td className="px-6 py-5 text-sm text-gray-600">{new Date(order.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}</td>
-                <td className="px-6 py-5">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                    order.status === 'DELIVERED' ? 'bg-green-100 text-green-800' :
-                    order.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
-                    order.status === 'SHIPPED' ? 'bg-purple-100 text-purple-800' :
-                    'bg-blue-100 text-blue-800'
-                  }`}>
-                    {order.status}
-                  </span>
-                </td>
-                <td className="px-6 py-5 text-sm font-bold text-gray-900">{formatCurrency(Number(order.total))}</td>
-                <td className="px-6 py-5 text-center">
-                  <Link href={`/orders/${order.id}`} className="inline-flex items-center gap-1 text-[#2979FF] hover:underline text-sm font-medium">
-                    View Details
-                  </Link>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th className="px-6 py-4">Order ID</th>
+                <th className="px-6 py-4">Date</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Total</th>
+                <th className="px-6 py-4 text-center">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {orders.map((order) => (
+                <tr key={order.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
+                  <td className="px-6 py-5 text-sm font-semibold text-gray-800 font-mono">{order.id.slice(0, 8).toUpperCase()}</td>
+                  <td className="px-6 py-5 text-sm text-gray-600">{new Date(order.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}</td>
+                  <td className="px-6 py-5">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      order.status === 'DELIVERED' ? 'bg-green-100 text-green-800' :
+                      order.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                      order.status === 'SHIPPED' ? 'bg-purple-100 text-purple-800' :
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {order.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-5 text-sm font-bold text-gray-900">{formatCurrency(Number(order.total))}</td>
+                  <td className="px-6 py-5 text-center">
+                    <Link href={`/orders/${order.id}`} className="inline-flex items-center gap-1 text-[#2979FF] hover:underline text-sm font-medium">
+                      View Details
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="flex justify-center">
