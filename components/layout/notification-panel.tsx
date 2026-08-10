@@ -31,7 +31,7 @@ export function NotificationPanel({
   };
 
   return (
-    <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-lg bg-white shadow-xl ring-1 ring-black/5 flex flex-col overflow-hidden z-50">
+    <div className="fixed md:absolute right-4 left-4 md:right-0 md:left-auto mt-2 w-auto md:w-96 rounded-lg bg-white shadow-xl ring-1 ring-black/5 flex flex-col overflow-hidden z-50">
       <div className="flex items-center justify-between border-b border-gray-100 p-4">
         <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
         <button

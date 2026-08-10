@@ -8,7 +8,7 @@ export const ORDERS_PER_PAGE_DEFAULT = 10;
 export const DEFAULT_SORT = "newest";
 export const SEARCH_DEBOUNCE_MS = 400;
 export const POLLING_TIME = 10 * 1000; // 10 seconds in milliseconds
-export const CART_ITEM_EXPIRY_MS = 60 * 60 * 1000; // 1 hour in milliseconds
+export const CART_ITEM_EXPIRY_MS = 60 * 1000; // 1 hour in milliseconds
 
 export const SORT_OPTIONS = [
   { label: "Newest", value: "newest" },

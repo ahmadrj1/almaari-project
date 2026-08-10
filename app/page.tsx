@@ -136,18 +136,9 @@ function HomeContent() {
       <main className="container mx-auto flex-1 px-4 py-6 sm:py-8">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold text-primary">Our Products</h1>
-          <div className="flex flex-row items-center gap-3 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-none shrink-0">
-            <select
-              value={categoryId}
-              onChange={(e) => updateParams({ categoryId: e.target.value })}
-              className="h-11 rounded-lg border-1 border-[#E1E7EF] bg-white px-3 text-sm text-[#98A4C4] outline-none hover:border-primary focus:ring-0"
-            >
-              <option value="">All Categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            <div className="shrink-0 w-48 sm:w-80">
+          <div className="flex flex-col gap-3 w-full sm:flex-row sm:items-center sm:w-auto">
+            {/* Search bar of full length on mobile, constrained size on larger screens */}
+            <div className="w-full sm:w-80">
               <SearchBar
                 placeholder="Search products..."
                 className="w-full"
@@ -155,12 +146,27 @@ function HomeContent() {
                 onChange={(e) => setLocalSearch(e.target.value)}
               />
             </div>
-            <div className="shrink-0">
-              <SortDropdown
-                options={SORT_OPTIONS}
-                value={sort}
-                onChange={(e) => updateParams({ sort: e.target.value })}
-              />
+            {/* Categories and filters on one line */}
+            <div className="flex items-center justify-center gap-3 w-full sm:w-auto overflow-x-auto scrollbar-none shrink-0">
+              <div className="shrink-0">
+                <select
+                  value={categoryId}
+                  onChange={(e) => updateParams({ categoryId: e.target.value })}
+                  className="h-11 rounded-lg border-1 border-[#E1E7EF] bg-white px-3 text-sm text-[#98A4C4] outline-none hover:border-primary focus:ring-0"
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="shrink-0">
+                <SortDropdown
+                  options={SORT_OPTIONS}
+                  value={sort}
+                  onChange={(e) => updateParams({ sort: e.target.value })}
+                />
+              </div>
             </div>
           </div>
         </div>

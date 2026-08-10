@@ -6,6 +6,7 @@ import { Product } from "@prisma/client"
 import { Button } from "./button"
 import { QuantitySelector } from "./quantity-selector"
 import { formatCurrency } from "@/lib/utils"
+import { ChevronDown } from "lucide-react"
 
 export type Variant = {
   id: string
@@ -43,6 +44,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
   const [selectedColorId, setSelectedColorId] = React.useState<string>(colors[0]?.id || "")
   const [selectedSizeId, setSelectedSizeId] = React.useState<string>(sizes[0]?.id || "")
+  const [isColorsExpanded, setIsColorsExpanded] = React.useState(false)
 
   // Find the exact variant based on selected color and size
   const selectedVariant = variants.find(v => v.color.id === selectedColorId && v.size.id === selectedSizeId)
@@ -120,7 +122,8 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         {/* Variations */}
         {colors.length > 0 && (
           <div className="mt-3">
-            <div className="flex gap-2 flex-wrap">
+            {/* Desktop View: Show all colors */}
+            <div className="hidden sm:flex gap-2 flex-wrap">
               {colors.map(color => (
                 <button
                   key={color.id}
@@ -132,6 +135,30 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                   style={{ backgroundColor: color.hexCode, boxShadow: "0 0 0 1px rgba(0,0,0,0.1)" }}
                 />
               ))}
+            </div>
+
+            {/* Mobile View: Show max 4 colors and a expand chevron if colors.length > 4 */}
+            <div className="flex sm:hidden gap-2 flex-wrap items-center">
+              {(isColorsExpanded ? colors : colors.slice(0, 4)).map(color => (
+                <button
+                  key={color.id}
+                  onClick={() => handleColorSelect(color.id)}
+                  title={color.name}
+                  className={`w-6 h-6 rounded-full border-2 focus:outline-none transition-all ${
+                    selectedColorId === color.id ? "border-[#2979FF] scale-110" : "border-transparent"
+                  }`}
+                  style={{ backgroundColor: color.hexCode, boxShadow: "0 0 0 1px rgba(0,0,0,0.1)" }}
+                />
+              ))}
+              {colors.length > 4 && (
+                <button
+                  onClick={() => setIsColorsExpanded(!isColorsExpanded)}
+                  className="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+                  title={isColorsExpanded ? "Show less colors" : "Show all colors"}
+                >
+                  <ChevronDown size={14} className={`transition-transform duration-200 ${isColorsExpanded ? "rotate-180" : ""}`} />
+                </button>
+              )}
             </div>
           </div>
         )}

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { ORDERS_PER_PAGE_DEFAULT, TAX_PERCENTAGE } from "@/lib/constants";
+import { ORDERS_PER_PAGE_DEFAULT, TAX_PERCENTAGE, CART_ITEM_EXPIRY_MS } from "@/lib/constants";
 import { logger } from "@/lib/logger";
 import { createNotification } from "@/lib/notifications";
 
@@ -25,6 +25,17 @@ export async function POST(req: Request) {
 
     if (cartItems.length === 0) {
       return NextResponse.json({ success: false, error: "Cart is empty" }, { status: 400 });
+    }
+
+    const now = Date.now();
+    const hasExpiredItems = cartItems.some(
+      (item) => now - new Date(item.updatedAt).getTime() > CART_ITEM_EXPIRY_MS
+    );
+    if (hasExpiredItems) {
+      return NextResponse.json(
+        { success: false, error: "Some items in your cart have expired. Please refresh the page to update your cart." },
+        { status: 400 }
+      );
     }
 
     let subTotal = 0;
