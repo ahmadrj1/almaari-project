@@ -22,6 +22,7 @@ const getTimestamp = () => Date.now();
 
 export default function CartPage() {
   const [items, setItems] = useState<CartItemWithProduct[]>([]);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -50,6 +51,7 @@ export default function CartPage() {
       const data = await res.json();
       if (data.success) {
         setItems(data.data);
+        setSelectedItems(new Set(data.data.map((i: CartItemWithProduct) => i.id)));
       }
     } catch (error) {
       console.error(error);
@@ -75,6 +77,11 @@ export default function CartPage() {
       if (data.success) {
         if (quantity <= 0) {
           setItems(items.filter((i) => i.id !== cartItemId));
+          setSelectedItems(prev => {
+            const next = new Set(prev);
+            next.delete(cartItemId);
+            return next;
+          });
           decrement();
         } else {
           setItems(
@@ -100,6 +107,11 @@ export default function CartPage() {
       });
       if (res.ok) {
         setItems(items.filter((i) => i.id !== itemToDelete));
+        setSelectedItems(prev => {
+          const next = new Set(prev);
+          next.delete(itemToDelete);
+          return next;
+        });
         decrement();
         showToast("success", "Item removed from cart");
       }
@@ -170,7 +182,10 @@ export default function CartPage() {
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ addressId: finalAddressId }),
+        body: JSON.stringify({ 
+          addressId: finalAddressId,
+          selectedItemIds: Array.from(selectedItems) 
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -219,10 +234,9 @@ export default function CartPage() {
     );
   }
 
-  const subTotal = items.reduce(
-    (sum, item) => sum + Number(item.product.price) * item.quantity,
-    0
-  );
+  const subTotal = items
+    .filter(item => selectedItems.has(item.id))
+    .reduce((sum, item) => sum + Number(item.product.price) * item.quantity, 0);
   const tax = subTotal * TAX_PERCENTAGE;
   const total = subTotal + tax;
 
@@ -263,6 +277,20 @@ export default function CartPage() {
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-500">
+                <th className="p-4 w-12 text-center">
+                  <input
+                    type="checkbox"
+                    checked={items.length > 0 && selectedItems.size === items.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedItems(new Set(items.map(i => i.id)));
+                      } else {
+                        setSelectedItems(new Set());
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                </th>
                 <th className="p-4">Product</th>
                 <th className="p-4">Color</th>
                 <th className="p-4">Size</th>
@@ -277,7 +305,22 @@ export default function CartPage() {
                 const rate = Number(item.product.price);
                 const lineTotal = rate * item.quantity;
                 return (
-                  <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={item.id} className={`hover:bg-gray-50/50 transition-colors ${!selectedItems.has(item.id) ? 'opacity-50' : ''}`}>
+                    <td className="p-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.has(item.id)}
+                        onChange={(e) => {
+                          setSelectedItems(prev => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(item.id);
+                            else next.delete(item.id);
+                            return next;
+                          });
+                        }}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="relative w-12 h-12 rounded bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
@@ -344,7 +387,12 @@ export default function CartPage() {
             <span className="font-bold text-gray-900">{formatCurrency(total)}</span>
           </div>
           <div className="pt-4">
-            <Button className="w-full" size="lg" onClick={openAddressModal}>
+            <Button 
+              className="w-full" 
+              size="lg" 
+              onClick={openAddressModal}
+              disabled={selectedItems.size === 0}
+            >
               Place Order
             </Button>
           </div>

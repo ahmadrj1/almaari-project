@@ -18,7 +18,7 @@ import {
   DEFAULT_SORT,
 } from "@/lib/constants";
 import { useDebounce } from "@/hooks/use-debounce";
-import type { Product } from "@/types";
+import type { Product } from "@prisma/client";
 
 type Pagination = { page: number; totalPages: number; total: number };
 

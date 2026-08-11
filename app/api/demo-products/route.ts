@@ -1,14 +1,5 @@
-import { NextResponse } from "next/server"
-import { prisma } from "@/lib/db"
+import { ProductController } from "@/controllers/product.controller";
 
-export async function GET() {
-  try {
-    const products = await prisma.product.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 12,
-    })
-    return NextResponse.json({ products })
-  } catch {
-    return NextResponse.json({ products: [] }, { status: 500 })
-  }
+export async function GET(req: Request) {
+  return ProductController.getDemoProducts(req);
 }

@@ -17,6 +17,8 @@ import { ToastProvider } from "@/hooks/use-toast";
 import { ToastContainer } from "@/components/ui/toast-container";
 import { SessionProvider } from "next-auth/react";
 import { CartCountProvider } from "@/hooks/use-cart-count";
+import { AuthProvider } from "@/components/providers/auth-provider";
+
 
 export default function RootLayout({
   children,
@@ -30,12 +32,14 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[#F5F7FA]">
         <SessionProvider>
-          <ToastProvider>
-            <CartCountProvider>
-              {children}
-              <ToastContainer />
-            </CartCountProvider>
-          </ToastProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <CartCountProvider>
+                {children}
+                <ToastContainer />
+              </CartCountProvider>
+            </ToastProvider>
+          </AuthProvider>
         </SessionProvider>
       </body>
     </html>

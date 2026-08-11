@@ -1,5 +1,4 @@
 import { Prisma } from "@prisma/client";
-import type { ProductCardProps } from "@/components/ui/product-card";
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -75,41 +74,6 @@ export type Order = {
   items: { quantity: number }[];
 };
 
-export type Product = {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  image: string;
-  categoryId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  variants: import("@/components/ui/product-card").Variant[];
-  images?: { id: string; url: string; colorId: string | null }[];
-};
-
-export type FullProduct = ProductCardProps["product"] & {
-  variants: NonNullable<ProductCardProps["product"]["variants"]>;
-  images?: { id: string; url: string; colorId: string | null }[];
-};
-
-export interface Option {
-  label: string;
-  value: string;
-}
-
-export interface SortDropdownProps
-  extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  options: readonly Option[];
-}
-
-export interface CartCountContextValue {
-  count: number;
-  increment: () => void;
-  decrement: () => void;
-  setCount: (n: number) => void;
-  refresh: () => void;
-}
 
 export interface Notification {
   id: string;
@@ -121,11 +85,6 @@ export interface Notification {
   createdAt: string;
 }
 
-export interface ToastData {
-  id: string
-  type: "success" | "error" | "info"
-  message: string
-}
 
 export interface Color {
   id: string;
@@ -136,7 +95,7 @@ export interface Size {
   id: string;
   name: string;
 }
-export interface Variant {
+export interface FormVariant {
   id: string;
   colorId: string;
   sizeId: string;
@@ -144,6 +103,13 @@ export interface Variant {
   colorName?: string;
   sizeName?: string;
 }
+
+export type ProductVariant = {
+  id: string;
+  stock: number;
+  color: { id: string; name: string; hexCode: string };
+  size: { id: string; name: string; sortOrder: number };
+};
 export interface Category {
   id: string;
   name: string;
@@ -184,6 +150,7 @@ export interface OrderItem {
     title: string;
     image: string;
     price: number | string;
+    deletedAt?: string | Date | null;
     variants: {
       color?: { name: string };
       size?: { name: string };
@@ -191,3 +158,5 @@ export interface OrderItem {
     }[];
   } | null;
 }
+
+export type OrderStatus = "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";

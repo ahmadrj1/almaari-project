@@ -1,94 +1,125 @@
 "use client";
 
-import { ShoppingBag, Package, Tag, Bell } from "lucide-react";
+import { ShoppingBag, Package, Tag, Bell, Check, RotateCcw } from "lucide-react";
 import type { Notification } from "@/types";
 import { timeAgo } from "@/lib/notifications";
+
+const TYPE_STYLES: Record<string, { icon: React.ReactNode; bg: string }> = {
+  ORDER_PLACED: {
+    icon: <ShoppingBag className="h-4 w-4 text-blue-600" />,
+    bg: "bg-blue-100",
+  },
+  ORDER_STATUS_UPDATED: {
+    icon: <Package className="h-4 w-4 text-green-600" />,
+    bg: "bg-green-100",
+  },
+  NEW_PRODUCT: {
+    icon: <Tag className="h-4 w-4 text-purple-600" />,
+    bg: "bg-purple-100",
+  },
+};
 
 export function NotificationPanel({
   notifications,
   activeTab,
   setActiveTab,
   markAllAsRead,
+  toggleRead,
   loading,
 }: {
   notifications: Notification[];
   activeTab: "unread" | "all";
   setActiveTab: (tab: "unread" | "all") => void;
   markAllAsRead: () => void;
+  toggleRead: (id: string) => void;
   loading: boolean;
 }) {
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "ORDER_PLACED":
-        return <ShoppingBag className="h-5 w-5 text-blue-500" />;
-      case "ORDER_STATUS_UPDATED":
-        return <Package className="h-5 w-5 text-green-500" />;
-      case "NEW_PRODUCT":
-        return <Tag className="h-5 w-5 text-purple-500" />;
-      default:
-        return <Bell className="h-5 w-5 text-gray-500" />;
-    }
-  };
+  const getStyle = (type: string) =>
+    TYPE_STYLES[type] ?? {
+      icon: <Bell className="h-4 w-4 text-gray-500" />,
+      bg: "bg-gray-100",
+    };
 
   return (
-    <div className="fixed md:absolute right-4 left-4 md:right-0 md:left-auto mt-2 w-auto md:w-96 rounded-lg bg-white shadow-xl ring-1 ring-black/5 flex flex-col overflow-hidden z-50">
-      <div className="flex items-center justify-between border-b border-gray-100 p-4">
-        <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+    <div className="fixed md:absolute right-4 left-4 md:right-0 md:left-auto mt-2 w-auto md:w-96 rounded-xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col overflow-hidden z-50">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+        <div className="flex items-center gap-2">
+          <Bell className="h-4 w-4 text-blue-600" />
+          <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+        </div>
         <button
           onClick={markAllAsRead}
           disabled={loading || notifications.every((n) => n.isRead)}
-          className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors cursor-pointer"
         >
-          Mark all as read
+          <Check className="h-3 w-3" />
+          Mark all read
         </button>
       </div>
 
+      {/* Tabs */}
       <div className="flex border-b border-gray-100">
-        <button
-          onClick={() => setActiveTab("unread")}
-          className={`flex-1 py-2 text-sm font-medium text-center ${
-            activeTab === "unread" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Unread
-        </button>
-        <button
-          onClick={() => setActiveTab("all")}
-          className={`flex-1 py-2 text-sm font-medium text-center ${
-            activeTab === "all" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          All
-        </button>
+        {(["unread", "all"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`flex-1 py-2.5 text-xs font-semibold uppercase tracking-wide text-center transition-colors cursor-pointer ${
+              activeTab === tab
+                ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50/50"
+                : "text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
-      <div className="max-h-[400px] overflow-y-auto">
+      {/* List */}
+      <div className="max-h-[380px] overflow-y-auto divide-y divide-gray-50">
         {notifications.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <Bell className="mx-auto h-8 w-8 mb-2 opacity-20" />
-            <p>No {activeTab === "unread" ? "unread " : ""}notifications</p>
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-2">
+            <Bell className="h-8 w-8 opacity-20" />
+            <p className="text-sm">No {activeTab === "unread" ? "unread " : ""}notifications</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`p-4 flex gap-3 hover:bg-gray-50 transition-colors ${
-                  !notification.isRead ? "bg-blue-50/30" : ""
+          notifications.map((n) => {
+            const { icon, bg } = getStyle(n.type);
+            return (
+              <button
+                key={n.id}
+                onClick={() => toggleRead(n.id)}
+                title={n.isRead ? "Mark as unread" : "Mark as read"}
+                className={`w-full text-left p-4 flex gap-3 transition-colors cursor-pointer group ${
+                  !n.isRead ? "bg-blue-50/40 hover:bg-blue-50/70" : "hover:bg-gray-50"
                 }`}
               >
-                <div className="mt-1 flex-shrink-0">{getIcon(notification.type)}</div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{notification.title}</p>
-                  <p className="text-sm text-gray-600 line-clamp-2 mt-0.5">{notification.message}</p>
-                  <p className="text-xs text-gray-400 mt-1">{timeAgo(notification.createdAt)}</p>
+                {/* Icon */}
+                <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full ${bg} flex items-center justify-center`}>
+                  {icon}
                 </div>
-                {!notification.isRead && (
-                  <div className="w-2 h-2 rounded-full bg-blue-600 mt-1.5 flex-shrink-0" />
-                )}
-              </div>
-            ))}
-          </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold leading-tight ${n.isRead ? "text-gray-600" : "text-gray-900"}`}>
+                    {n.title}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.message}</p>
+                  <p className="text-[11px] text-gray-400 mt-1">{timeAgo(n.createdAt)}</p>
+                </div>
+
+                {/* Status indicator + hover action */}
+                <div className="flex flex-col items-center justify-start gap-1 flex-shrink-0 pt-0.5">
+                  {!n.isRead && (
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                  )}
+                  <span className={`text-[10px] opacity-0 group-hover:opacity-100 transition-opacity ${n.isRead ? "text-gray-400" : "text-blue-500"}`}>
+                    {n.isRead ? <RotateCcw className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+                  </span>
+                </div>
+              </button>
+            );
+          })
         )}
       </div>
     </div>

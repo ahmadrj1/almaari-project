@@ -7,7 +7,7 @@ import { NotificationPanel } from "./notification-panel";
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
-  const { notifications, unreadCount, activeTab, setActiveTab, markAllAsRead, loading } = useNotifications();
+  const { notifications, unreadCount, activeTab, setActiveTab, markAllAsRead, toggleRead, loading } = useNotifications();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none"
+        className="relative rounded-full p-2 text-primary transition-colors hover:bg-gray-100 hover:bg-[#e1ebfc] hover:text-blue-600 hover:font-bold cursor-pointer"
         title="Notifications"
       >
         <Bell className="h-5 w-5" />
@@ -41,6 +41,7 @@ export function NotificationBell() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           markAllAsRead={markAllAsRead}
+          toggleRead={toggleRead}
           loading={loading}
         />
       )}

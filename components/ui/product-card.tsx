@@ -7,37 +7,34 @@ import { Button } from "./button"
 import { QuantitySelector } from "./quantity-selector"
 import { formatCurrency } from "@/lib/utils"
 import { ChevronDown } from "lucide-react"
-
-export type Variant = {
-  id: string
-  stock: number
-  color: { id: string; name: string; hexCode: string }
-  size: { id: string; name: string; sortOrder: number }
-}
+import { ProductVariant } from "@/types"
+import { useSession } from "next-auth/react"
 
 export interface ProductCardProps {
   product: Omit<Product, "price"> & { 
     price: number | { toNumber(): number; toString(): string },
-    variants?: Variant[]
+    variants?: ProductVariant[]
     images?: { id: string; url: string; colorId: string | null }[]
   }
   onAddToCart?: (productId: string, variantId: string, quantity: number) => void
 }
 
 export function ProductCard({ product, onAddToCart }: ProductCardProps) {
+  const { data: session } = useSession()
+  const isAdmin = session?.user?.role === "ADMIN"
   const [quantity, setQuantity] = React.useState(1)
   const variants = React.useMemo(() => product.variants || [], [product.variants])
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
   // Extract unique colors and sizes
   const colors = React.useMemo(() => {
-    const map = new Map<string, Variant['color']>()
+    const map = new Map<string, ProductVariant['color']>()
     variants.forEach(v => map.set(v.color.id, v.color))
     return Array.from(map.values())
   }, [variants])
 
   const sizes = React.useMemo(() => {
-    const map = new Map<string, Variant['size']>()
+    const map = new Map<string, ProductVariant['size']>()
     variants.forEach(v => map.set(v.size.id, v.size))
     return Array.from(map.values()).sort((a, b) => a.sortOrder - b.sortOrder)
   }, [variants])
@@ -187,27 +184,29 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           {isOutOfStock ? "Out of stock" : `${maxStock} in stock`}
         </p>
         
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <QuantitySelector 
-            value={quantity} 
-            onChange={setQuantity} 
-            min={1} 
-            max={maxStock > 0 ? maxStock : 1} 
-            disabled={isOutOfStock} 
-          />
-          <Button
-            size="sm"
-            onClick={() => {
-              if (selectedVariant) {
-                onAddToCart?.(product.id, selectedVariant.id, quantity)
-              }
-            }}
-            className="whitespace-nowrap text-[10px] sm:text-xs md:text-sm h-7 sm:h-8 px-2 sm:px-3 flex-1 sm:flex-initial"
-            disabled={isOutOfStock}
-          >
-            Add to Cart
-          </Button>
-        </div>
+        {!isAdmin && (
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <QuantitySelector 
+              value={quantity} 
+              onChange={setQuantity} 
+              min={1} 
+              max={maxStock > 0 ? maxStock : 1} 
+              disabled={isOutOfStock} 
+            />
+            <Button
+              size="sm"
+              onClick={() => {
+                if (selectedVariant) {
+                  onAddToCart?.(product.id, selectedVariant.id, quantity)
+                }
+              }}
+              className="whitespace-nowrap text-[10px] sm:text-xs md:text-sm h-7 sm:h-8 px-2 sm:px-3 flex-1 sm:flex-initial"
+              disabled={isOutOfStock}
+            >
+              Add to Cart
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -16,7 +16,7 @@ import { SORT_OPTIONS, PRODUCTS_PER_PAGE_DEFAULT, DEFAULT_SORT } from "@/lib/con
 import { useDebounce } from "@/hooks/use-debounce";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import type { Product } from "@/types";
+import type { Product } from "@prisma/client";
 
 type Pagination = { page: number; totalPages: number; total: number };
 
@@ -36,32 +36,29 @@ function HomeContent() {
 
   const searchParam = searchParams.get("search") || "";
   const sort = searchParams.get("sort") || DEFAULT_SORT;
-  const categoryId = searchParams.get("categoryId") || "";
   const page = parseInt(searchParams.get("page") || "1");
 
-  const [localSearch, setLocalSearch] = useState(searchParam);
+  const [localSearch, setLocalSearch] = useState("");
   const debouncedSearch = useDebounce(localSearch);
 
-  const fetchCategories = useCallback(async () => {
-    try {
-      const res = await fetch("/api/categories");
-      const data = await res.json();
-      if (data.success) {
-        setCategories(data.data);
-      }
-    } catch (e) {
-      console.error(e);
+  // Reset filters on page refresh (not SPA navigation)
+  useEffect(() => {
+    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    const isReload = nav?.type === "reload";
+    if (isReload && (searchParams.get("search") || searchParams.get("sort") || searchParams.get("page"))) {
+      router.replace("/");
+    } else {
+      setLocalSearch(searchParams.get("search") || "");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   const fetchProducts = useCallback(async () => {
     setLoading(true)
     try {
       await new Promise((r) => setTimeout(r, 1000));
       const paramsParams: Record<string, string> = { search: searchParam, sort, page: String(page), limit: String(PRODUCTS_PER_PAGE_DEFAULT) };
-      if (categoryId) {
-        paramsParams.categoryId = categoryId;
-      }
       const params = new URLSearchParams(paramsParams);
       const res = await fetch(`/api/products?${params}`, { method: "GET" });
       
@@ -77,12 +74,7 @@ function HomeContent() {
     } finally {
       setLoading(false);
     }
-  }, [searchParam, sort, page, categoryId]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchCategories();
-  }, [fetchCategories]);
+  }, [searchParam, sort, page]);
 
   useEffect(() => { 
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -140,7 +132,7 @@ function HomeContent() {
             {/* Search bar of full length on mobile, constrained size on larger screens */}
             <div className="w-full sm:w-80">
               <SearchBar
-                placeholder="Search products..."
+                placeholder="Search products or categories..."
                 className="w-full"
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
@@ -148,18 +140,7 @@ function HomeContent() {
             </div>
             {/* Categories and filters on one line */}
             <div className="flex items-center justify-center gap-3 w-full sm:w-auto overflow-x-auto scrollbar-none shrink-0">
-              <div className="shrink-0">
-                <select
-                  value={categoryId}
-                  onChange={(e) => updateParams({ categoryId: e.target.value })}
-                  className="h-11 rounded-lg border-1 border-[#E1E7EF] bg-white px-3 text-sm text-[#98A4C4] outline-none hover:border-primary focus:ring-0"
-                >
-                  <option value="">All Categories</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
+
               <div className="shrink-0">
                 <SortDropdown
                   options={SORT_OPTIONS}

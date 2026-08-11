@@ -30,7 +30,7 @@ export function ConfirmDialog({
           <AlertTriangle className="h-6 w-6" />
         </div>
         <h2 className="mb-2 text-xl font-semibold">{title}</h2>
-        <p className="mb-6 text-sm text-gray-500">{message}</p>
+        <p className="mb-6 text-sm font-bold text-gray-800">{message}</p>
         <div className="flex w-full gap-3">
           <Button variant="outline" fullWidth onClick={onClose}>
             {cancelText}

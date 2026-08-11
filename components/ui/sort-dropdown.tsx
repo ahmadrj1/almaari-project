@@ -1,21 +1,30 @@
 "use client";
 
 import * as React from "react";
-import type { SortDropdownProps } from "@/types";
+
+export interface Option {
+  label: string;
+  value: string;
+}
+
+export interface SortDropdownProps
+  extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  options: readonly Option[];
+}
 
 export const SortDropdown = React.forwardRef<
   HTMLSelectElement,
   SortDropdownProps
 >(({ className, options, ...props }, ref) => {
   return (
-    <div className={`relative ${className || ""}`}>
+    <div className={`relative inline-block ${className || ""}`} style={{ minWidth: "160px" }}>
       <select
         ref={ref}
-        className="block h-11 w-full appearance-none rounded-lg border-1 border-[#E1E7EF] bg-white px-3 pr-10 text-sm text-[#98A4C4] outline-none hover:border-primary focus:ring-0"
+        className="block h-11 w-full appearance-none rounded-lg border border-[#E1E7EF] bg-white px-3 pr-10 text-sm text-black outline-none hover:border-primary focus:ring-0 cursor-pointer"
         {...props}
       >
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option key={option.value} value={option.value} className="text-black">
             {option.label}
           </option>
         ))}

@@ -5,22 +5,12 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import authConfig from "./auth.config";
 import { SESSION_EXPIRY_REMEMBER_ME, SESSION_EXPIRY_DEFAULT } from "@/lib/constants";
-import { logger } from "@/lib/logger";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   session: { strategy: "jwt", maxAge: SESSION_EXPIRY_REMEMBER_ME },
-  logger: {
-    error(error) {
-      const code = (error as { type?: string }).type ?? error.name;
-      if (code === "CredentialsSignin") {
-        logger.warn({ code }, "Invalid credentials attempt");
-      } else {
-        logger.error({ err: error, code }, "Auth error");
-      }
-    },
-    warn(code) { logger.warn({ code }, "Auth warning"); },
-    debug(code, metadata) { logger.debug({ code, metadata }, "Auth debug"); },
+  jwt: {
+    maxAge: SESSION_EXPIRY_REMEMBER_ME,
   },
   providers: [
     Google({
@@ -65,15 +55,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      if (account) {
+        token.provider = account.provider;
+      }
       if (user) {
         token.id = user.id;
         token.role = user.role;
         const isRemember = (user as { rememberMe?: boolean }).rememberMe ?? false;
-        const expiryDuration = isRemember ? SESSION_EXPIRY_REMEMBER_ME : SESSION_EXPIRY_DEFAULT;
-        token.exp = Math.floor(Date.now() / 1000) + expiryDuration;
+        const duration = isRemember ? SESSION_EXPIRY_REMEMBER_ME : SESSION_EXPIRY_DEFAULT;
+        token.absoluteExpiry = Math.floor(Date.now() / 1000) + duration;
       }
-      // If logging in via Google, user.id might be the Google provider's sub ID, so we look up the DB user id
+      if (token.absoluteExpiry) {
+        token.exp = token.absoluteExpiry as number;
+      }
       if (!token.id && token.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
@@ -88,7 +83,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (token.id) {
         session.user.id = token.id as string;
-        (session.user as { role?: string }).role = token.role as string;
+        (session.user as { role?: string; provider?: string }).role = token.role as string;
+        (session.user as { role?: string; provider?: string }).provider = token.provider as string;
+      }
+      if (token.exp) {
+        (session as any).expires = new Date((token.exp as number) * 1000).toISOString();
       }
       return session;
     },

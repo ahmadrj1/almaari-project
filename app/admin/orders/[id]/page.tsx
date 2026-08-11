@@ -128,25 +128,28 @@ export default function OrderDetailPage({
           </p>
         </div>
         {/* Status with change control */}
-        <div>
+        <div className="relative">
           <p className="text-sm text-gray-500 mb-1">Status</p>
-          <span
-            className={`inline-block px-2 py-1 rounded-full text-xs font-medium mb-2 ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}
-          >
-            {order.status}
-          </span>
-          <select
-            value={order.status}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            disabled={updatingStatus}
-            className="block w-full text-xs border border-gray-200 rounded p-1.5 bg-white focus:outline-none focus:border-blue-500 disabled:opacity-50"
-          >
-            {ORDER_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+          <div className="relative inline-block w-full">
+            <select
+              value={order.status}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              disabled={updatingStatus}
+              className={`block w-full text-xs font-semibold rounded-full px-3 py-1.5 appearance-none cursor-pointer border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 text-center ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}
+              style={{ paddingRight: "1.5rem" }}
+            >
+              {ORDER_STATUSES.map((s) => (
+                <option key={s} value={s} className="bg-white text-gray-800 font-normal">
+                  {s}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+              <svg className="h-3 w-3 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -193,8 +196,13 @@ export default function OrderDetailPage({
                         unoptimized
                       />
                     </div>
-                    <span className="font-medium text-gray-800 max-w-[400px] line-clamp-2">
-                      {item.product?.title || "Deleted Product"}
+                    <span className="font-medium text-gray-800 max-w-[400px] line-clamp-2 flex items-center gap-2">
+                      {item.product?.title || "Unknown Product"}
+                      {item.product?.deletedAt && (
+                        <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10">
+                          Deleted
+                        </span>
+                      )}
                     </span>
                   </td>
                   <td className="py-4 px-4 text-gray-600">

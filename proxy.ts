@@ -1,8 +1,17 @@
-import authConfig from "./auth.config";
-import NextAuth from "next-auth";
+import { NextResponse } from 'next/server';
+import NextAuth from 'next-auth';
+import authConfig from './auth.config';
 
-export default NextAuth(authConfig).auth;
+const { auth } = NextAuth(authConfig);
+
+export default auth(async (req) => {
+  if (process.env.NODE_ENV !== 'production') {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  return NextResponse.next();
+});
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // Exclude all API routes - they handle auth server-side via auth()
+  matcher: ['/((?!api|_next/static|_next/image|favicon\\.ico|images).*)'],
 };

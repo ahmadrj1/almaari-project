@@ -137,7 +137,7 @@ export default function OrderDetailsPage() {
                         )}
                       </div>
                       <span className="text-sm font-medium text-gray-800 line-clamp-2 max-w-xs">
-                        {item.product?.title}
+                        {item.product?.title || "Unknown Product"}
                       </span>
                     </div>
                   </td>

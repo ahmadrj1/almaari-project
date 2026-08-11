@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Pagination } from "@/components/ui/pagination";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PackageSearch } from "lucide-react";
+import { PackageSearch, ArrowUpRight } from "lucide-react";
 import { ORDERS_PER_PAGE_DEFAULT } from "@/lib/constants";
 import type { Order } from "@/types";
 
@@ -91,8 +91,8 @@ export default function OrdersPage() {
                   </td>
                   <td className="px-6 py-5 text-sm font-bold text-gray-900">{formatCurrency(Number(order.total))}</td>
                   <td className="px-6 py-5 text-center">
-                    <Link href={`/orders/${order.id}`} className="inline-flex items-center gap-1 text-[#2979FF] hover:underline text-sm font-medium">
-                      View Details
+                    <Link href={`/orders/${order.id}`} className="text-gray-500 hover:text-blue-500 transition-colors p-1 inline-flex items-center justify-center w-8 h-8 rounded hover:bg-blue-50">
+                      <ArrowUpRight size={18} />
                     </Link>
                   </td>
                 </tr>

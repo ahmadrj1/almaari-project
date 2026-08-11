@@ -14,17 +14,16 @@ export default function AdminProductsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [viewProductId, setViewProductId] = useState<string | null>(null);
 
-  const fetchProducts = useCallback(async (p: number, search: string, catId: string) => {
+  const fetchProducts = useCallback(async (p: number, search: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/products?page=${p}&limit=10&search=${encodeURIComponent(search)}&categoryId=${catId}`);
+      const res = await fetch(`/api/admin/products?page=${p}&limit=10&search=${encodeURIComponent(search)}`);
       const data = await res.json();
       if (data.success) {
         setProducts(data.data.products);
@@ -56,8 +55,8 @@ export default function AdminProductsPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchProducts(page, searchQuery, selectedCategory);
-  }, [page, searchQuery, selectedCategory, fetchProducts]);
+    fetchProducts(page, searchQuery);
+  }, [page, searchQuery, fetchProducts]);
 
   const openDeleteModal = (id: string) => {
     setProductToDelete(id);
@@ -74,7 +73,7 @@ export default function AdminProductsPage() {
       if (res.ok) {
         setIsDeleteModalOpen(false);
         setProductToDelete(null);
-        fetchProducts(page, searchQuery, selectedCategory); // refresh
+        fetchProducts(page, searchQuery); // refresh
       }
     } catch (error) {
       console.error("Failed to delete product:", error);
@@ -94,7 +93,7 @@ export default function AdminProductsPage() {
           >
             + Add a Single Product
           </Link>
-          <button className="flex-1 sm:flex-none bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
+          <button className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
             + Add Multiple Products
           </button>
         </div>
@@ -105,7 +104,7 @@ export default function AdminProductsPage() {
         <div className="flex-1">
           <input
             type="text"
-            placeholder="Search products..."
+            placeholder="Search products or categories..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -114,23 +113,7 @@ export default function AdminProductsPage() {
             className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 hover:border-blue-500 focus:ring-blue-500"
           />
         </div>
-        <div className="w-full sm:w-48">
-          <select
-            value={selectedCategory}
-            onChange={(e) => {
-              setSelectedCategory(e.target.value);
-              setPage(1);
-            }}
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 hover:border-blue-500 focus:ring-blue-500 text-gray-600 bg-white"
-          >
-            <option value="">All Categories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
+
       </div>
 
       <div className="overflow-x-auto">

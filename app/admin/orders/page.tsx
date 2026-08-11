@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Search, ArrowUpRight, ClipboardList, Box, Banknote } from "lucide-react";
+import { Search, ArrowUpRight, ClipboardList, Box, CircleDollarSign } from "lucide-react";
 import { STATUS_COLORS } from "@/lib/constants";
 import { Order } from "@/types";
 
@@ -47,7 +47,7 @@ export default function AdminOrdersPage() {
         {[
           { label: "Total Orders:", value: stats.totalOrders, Icon: ClipboardList },
           { label: "Total Units:", value: stats.totalUnits, Icon: Box },
-          { label: "Total Amount:", value: `Rs. ${Number(stats.totalAmount).toFixed(2)}`, Icon: Banknote },
+          { label: "Total Amount:", value: `Rs. ${Number(stats.totalAmount).toFixed(2)}`, Icon: CircleDollarSign },
         ].map(({ label, value, Icon }) => (
           <div key={label} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex items-center justify-between">
             <div>

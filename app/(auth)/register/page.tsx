@@ -7,10 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { registerSchema, RegisterInput } from "@/lib/validations/auth";
 import { useToast } from "@/hooks/use-toast";
+import { useSession, signOut } from "next-auth/react";
+import { useEffect } from "react";
 
 export default function RegisterPage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const { data: session, status } = useSession();
   
   const [formData, setFormData] = useState<RegisterInput>({
     fullName: "",
@@ -22,6 +25,17 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof RegisterInput, string[]>>>({});
   const [globalError, setGlobalError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      const provider = (session?.user as any)?.provider;
+      if (provider === "google") {
+        signOut({ callbackUrl: "/register" });
+      } else {
+        router.replace("/");
+      }
+    }
+  }, [status, session, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -82,7 +96,7 @@ export default function RegisterPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
-          label="Full Name"
+          label="Full Name *"
           name="fullName"
           value={formData.fullName}
           onChange={handleChange}
@@ -92,7 +106,7 @@ export default function RegisterPage() {
         />
         
         <Input
-          label="Email Address"
+          label="Email Address *"
           name="email"
           type="email"
           value={formData.email}
@@ -103,7 +117,7 @@ export default function RegisterPage() {
         />
         
         <Input
-          label="Mobile"
+          label="Mobile *"
           name="phone"
           type="tel"
           value={formData.phone}
@@ -114,7 +128,7 @@ export default function RegisterPage() {
         />
         
         <Input
-          label="Password"
+          label="Password *"
           name="password"
           type="password"
           value={formData.password}
@@ -126,7 +140,7 @@ export default function RegisterPage() {
         />
         
         <Input
-          label="Confirm Password"
+          label="Confirm Password *"
           name="confirmPassword"
           type="password"
           value={formData.confirmPassword}

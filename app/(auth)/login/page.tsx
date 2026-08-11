@@ -2,13 +2,17 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
+import { signIn, useSession, signOut } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { loginSchema, LoginInput } from "@/lib/validations/auth";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function LoginPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [formData, setFormData] = useState<LoginInput>({
     email: "",
     password: "",
@@ -18,6 +22,17 @@ export default function LoginPage() {
   const [globalError, setGlobalError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      const provider = (session?.user as any)?.provider;
+      if (provider === "google") {
+        signOut({ callbackUrl: "/login" });
+      } else {
+        router.replace("/");
+      }
+    }
+  }, [status, session, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -135,7 +150,7 @@ export default function LoginPage() {
         variant="outline"
         fullWidth
         disabled={isLoading}
-        onClick={() => signIn("google", { callbackUrl: "/login" })}
+        onClick={() => signIn("google", { callbackUrl: "/login" }, { prompt: "select_account" })}
       >
         <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
           <path fill="#4285F4" d="M488 261.8c0-16.7-1.5-32.9-4.3-48.5H248v91.8h134.8c-5.8 31.3-23.4 57.8-50 75.6v62.8h81c47.4-43.6 74.2-107.8 74.2-181.7z"></path>

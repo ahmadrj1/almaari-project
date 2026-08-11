@@ -3,12 +3,12 @@ export const RESET_TOKEN_EXPIRY_MS = 900000; // 15 minutes in milliseconds
 export const SESSION_EXPIRY_REMEMBER_ME = 7 * 24 * 60 * 60; // 7 days in seconds
 export const SESSION_EXPIRY_DEFAULT = 24 * 60 * 60; // 1 day in seconds
 export const TAX_PERCENTAGE = 0.10; // 10%
-export const PRODUCTS_PER_PAGE_DEFAULT = 8;
+export const PRODUCTS_PER_PAGE_DEFAULT = 42;
 export const ORDERS_PER_PAGE_DEFAULT = 10;
 export const DEFAULT_SORT = "newest";
 export const SEARCH_DEBOUNCE_MS = 400;
 export const POLLING_TIME = 10 * 1000; // 10 seconds in milliseconds
-export const CART_ITEM_EXPIRY_MS = 60 * 1000; // 1 hour in milliseconds
+export const CART_ITEM_EXPIRY_MS = 60 * 60 * 1000; // 1 hour in milliseconds
 
 export const SORT_OPTIONS = [
   { label: "Newest", value: "newest" },
