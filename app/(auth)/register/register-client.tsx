@@ -73,7 +73,7 @@ export default function RegisterPage() {
         setGlobalError(data.error || "Failed to register");
       } else {
         showToast("success", "Registration successful. Please login.");
-        router.push("/login");
+        router.replace("/login");
       }
     } catch {
       showToast("error", "Something went wrong. Please try again.");

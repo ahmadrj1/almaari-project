@@ -46,6 +46,7 @@ next-env.d.ts
 # Implementation Plan
 IMPLEMENTATION_PLAN.md
 ABOUT.md
+details.md
 
 # Images
 /public/images/products/*

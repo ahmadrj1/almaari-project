@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import React from "react";
 import { STATUS_COLORS, ORDER_STATUSES } from "@/lib/constants";
 import { OrderDetail, OrderItem } from "@/types";
+import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary";
 
 export default function OrderDetailPage({
   params,
@@ -189,7 +190,7 @@ export default function OrderDetailPage({
                   <td className="py-4 px-4 flex items-center gap-4">
                     <div className="w-12 h-12 relative flex-shrink-0 bg-gray-100 rounded overflow-hidden">
                       <Image
-                        src={item.product?.image || "/images/placeholder.png"}
+                        src={getOptimizedCloudinaryUrl(item.product?.image || "/images/placeholder.png", 160)}
                         alt={item.product?.title || "Product"}
                         fill
                         className="object-cover"

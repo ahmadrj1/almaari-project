@@ -10,6 +10,7 @@ import ViewProductModal from "@/components/admin/ViewProductModal";
 import { Category, ProductSummary } from "@/types";
 import { Pagination } from "@/components/ui/pagination";
 import { ADMIN_PRODUCTS_PER_PAGE_DEFAULT } from "@/lib/constants";
+import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductSummary[]>([]);
@@ -155,7 +156,7 @@ export default function AdminProductsPage() {
                   <td className="py-4 flex items-center gap-4">
                     <div className="w-12 h-12 relative flex-shrink-0 bg-gray-100 rounded-md overflow-hidden">
                       <Image
-                        src={product.image || "/images/placeholder.png"}
+                        src={getOptimizedCloudinaryUrl(product.image || "/images/placeholder.png", 180)}
                         alt={product.title}
                         fill
                         className="object-cover"

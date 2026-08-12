@@ -39,19 +39,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async signIn({ user, account }) {
       if (account?.provider === "google") {
         if (!user.email) return false;
-        const existingUser = await prisma.user.findUnique({
+        await prisma.user.upsert({
           where: { email: user.email },
+          update: {},
+          create: {
+            email: user.email,
+            fullName: user.name || "Google User",
+            phone: "",
+            passwordHash: "",
+          },
         });
-        if (!existingUser) {
-          await prisma.user.create({
-            data: {
-              email: user.email,
-              fullName: user.name || "Google User",
-              phone: "",
-              passwordHash: "",
-            },
-          });
-        }
       }
       return true;
     },
@@ -59,12 +56,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (account) {
         token.provider = account.provider;
       }
-      if (user) {
+      if (user && account?.provider !== "google") {
         token.id = user.id;
         token.role = user.role;
         const isRemember = (user as { rememberMe?: boolean }).rememberMe ?? false;
         const duration = isRemember ? SESSION_EXPIRY_REMEMBER_ME : SESSION_EXPIRY_DEFAULT;
         token.absoluteExpiry = Math.floor(Date.now() / 1000) + duration;
+      }
+      if (account?.provider === "google" && token.email) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: token.email },
+        });
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.role = dbUser.role;
+        }
       }
       if (token.absoluteExpiry) {
         token.exp = token.absoluteExpiry as number;

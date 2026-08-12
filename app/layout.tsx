@@ -18,6 +18,7 @@ import { ToastContainer } from "@/components/ui/toast-container";
 import { SessionProvider } from "next-auth/react";
 import { CartCountProvider } from "@/hooks/use-cart-count";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { BackNavigationGuard } from "@/components/providers/back-navigation-guard";
 
 
 export default function RootLayout({
@@ -35,6 +36,7 @@ export default function RootLayout({
           <AuthProvider>
             <ToastProvider>
               <CartCountProvider>
+                <BackNavigationGuard />
                 {children}
                 <ToastContainer />
               </CartCountProvider>

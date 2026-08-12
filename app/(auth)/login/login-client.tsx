@@ -70,9 +70,9 @@ export default function LoginPage() {
         const sessionRes = await fetch("/api/auth/session");
         const sessionData = await sessionRes.json();
         if (sessionData?.user?.role === "ADMIN") {
-          window.location.href = "/admin/products";
+          router.replace("/admin/products");
         } else {
-          window.location.href = "/";
+          router.replace("/");
         }
       }
     } catch {
@@ -147,11 +147,11 @@ export default function LoginPage() {
 
       <Button
         type="button"
-        variant="outline"
-        fullWidth
-        disabled={isLoading}
-        onClick={() => signIn("google", { callbackUrl: "/login" }, { prompt: "select_account" })}
-      >
+      variant="outline"
+      fullWidth
+      disabled={isLoading}
+      onClick={() => signIn("google", { callbackUrl: "/" }, { prompt: "select_account" })}
+    >
         <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
           <path fill="#4285F4" d="M488 261.8c0-16.7-1.5-32.9-4.3-48.5H248v91.8h134.8c-5.8 31.3-23.4 57.8-50 75.6v62.8h81c47.4-43.6 74.2-107.8 74.2-181.7z"></path>
           <path fill="#34A853" d="M248 504c69.1 0 127.1-22.9 169.5-62.1l-81-62.8c-22.4 15-51.2 23.9-88.5 23.9-68.1 0-125.8-46-146.4-108H19.7v64.8C62 443.8 147.2 504 248 504z"></path>

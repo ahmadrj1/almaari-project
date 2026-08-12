@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { ArrowLeft } from "lucide-react";
 import { STATUS_COLORS } from "@/lib/constants";
 import type { OrderDetail } from "@/types";
+import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary";
 
 export default function OrderDetailsPage() {
   const params = useParams();
@@ -133,7 +134,7 @@ export default function OrderDetailsPage() {
                     <div className="flex items-center gap-3">
                       <div className="relative w-12 h-12 rounded-md bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
                         {item.product?.image && (
-                          <Image src={item.product.image} alt={item.product.title} fill className="object-cover" />
+                          <Image src={getOptimizedCloudinaryUrl(item.product.image, 240)} alt={item.product.title} fill className="object-cover" />
                         )}
                       </div>
                       <span className="text-sm font-medium text-gray-800 line-clamp-2 max-w-xs">

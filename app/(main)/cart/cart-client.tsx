@@ -17,6 +17,7 @@ import { Spinner } from "@/components/ui/spinner";
 import type { CartItemWithProduct, SavedAddress } from "@/types";
 import { useCartCount } from "@/hooks/use-cart-count";
 import { TAX_PERCENTAGE, CART_ITEM_EXPIRY_MS } from "@/lib/constants";
+import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary";
 
 const getTimestamp = () => Date.now();
 
@@ -325,7 +326,7 @@ export default function CartPage() {
                       <div className="flex items-center gap-3">
                         <div className="relative w-12 h-12 rounded bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
                           {item.product.image ? (
-                            <Image src={item.product.image} alt={item.product.title} fill sizes="64px" className="object-cover" />
+                            <Image src={getOptimizedCloudinaryUrl(item.product.image, 160)} alt={item.product.title} fill sizes="64px" className="object-cover" />
                           ) : null}
                         </div>
                         <span className="font-medium text-gray-800 line-clamp-2">{item.product.title}</span>

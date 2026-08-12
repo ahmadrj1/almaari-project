@@ -73,6 +73,7 @@ GOOGLE_CLIENT_SECRET="your-google-client-secret"
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASS` are used for password reset emails.
 - `APP_URL` is used to build password-reset links. If omitted, the app falls back to `http://localhost:3000`.
 - `NODE_ENV` is set automatically by your runtime and is used internally for development vs production behavior.
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` power admin product image uploads and remote image delivery.
 
 ## Getting Started
 
@@ -131,7 +132,7 @@ The Prisma schema includes:
 
 ## Notes
 
-- Product images uploaded by admins are stored locally in `public/images/products/`.
+- Product images uploaded by admins are stored in Cloudinary and served from Cloudinary URLs.
 - Product deletions are soft deletes so order history can still reference past purchases.
 - Cart items expire after a fixed duration and are purged automatically when the cart is fetched.
 - Notification read state is tracked differently for broadcast and user-specific notifications.

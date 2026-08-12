@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/utils"
 import { ChevronDown } from "lucide-react"
 import { ProductVariant } from "@/types"
 import { useSession } from "next-auth/react"
+import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary"
 
 export interface ProductCardProps {
   product: Omit<Product, "price"> & { 
@@ -81,11 +82,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               key={img.id || idx}
               className="relative h-full w-full flex-shrink-0"
             >
-              <Image
-                src={img.url}
-                alt={product.title}
-                loading="lazy"
-                sizes="50vw"
+            <Image
+              src={getOptimizedCloudinaryUrl(img.url, 900)}
+              alt={product.title}
+              loading="lazy"
+              sizes="50vw"
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-105"
                 unoptimized
