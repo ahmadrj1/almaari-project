@@ -15,8 +15,9 @@ export class AdminProductController {
       const url = new URL(req.url);
       const search = url.searchParams.get("search") || "";
       const page = parseInt(url.searchParams.get("page") || "1");
+      const limit = parseInt(url.searchParams.get("limit") || "10");
 
-      const data = await AdminProductService.getProducts({ search, page });
+      const data = await AdminProductService.getProducts({ search, page, limit });
       return NextResponse.json({ success: true, data });
     } catch (error) {
       return handleApiError(error, "AdminProductController.getProducts");

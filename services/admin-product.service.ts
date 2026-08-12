@@ -1,12 +1,11 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import { PRODUCTS_PER_PAGE_DEFAULT } from "@/lib/constants";
+import { ADMIN_PRODUCTS_PER_PAGE_DEFAULT } from "@/lib/constants";
 import { AppError } from "@/lib/api-error";
 import { createBroadcastNotification } from "@/lib/notifications";
 
 export class AdminProductService {
-  static async getProducts({ search, page }: { search: string; page: number }) {
-    const limit = PRODUCTS_PER_PAGE_DEFAULT;
+  static async getProducts({ search, page, limit = ADMIN_PRODUCTS_PER_PAGE_DEFAULT }: { search: string; page: number; limit?: number }) {
     const skip = (page - 1) * limit;
     const where: Prisma.ProductWhereInput = { deletedAt: null };
     
@@ -40,7 +39,15 @@ export class AdminProductService {
     return { products: productsWithStock, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
   }
 
-  static async createProduct(body: any) {
+  static async createProduct(body: {
+    title: string;
+    description?: string;
+    price: number;
+    image: string;
+    categoryId?: string | null;
+    variants: { colorId: string; sizeId: string; stock: string | number }[];
+    images?: { url: string; colorId: string | null }[];
+  }) {
     const { title, description, price, image, categoryId, variants, images } = body;
 
     if (!title || !price || !image || !variants || variants.length === 0) {
@@ -104,7 +111,18 @@ export class AdminProductService {
     return product;
   }
 
-  static async updateProduct(id: string, body: any) {
+  static async updateProduct(
+    id: string,
+    body: {
+      title: string;
+      description?: string;
+      price: number;
+      image?: string;
+      categoryId?: string | null;
+      variants: { colorId: string; sizeId: string; stock: string | number }[];
+      images?: { url: string; colorId: string | null }[];
+    }
+  ) {
     const { title, description, price, image, categoryId, variants, images } = body;
 
     if (!title || !price || !variants || variants.length === 0) {

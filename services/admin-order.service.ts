@@ -1,12 +1,11 @@
 import { prisma } from "@/lib/db";
 import { OrderStatus, Prisma } from "@prisma/client";
-import { ORDERS_PER_PAGE_DEFAULT } from "@/lib/constants";
+import { ADMIN_ORDERS_PER_PAGE_DEFAULT } from "@/lib/constants";
 import { AppError } from "@/lib/api-error";
 import { createNotification } from "@/lib/notifications";
 
 export class AdminOrderService {
-  static async getOrders({ search, page }: { search: string; page: number }) {
-    const limit = ORDERS_PER_PAGE_DEFAULT;
+  static async getOrders({ search, page, limit = ADMIN_ORDERS_PER_PAGE_DEFAULT }: { search: string; page: number; limit?: number }) {
     const skip = (page - 1) * limit;
 
     const where: Prisma.OrderWhereInput = search

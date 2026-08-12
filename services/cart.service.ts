@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { CART_ITEM_EXPIRY_MS } from "@/lib/constants";
 import { cartItemSchema, patchCartItemSchema, deleteCartItemSchema } from "@/lib/validations/main";
 import { AppError } from "@/lib/api-error";
+import { z } from "zod";
 
 export class CartService {
   static async purgeExpiredCartItems(userId: string) {
@@ -26,7 +27,7 @@ export class CartService {
     });
   }
 
-  static async addToCart(userId: string, body: any) {
+  static async addToCart(userId: string, body: z.infer<typeof cartItemSchema>) {
     const { productId, variantId, quantity } = cartItemSchema.parse(body);
 
     return prisma.$transaction(async (tx) => {
@@ -82,7 +83,7 @@ export class CartService {
     });
   }
 
-  static async updateCartItem(userId: string, body: any) {
+  static async updateCartItem(userId: string, body: z.infer<typeof patchCartItemSchema>) {
     const { cartItemId, quantity } = patchCartItemSchema.parse(body);
 
     const existing = await prisma.cartItem.findUnique({
@@ -110,7 +111,7 @@ export class CartService {
     });
   }
 
-  static async deleteCartItem(userId: string, body: any) {
+  static async deleteCartItem(userId: string, body: z.infer<typeof deleteCartItemSchema>) {
     const { cartItemId } = deleteCartItemSchema.parse(body);
 
     const existing = await prisma.cartItem.findUnique({ where: { id: cartItemId } });

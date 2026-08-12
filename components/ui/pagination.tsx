@@ -11,7 +11,7 @@ export interface PaginationProps {
 }
 
 export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
-  if (totalPages <= 1) return null
+  const displayPages = Math.max(1, totalPages)
 
   return (
     <div className="flex items-center justify-center space-x-2 mt-8">
@@ -24,13 +24,13 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         <ChevronLeft className="h-4 w-4" />
       </Button>
       <span className="text-sm font-medium">
-        Page {currentPage} of {totalPages}
+        Page {currentPage} of {displayPages}
       </span>
       <Button
         variant="outline"
         size="sm"
         onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage >= totalPages}
+        disabled={currentPage >= displayPages}
       >
         <ChevronRight className="h-4 w-4" />
       </Button>

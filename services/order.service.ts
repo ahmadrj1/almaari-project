@@ -4,7 +4,7 @@ import { AppError } from "@/lib/api-error";
 import { createNotification } from "@/lib/notifications";
 
 export class OrderService {
-  static async createOrder(userId: string, body: any) {
+  static async createOrder(userId: string, body: { addressId: string; selectedItemIds: string[] }) {
     const addressId = body.addressId;
     const selectedItemIds = body.selectedItemIds;
     if (!addressId) throw new AppError("Address is required", 400);

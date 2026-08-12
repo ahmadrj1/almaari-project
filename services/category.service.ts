@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { categorySchema } from "@/lib/validations/main";
+import { z } from "zod";
 
 export class CategoryService {
   static async getCategories() {
@@ -8,7 +9,7 @@ export class CategoryService {
     });
   }
 
-  static async addCategory(body: any) {
+  static async addCategory(body: z.infer<typeof categorySchema>) {
     const parsed = categorySchema.parse(body);
     return prisma.category.create({
       data: {

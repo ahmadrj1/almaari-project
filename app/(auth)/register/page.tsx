@@ -28,7 +28,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      const provider = (session?.user as any)?.provider;
+      const provider = (session?.user as { provider?: string })?.provider;
       if (provider === "google") {
         signOut({ callbackUrl: "/register" });
       } else {

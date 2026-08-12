@@ -20,11 +20,11 @@ export class ProductController {
     }
   }
 
-  static async getDemoProducts(req: Request) {
+  static async getDemoProducts(_req: Request) {
     try {
       const data = await ProductService.getDemoProducts();
       return NextResponse.json({ products: data });
-    } catch (error) {
+    } catch (_error) {
       return NextResponse.json({ products: [] }, { status: 500 });
     }
   }

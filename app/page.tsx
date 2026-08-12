@@ -3,8 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ShoppingBag } from "lucide-react";
-import { ProductCard } from "@/components/ui/product-card";
+import dynamic from "next/dynamic";
 import { ProductCardSkeleton } from "@/components/ui/product-card-skeleton";
+
+const ProductCard = dynamic(() => import("@/components/ui/product-card").then((mod) => mod.ProductCard), {
+  ssr: false,
+  loading: () => <ProductCardSkeleton />
+});
 import { SearchBar } from "@/components/ui/search-bar";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { Pagination } from "@/components/ui/pagination";
@@ -30,7 +35,6 @@ function HomeContent() {
   const { refresh } = useCartCount();
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, totalPages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -38,7 +42,7 @@ function HomeContent() {
   const sort = searchParams.get("sort") || DEFAULT_SORT;
   const page = parseInt(searchParams.get("page") || "1");
 
-  const [localSearch, setLocalSearch] = useState("");
+  const [localSearch, setLocalSearch] = useState(searchParam);
   const debouncedSearch = useDebounce(localSearch);
 
   // Reset filters on page refresh (not SPA navigation)
@@ -47,8 +51,6 @@ function HomeContent() {
     const isReload = nav?.type === "reload";
     if (isReload && (searchParams.get("search") || searchParams.get("sort") || searchParams.get("page"))) {
       router.replace("/");
-    } else {
-      setLocalSearch(searchParams.get("search") || "");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

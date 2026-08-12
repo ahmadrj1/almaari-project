@@ -87,7 +87,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         (session.user as { role?: string; provider?: string }).provider = token.provider as string;
       }
       if (token.exp) {
-        (session as any).expires = new Date((token.exp as number) * 1000).toISOString();
+        (session as { expires?: string }).expires = new Date((token.exp as number) * 1000).toISOString();
       }
       return session;
     },

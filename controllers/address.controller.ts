@@ -4,7 +4,7 @@ import { handleApiError, AppError } from "@/lib/api-error";
 import { AddressService } from "@/services/address.service";
 
 export class AddressController {
-  static async getAddresses(req: Request) {
+  static async getAddresses(_req: Request) {
     try {
       const session = await auth();
       if (!session?.user?.id) throw new AppError("Unauthorized", 401);

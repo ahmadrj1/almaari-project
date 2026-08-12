@@ -73,10 +73,6 @@ export default function EditProductPage({
         setPrice(p.price);
         setCategoryId(p.categoryId || "");
 
-        const initialStock = p.variants.reduce(
-          (sum: number, v: { stock: number }) => sum + v.stock,
-          0,
-        );
 
         setVariants(
           p.variants.map(
@@ -250,7 +246,7 @@ export default function EditProductPage({
     } catch (e) {
       if (e instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
-        (e as z.ZodError<any>).issues.forEach((err: any) => {
+        e.issues.forEach((err) => {
           if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
         });
         setErrors(fieldErrors);

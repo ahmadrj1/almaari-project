@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import { PRODUCTS_PER_PAGE_DEFAULT, DEFAULT_SORT } from "@/lib/constants";
+import { PRODUCTS_PER_PAGE_DEFAULT } from "@/lib/constants";
 
 export class ProductService {
   static async getProducts({ search, sort, page, inStock }: { search: string, sort: string, page: number, inStock: boolean }) {

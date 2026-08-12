@@ -194,7 +194,7 @@ export default function AddProductPage() {
     } catch (e) {
       if (e instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
-        (e as z.ZodError<any>).issues.forEach((err: any) => {
+        e.issues.forEach((err) => {
           if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
         });
         setErrors(fieldErrors);

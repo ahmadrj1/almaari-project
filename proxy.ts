@@ -4,7 +4,7 @@ import authConfig from './auth.config';
 
 const { auth } = NextAuth(authConfig);
 
-export default auth(async (req) => {
+export default auth(async (_req) => {
   if (process.env.NODE_ENV !== 'production') {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }

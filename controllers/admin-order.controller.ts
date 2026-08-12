@@ -15,8 +15,9 @@ export class AdminOrderController {
       const url = new URL(req.url);
       const search = url.searchParams.get("search") || "";
       const page = parseInt(url.searchParams.get("page") || "1");
+      const limit = parseInt(url.searchParams.get("limit") || "10");
 
-      const data = await AdminOrderService.getOrders({ search, page });
+      const data = await AdminOrderService.getOrders({ search, page, limit });
       return NextResponse.json({ success: true, data });
     } catch (error) {
       return handleApiError(error, "AdminOrderController.getOrders");

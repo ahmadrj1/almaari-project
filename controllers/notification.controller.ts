@@ -35,7 +35,7 @@ export class NotificationController {
     }
   }
 
-  static async markAllAsRead(req: Request) {
+  static async markAllAsRead(_req: Request) {
     try {
       const session = await auth();
       if (!session?.user?.id) throw new AppError("Unauthorized", 401);

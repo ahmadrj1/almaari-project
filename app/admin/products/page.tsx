@@ -7,6 +7,8 @@ import { Edit, Trash2, Eye } from "lucide-react";
 import DeleteProductModal from "@/components/admin/DeleteProductModal";
 import ViewProductModal from "@/components/admin/ViewProductModal";
 import { Category, ProductSummary } from "@/types";
+import { Pagination } from "@/components/ui/pagination";
+import { ADMIN_PRODUCTS_PER_PAGE_DEFAULT } from "@/lib/constants";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductSummary[]>([]);
@@ -23,7 +25,7 @@ export default function AdminProductsPage() {
   const fetchProducts = useCallback(async (p: number, search: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/products?page=${p}&limit=10&search=${encodeURIComponent(search)}`);
+      const res = await fetch(`/api/admin/products?page=${p}&limit=${ADMIN_PRODUCTS_PER_PAGE_DEFAULT}&search=${encodeURIComponent(search)}`);
       const data = await res.json();
       if (data.success) {
         setProducts(data.data.products);
@@ -192,39 +194,13 @@ export default function AdminProductsPage() {
       </div>
 
       {/* Pagination */}
-      {!loading && totalPages > 1 && (
-        <div className="flex justify-end mt-6 gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1 border border-gray-200 rounded text-sm text-blue-500 disabled:text-gray-400 disabled:border-gray-100 hover:bg-gray-50 disabled:hover:bg-transparent"
-          >
-            Previous
-          </button>
-          
-          {Array.from({ length: totalPages }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setPage(i + 1)}
-              className={`px-3 py-1 border rounded text-sm ${
-                page === i + 1 
-                  ? "bg-white border-gray-200 text-blue-500 shadow-sm font-medium" 
-                  : "border-transparent text-blue-500 hover:bg-gray-50"
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
-
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-3 py-1 border border-transparent rounded text-sm text-blue-500 disabled:text-gray-400 hover:bg-gray-50 disabled:hover:bg-transparent"
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <div className="flex justify-end mt-6">
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
+      </div>
 
       <DeleteProductModal
         isOpen={isDeleteModalOpen}

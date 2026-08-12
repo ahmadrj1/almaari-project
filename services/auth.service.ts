@@ -5,8 +5,10 @@ import nodemailer from "nodemailer";
 import { AppError } from "@/lib/api-error";
 import { RESET_TOKEN_EXPIRY_MS, APP_NAME } from "@/lib/constants";
 
+import { RegisterInput } from "@/lib/validations/auth";
+
 export class AuthService {
-  static async register(body: any) {
+  static async register(body: RegisterInput) {
     const { email, password, fullName, phone } = body;
 
     const existingUser = await prisma.user.findUnique({

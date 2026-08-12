@@ -4,7 +4,7 @@ import { handleApiError, AppError } from "@/lib/api-error";
 import { CartService } from "@/services/cart.service";
 
 export class CartController {
-  static async getCart(req: Request) {
+  static async getCart(_req: Request) {
     try {
       const session = await auth();
       if (!session?.user?.id) throw new AppError("Unauthorized", 401);
@@ -16,14 +16,14 @@ export class CartController {
     }
   }
 
-  static async getCartCount(req: Request) {
+  static async getCartCount(_req: Request) {
     try {
       const session = await auth();
       if (!session?.user?.id) return NextResponse.json({ success: true, count: 0 });
 
       const count = await CartService.getCartCount(session.user.id);
       return NextResponse.json({ success: true, count });
-    } catch (error) {
+    } catch (_error) {
       return NextResponse.json({ success: true, count: 0 });
     }
   }
