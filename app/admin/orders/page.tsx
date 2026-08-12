@@ -130,7 +130,7 @@ export default function AdminOrdersPage() {
           </table>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-center">
           <Pagination
             currentPage={page}
             totalPages={totalPages}

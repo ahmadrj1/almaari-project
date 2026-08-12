@@ -194,7 +194,7 @@ export default function AdminProductsPage() {
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-end mt-6">
+      <div className="flex justify-center mt-6">
         <Pagination
           currentPage={page}
           totalPages={totalPages}
