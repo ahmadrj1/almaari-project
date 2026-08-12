@@ -196,15 +196,19 @@ function ProductsContent() {
           ))}
         </div>
       ) : products.length === 0 ? (
-        <EmptyState
-          icon={<ShoppingBag className="w-12 h-12 text-gray-400" />}
-          title="No products found"
-          description={
-            searchParam
-              ? `No results for "${searchParam}". Try clearing the search.`
-              : "No products available."
-          }
-        />
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 min-h-[300px]">
+          <div className="col-span-2 md:col-span-3 lg:col-span-4 flex items-center justify-center">
+            <EmptyState
+              icon={<ShoppingBag className="w-12 h-12 text-gray-400" />}
+              title="No products found"
+              description={
+                searchParam
+                  ? `No results for "${searchParam}". Try clearing the search.`
+                  : "No products available."
+              }
+            />
+          </div>
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">

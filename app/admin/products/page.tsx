@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Edit, Trash2, Eye } from "lucide-react";
+import { Edit, Trash2, Eye, ShoppingBag } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import DeleteProductModal from "@/components/admin/DeleteProductModal";
 import ViewProductModal from "@/components/admin/ViewProductModal";
 import { Category, ProductSummary } from "@/types";
@@ -132,11 +133,21 @@ export default function AdminProductsPage() {
           <tbody className="text-sm">
             {loading ? (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-gray-500">Loading...</td>
+                <td colSpan={5} className="py-8">
+                  <div className="flex items-center justify-center text-gray-500">Loading...</div>
+                </td>
               </tr>
             ) : products.length === 0 ? (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-gray-500">No products found.</td>
+                <td colSpan={5} className="py-8">
+                  <div className="flex items-center justify-center">
+                    <EmptyState
+                      icon={<ShoppingBag className="w-12 h-12 text-gray-400" />}
+                      title="No products found"
+                      description="No products available."
+                    />
+                  </div>
+                </td>
               </tr>
             ) : (
               products.map((product) => (

@@ -445,8 +445,7 @@ export default function EditProductPage({
             <label className="block text-sm text-gray-700 mb-1 font-medium">
               Category <span className="text-red-500">*</span>
             </label>
-            <div className="flex flex-col gap-1">
-              <div className="flex gap-3 items-center">
+              <div className="relative">
                 <select
                   value={categoryId}
                   onChange={(e) => {
@@ -455,7 +454,7 @@ export default function EditProductPage({
                       setNewCategoryName("");
                     }
                   }}
-                  className={`flex-1 border ${errors.categoryId ? 'border-red-500' : 'border-gray-200'} rounded p-2.5 text-sm bg-white focus:outline-none focus:border-blue-500`}
+                  className={`w-full min-w-0 appearance-none border ${errors.categoryId ? "border-red-500" : "border-gray-200"} rounded-lg bg-white py-2.5 pl-3 pr-10 text-sm focus:outline-none focus:border-blue-500`}
                 >
                   <option value="">Select Category</option>
                   {categories.map((c) => (
@@ -463,31 +462,44 @@ export default function EditProductPage({
                       {c.name}
                     </option>
                   ))}
-                  <option value="create_new" className="font-semibold text-blue-600">+ Create New Category</option>
+                  <option value="create_new" className="font-semibold text-blue-600">
+                    + Create New Category
+                  </option>
                 </select>
-                
-                {categoryId === "create_new" && (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="Category name…"
-                      value={newCategoryName}
-                      onChange={(e) => setNewCategoryName(e.target.value)}
-                      className={`animate-slide-in flex-1 border ${errors.categoryId ? 'border-red-500' : 'border-gray-200'} rounded p-2.5 text-sm bg-white focus:outline-none focus:border-blue-500`}
-                      autoFocus
-                    />
-                    <button
-                      onClick={handleCreateCategory}
-                      disabled={isCreatingCategory || !newCategoryName.trim()}
-                      className="animate-slide-in bg-blue-500 text-white px-4 py-2.5 rounded text-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
-                    >
-                      Create
-                    </button>
-                  </>
-                )}
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 8l4 4 4-4" />
+                </svg>
               </div>
-              {errors.categoryId && <span className="text-xs text-red-500 mt-1">{errors.categoryId}</span>}
-            </div>
+
+              {categoryId === "create_new" && (
+                <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] mt-5">
+                  <input
+                    type="text"
+                    placeholder="Category name…"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    className={`animate-slide-in w-full min-w-0 border ${errors.categoryId ? "border-red-500" : "border-gray-200"} rounded-lg bg-white p-2.5 text-sm focus:outline-none focus:border-blue-500`}
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleCreateCategory}
+                    disabled={isCreatingCategory || !newCategoryName.trim()}
+                    className="animate-slide-in w-full xl:w-auto bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 whitespace-nowrap"
+                  >
+                    Create
+                  </button>
+                </div>
+              )}
+              {errors.categoryId && (
+                <span className="text-xs text-red-500">{errors.categoryId}</span>
+              )}
           </div>
 
           {/* Variants section */}

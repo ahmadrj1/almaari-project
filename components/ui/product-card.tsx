@@ -24,7 +24,6 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const isAdmin = session?.user?.role === "ADMIN"
   const [quantity, setQuantity] = React.useState(1)
   const variants = React.useMemo(() => product.variants || [], [product.variants])
-  const scrollRef = React.useRef<HTMLDivElement>(null)
 
   // Extract unique colors and sizes
   const colors = React.useMemo(() => {
@@ -61,34 +60,26 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     return [{ id: "default", url: product.image, colorId: null }];
   }, [product.images, product.image]);
 
+  const activeImageIndex = React.useMemo(() => {
+    const nextIndex = displayImages.findIndex((img) => img.colorId === selectedColorId)
+    return nextIndex >= 0 ? nextIndex : 0
+  }, [displayImages, selectedColorId])
+
   const handleColorSelect = (colorId: string) => {
     setSelectedColorId(colorId);
-    if (!scrollRef.current) return;
-    
-    const targetElement = scrollRef.current.querySelector(`[data-color-id="${colorId}"]`) as HTMLElement;
-    if (targetElement) {
-      targetElement.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
-    } else {
-      const firstElement = scrollRef.current.firstElementChild as HTMLElement;
-      if (firstElement) {
-        firstElement.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
-      }
-    }
   };
 
   return (
     <div className={`group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white transition-shadow hover:shadow-lg ${isOutOfStock ? "opacity-75" : ""}`}>
       <div className="relative aspect-square overflow-hidden bg-gray-100">
-        <div 
-          ref={scrollRef}
-          className="flex h-full w-full overflow-x-auto scrollbar-none snap-x snap-mandatory"
-          style={{ scrollSnapType: "x mandatory", scrollBehavior: "smooth" }}
+        <div
+          className="flex h-full w-full transition-transform duration-500 ease-out"
+          style={{ transform: `translate3d(-${activeImageIndex * 100}%, 0, 0)` }}
         >
           {displayImages.map((img, idx) => (
-            <div 
-              key={img.id || idx} 
-              data-color-id={img.colorId || ""} 
-              className="relative h-full w-full flex-shrink-0 snap-start snap-always"
+            <div
+              key={img.id || idx}
+              className="relative h-full w-full flex-shrink-0"
             >
               <Image
                 src={img.url}
