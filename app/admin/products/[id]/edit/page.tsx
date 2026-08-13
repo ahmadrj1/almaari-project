@@ -442,7 +442,7 @@ export default function EditProductPage({
           </div>
 
           {/* Category selection */}
-          <div className="border-t border-gray-100 pt-3">
+          <div>
             <label className="block text-sm text-gray-700 mb-1 font-medium">
               Category <span className="text-red-500">*</span>
             </label>

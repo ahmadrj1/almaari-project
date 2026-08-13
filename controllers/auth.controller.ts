@@ -54,7 +54,7 @@ export class AuthController {
       const token = url.searchParams.get("token");
 
       if (!token) {
-        return NextResponse.redirect(new URL("/reset-link-expired", req.url));
+        return NextResponse.redirect(new URL("/login?error=Reset token is missing or invalid.", req.url));
       }
 
       await AuthService.verifyResetToken(token);
@@ -71,7 +71,7 @@ export class AuthController {
       return NextResponse.redirect(new URL("/reset-password", req.url));
     } catch (error) {
       logger.error({ err: error }, "Verify reset token error");
-      return NextResponse.redirect(new URL("/login?error=Something went wrong", req.url));
+      return NextResponse.redirect(new URL("/login?error=Reset password token is mismatched, wrong or expired.", req.url));
     }
   }
 
