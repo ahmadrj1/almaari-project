@@ -13,7 +13,7 @@ Almaari is a full-stack e-commerce platform built with Next.js 16, PostgreSQL, P
 - Admin order management with status updates and stock restoration on cancellation
 - Notification system with broadcast and user-specific notifications
 - Email-based forgot-password and reset-password flow
-- Google OAuth and credentials-based authentication
+- Google OAuth and credentials-based authentication with fixed remember-me expiry
 
 ## Tech Stack
 
@@ -114,7 +114,7 @@ Open `http://localhost:3000` in your browser.
 - Cart operations go through `/api/cart`
 - Orders are created through `/api/orders`
 - Customer addresses are handled by `/api/addresses`
-- Authentication is handled by `/api/auth/[...nextauth]` plus the register/reset routes
+- Authentication is handled by `/api/auth/[...nextauth]` for sign-in, sign-out, and callbacks, while `proxy.ts` owns session reads and cookie expiry
 - Admin product and order management lives under `/api/admin/*`
 - Notifications are loaded from `/api/notifications`
 
@@ -136,6 +136,24 @@ The Prisma schema includes:
 - Product deletions are soft deletes so order history can still reference past purchases.
 - Cart items expire after a fixed duration and are purged automatically when the cart is fetched.
 - Notification read state is tracked differently for broadcast and user-specific notifications.
+- Remember me is fixed at login time: unchecked sessions expire 24 hours after login, checked sessions expire 7 days after login, and refreshes do not slide the expiry window forward.
+
+## Authentication And Sessions
+
+NextAuth still handles the provider flows, but session handling is custom.
+
+1. Login creates a JWT with a fixed `exp` based on the remember-me checkbox.
+2. The JWT stores the identity data the app needs, including `id`, `role`, `provider`, and `rememberMe`.
+3. `proxy.ts` intercepts `/api/auth/session` and returns a custom session payload directly from the decoded JWT.
+4. The proxy rewrites `Set-Cookie` so the browser cookie expiry matches the JWT expiry exactly.
+5. Because the session route never reaches NextAuth, the token is not re-signed on refresh.
+
+That means:
+
+- Remember me unchecked: login time + 24 hours
+- Remember me checked: login time + 7 days
+- Page refresh: no sliding expiry
+- Cookie value: stays stable unless the user signs in again
 
 ## Deployment
 
