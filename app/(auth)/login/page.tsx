@@ -7,6 +7,12 @@ export const metadata: Metadata = {
   description: `Log in to your ${APP_NAME} account to shop and manage your orders.`,
 };
 
+import { Suspense } from "react";
+
 export default function Page() {
-  return <LoginPage />;
+  return (
+    <Suspense fallback={<div className="flex justify-center p-8">Loading...</div>}>
+      <LoginPage />
+    </Suspense>
+  );
 }

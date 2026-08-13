@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { loginSchema, LoginInput } from "@/lib/validations/auth";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
 export default function LoginPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const errorParam = searchParams.get("error");
   const [formData, setFormData] = useState<LoginInput>({
     email: "",
     password: "",
@@ -35,6 +37,13 @@ export default function LoginPage() {
       }
     }
   }, [skipAuthRedirect, status, session, router]);
+
+  useEffect(() => {
+    if (errorParam) {
+      showToast("error", errorParam);
+      router.replace("/login");
+    }
+  }, [errorParam, showToast, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
