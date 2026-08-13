@@ -8,6 +8,7 @@ import React from "react";
 import { STATUS_COLORS, ORDER_STATUSES } from "@/lib/constants";
 import { OrderDetail, OrderItem } from "@/types";
 import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary";
+import { SortDropdown } from "@/components/ui/sort-dropdown";
 
 export default function OrderDetailPage({
   params,
@@ -131,26 +132,18 @@ export default function OrderDetailPage({
         {/* Status with change control */}
         <div className="relative">
           <p className="text-sm text-gray-500 mb-1">Status</p>
-          <div className="relative inline-block w-full">
-            <select
-              value={order.status}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              disabled={updatingStatus}
-              className={`block w-full text-xs font-semibold rounded-full px-3 py-1.5 appearance-none cursor-pointer border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 text-center ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}
-              style={{ paddingRight: "1.5rem" }}
-            >
-              {ORDER_STATUSES.map((s) => (
-                <option key={s} value={s} className="bg-white text-gray-800 font-normal">
-                  {s}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-              <svg className="h-3 w-3 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
+          <SortDropdown
+            className="inline-block w-full"
+            buttonClassName={`h-9 rounded-full px-3 py-1.5 text-xs font-semibold justify-center border-0 ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}
+            menuClassName="max-h-56"
+            value={order.status}
+            options={ORDER_STATUSES.map((s) => ({
+              label: s,
+              value: s,
+            }))}
+            onValueChange={handleStatusChange}
+            disabled={updatingStatus}
+          />
         </div>
       </div>
 

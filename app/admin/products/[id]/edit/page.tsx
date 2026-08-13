@@ -10,6 +10,7 @@ import { Color, Size, FormVariant as Variant, Category, ProductImageUpload } fro
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { MAX_UPLOAD_SIZE } from "@/lib/constants";
+import { SortDropdown } from "@/components/ui/sort-dropdown";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -381,20 +382,20 @@ export default function EditProductPage({
                     unoptimized
                   />
                 </div>
-                <select
+                <SortDropdown
+                  className="w-full"
+                  buttonClassName="h-9 rounded-md px-2 text-xs"
+                  menuClassName="max-h-56"
                   value={img.colorId}
-                  onChange={(e) =>
-                    handleImageColorChange(img.id, e.target.value)
+                  placeholder="Global (Default)"
+                  options={colors.map((c) => ({
+                    label: c.name,
+                    value: c.id,
+                  }))}
+                  onValueChange={(value) =>
+                    handleImageColorChange(img.id, value)
                   }
-                  className="w-full border border-gray-200 rounded p-1 text-xs bg-white focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">Global (Default)</option>
-                  {colors.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             ))}
           </div>
@@ -446,36 +447,29 @@ export default function EditProductPage({
               Category <span className="text-red-500">*</span>
             </label>
               <div className="relative">
-                <select
+                <SortDropdown
+                  className={`w-full min-w-0 ${errors.categoryId ? "ring-1 ring-red-500 rounded-lg" : ""}`}
+                  buttonClassName={`rounded-lg py-2.5 text-sm ${errors.categoryId ? "border-red-500" : "border-gray-200"}`}
+                  menuClassName="max-h-56"
                   value={categoryId}
-                  onChange={(e) => {
-                    setCategoryId(e.target.value);
-                    if (e.target.value !== "create_new") {
+                  placeholder="Select Category"
+                  options={[
+                    ...categories.map((c) => ({
+                      label: c.name,
+                      value: c.id,
+                    })),
+                    {
+                      label: <span className="font-semibold text-blue-600">+ Create New Category</span>,
+                      value: "create_new",
+                    },
+                  ]}
+                  onValueChange={(value) => {
+                    setCategoryId(value);
+                    if (value !== "create_new") {
                       setNewCategoryName("");
                     }
                   }}
-                  className={`w-full min-w-0 appearance-none border ${errors.categoryId ? "border-red-500" : "border-gray-200"} rounded-lg bg-white py-2.5 pl-3 pr-10 text-sm focus:outline-none focus:border-blue-500`}
-                >
-                  <option value="">Select Category</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                  <option value="create_new" className="font-semibold text-blue-600">
-                    + Create New Category
-                  </option>
-                </select>
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 8l4 4 4-4" />
-                </svg>
+                />
               </div>
 
               {categoryId === "create_new" && (
@@ -508,30 +502,30 @@ export default function EditProductPage({
               Add Product Variants <span className="text-red-500">*</span>
             </label>
             <div className="flex items-center gap-3">
-              <select
+              <SortDropdown
+                className="flex-1 min-w-0"
+                buttonClassName="rounded p-2 text-sm h-10"
+                menuClassName="max-h-56"
                 value={selectedColor}
-                onChange={(e) => setSelectedColor(e.target.value)}
-                className="flex-1 border border-gray-200 rounded p-2 text-sm bg-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="">Select Color</option>
-                {colors.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <select
+                placeholder="Select Color"
+                options={colors.map((c) => ({
+                  label: c.name,
+                  value: c.id,
+                }))}
+                onValueChange={setSelectedColor}
+              />
+              <SortDropdown
+                className="flex-1 min-w-0"
+                buttonClassName="rounded p-2 text-sm h-10"
+                menuClassName="max-h-56"
                 value={selectedSize}
-                onChange={(e) => setSelectedSize(e.target.value)}
-                className="flex-1 border border-gray-200 rounded p-2 text-sm bg-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="">Select Size</option>
-                {sizes.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="Select Size"
+                options={sizes.map((s) => ({
+                  label: s.name,
+                  value: s.id,
+                }))}
+                onValueChange={setSelectedSize}
+              />
               <input
                 type="number"
                 value={variantQty}

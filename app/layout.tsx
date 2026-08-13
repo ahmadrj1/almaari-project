@@ -19,20 +19,23 @@ import { SessionProvider } from "next-auth/react";
 import { CartCountProvider } from "@/hooks/use-cart-count";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { BackNavigationGuard } from "@/components/providers/back-navigation-guard";
+import { getServerSessionSnapshot } from "@/lib/auth-session";
 
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getServerSessionSnapshot();
+
   return (
     <html
       lang="en"
       className={`${inter.variable} h-full`}
     >
       <body className="min-h-full flex flex-col bg-[#F5F7FA]">
-        <SessionProvider>
+        <SessionProvider session={session} refetchOnWindowFocus={false}>
           <AuthProvider>
             <ToastProvider>
               <CartCountProvider>

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { signIn, useSession, signOut } from "next-auth/react";
+import { getCsrfToken, signIn, useSession, signOut } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { loginSchema, LoginInput } from "@/lib/validations/auth";
@@ -22,8 +22,10 @@ export default function LoginPage() {
   const [globalError, setGlobalError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [skipAuthRedirect, setSkipAuthRedirect] = useState(false);
 
   useEffect(() => {
+    if (skipAuthRedirect) return;
     if (status === "authenticated") {
       const provider = (session?.user as { provider?: string })?.provider;
       if (provider === "google") {
@@ -32,7 +34,7 @@ export default function LoginPage() {
         router.replace("/");
       }
     }
-  }, [status, session, router]);
+  }, [skipAuthRedirect, status, session, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -49,7 +51,7 @@ export default function LoginPage() {
     setGlobalError("");
 
     const validation = loginSchema.safeParse(formData);
-    
+
     if (!validation.success) {
       setErrors(validation.error.flatten().fieldErrors);
       setIsLoading(false);
@@ -57,23 +59,31 @@ export default function LoginPage() {
     }
 
     try {
-      const result = await signIn("credentials", {
-        redirect: false,
-        email: validation.data.email,
-        password: validation.data.password,
-        rememberMe: String(rememberMe),
+      const callbackUrl = new URL("/login/redirect", window.location.origin).toString();
+      const csrfToken = await getCsrfToken();
+      const response = await fetch("/api/auth/callback/credentials", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-Auth-Return-Redirect": "1",
+        },
+        body: new URLSearchParams({
+          email: validation.data.email,
+          password: validation.data.password,
+          rememberMe: String(rememberMe),
+          csrfToken,
+          callbackUrl,
+        }),
       });
+      const result = (await response.json()) as { url?: string };
+      const resultUrl = result.url ? new URL(result.url) : null;
+      const error = resultUrl?.searchParams.get("error");
 
-      if (result?.error) {
+      if (!response.ok || error) {
         setGlobalError("Invalid email or password");
-      } else if (result?.ok) {
-        const sessionRes = await fetch("/api/auth/session");
-        const sessionData = await sessionRes.json();
-        if (sessionData?.user?.role === "ADMIN") {
-          router.replace("/admin/products");
-        } else {
-          router.replace("/");
-        }
+      } else if (resultUrl) {
+        setSkipAuthRedirect(true);
+        window.location.assign(resultUrl.toString());
       }
     } catch {
       showToast("error", "Something went wrong. Please try again.");

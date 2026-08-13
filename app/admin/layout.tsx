@@ -1,18 +1,20 @@
 import { redirect } from "next/navigation";
-import { auth, signOut } from "@/auth";
+import { signOut } from "@/auth";
 import { Role } from "@prisma/client";
 import { LogOut, ChevronDown } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { getServerSessionSnapshot } from "@/lib/auth-session";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
+  const session = await getServerSessionSnapshot();
+  const user = session?.user;
 
-  if (session?.user?.role !== Role.ADMIN) {
+  if (user?.role !== Role.ADMIN) {
     redirect("/");
   }
 
-  const name = session.user.name || "Admin";
-  const email = session.user.email || "";
+  const name = user?.name || "Admin";
+  const email = user?.email || "";
   const initials = name
     .split(" ")
     .map((n: string) => n[0])

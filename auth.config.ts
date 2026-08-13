@@ -7,7 +7,7 @@ export default {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = (user as { role?: string }).role;
+        token.role = (user as { role?: string }).role || "USER";
       }
       return token;
     },
@@ -20,9 +20,7 @@ export default {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const userRole = (auth?.user as { role?: string })?.role;
-      const isAuthPage = ["/login", "/register", "/forgot-password", "/reset-password"].some((p) =>
-        nextUrl.pathname.startsWith(p)
-      );
+      const isAuthPage = ["/login", "/register", "/forgot-password", "/reset-password"].includes(nextUrl.pathname);
 
       const protectedRoutes = ["/cart", "/checkout", "/profile", "/orders", "/notifications"];
       const isProtectedRoute = protectedRoutes.some((p) => nextUrl.pathname.startsWith(p));

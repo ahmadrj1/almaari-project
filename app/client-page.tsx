@@ -130,9 +130,8 @@ function HomeContent() {
       <main className="container mx-auto flex-1 px-4 py-6 sm:py-8">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold text-primary">Our Products</h1>
-          <div className="flex flex-col gap-3 w-full sm:flex-row sm:items-center sm:w-auto">
-            {/* Search bar of full length on mobile, constrained size on larger screens */}
-            <div className="w-full sm:w-80">
+          <div className="flex flex-row items-center gap-3 w-full sm:w-auto">
+            <div className="min-w-0 flex-1 sm:w-80 sm:flex-none">
               <SearchBar
                 placeholder="Search products or categories..."
                 className="w-full"
@@ -140,16 +139,14 @@ function HomeContent() {
                 onChange={(e) => setLocalSearch(e.target.value)}
               />
             </div>
-            {/* Categories and filters on one line */}
-            <div className="flex items-center justify-center gap-3 w-full sm:w-auto overflow-x-auto scrollbar-none shrink-0">
-
-              <div className="shrink-0">
-                <SortDropdown
-                  options={SORT_OPTIONS}
-                  value={sort}
-                  onChange={(e) => updateParams({ sort: e.target.value })}
-                />
-              </div>
+            <div className="shrink-0">
+              <SortDropdown
+                className="w-40 sm:w-48 shrink-0"
+                options={SORT_OPTIONS}
+                value={sort}
+                placeholder="Sort by"
+                onValueChange={(value) => updateParams({ sort: value })}
+              />
             </div>
           </div>
         </div>

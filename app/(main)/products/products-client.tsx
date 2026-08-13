@@ -158,20 +158,18 @@ function ProductsContent() {
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-primary">Our Products</h1>
-        <div className="flex flex-row items-center gap-3 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-none shrink-0">
-          <select
+        <div className="flex flex-row items-center gap-3 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-none">
+          <SortDropdown
+            className="w-40 sm:w-48 shrink-0"
             value={categoryId}
-            onChange={(e) => updateParams({ categoryId: e.target.value })}
-            className="h-11 rounded-lg border-1 border-[#E1E7EF] bg-white px-3 text-sm text-[#98A4C4] outline-none hover:border-primary focus:ring-0"
-          >
-            <option value="">All Categories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <div className="shrink-0 w-48 sm:w-80">
+            placeholder="All Categories"
+            options={categories.map((c) => ({
+              label: c.name,
+              value: c.id,
+            }))}
+            onValueChange={(value) => updateParams({ categoryId: value })}
+          />
+          <div className="min-w-0 flex-1 sm:w-80 sm:flex-none">
             <SearchBar
               placeholder="Search products..."
               className="w-full"
@@ -181,9 +179,11 @@ function ProductsContent() {
           </div>
           <div className="shrink-0">
             <SortDropdown
+              className="w-40 sm:w-48 shrink-0"
               options={SORT_OPTIONS}
               value={sort}
-              onChange={(e) => updateParams({ sort: e.target.value })}
+              placeholder="Sort by"
+              onValueChange={(value) => updateParams({ sort: value })}
             />
           </div>
         </div>
