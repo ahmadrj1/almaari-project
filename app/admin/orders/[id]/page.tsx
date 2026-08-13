@@ -7,6 +7,8 @@ import { ArrowLeft } from "lucide-react";
 import React from "react";
 import { STATUS_COLORS, ORDER_STATUSES } from "@/lib/constants";
 import { OrderDetail, OrderItem } from "@/types";
+import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary";
+import { SortDropdown } from "@/components/ui/sort-dropdown";
 
 export default function OrderDetailPage({
   params,
@@ -128,25 +130,20 @@ export default function OrderDetailPage({
           </p>
         </div>
         {/* Status with change control */}
-        <div>
+        <div className="relative">
           <p className="text-sm text-gray-500 mb-1">Status</p>
-          <span
-            className={`inline-block px-2 py-1 rounded-full text-xs font-medium mb-2 ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}
-          >
-            {order.status}
-          </span>
-          <select
+          <SortDropdown
+            className="inline-block w-full"
+            buttonClassName={`h-9 rounded-full px-3 py-1.5 text-xs font-semibold justify-center border-0 ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}
+            menuClassName="max-h-56"
             value={order.status}
-            onChange={(e) => handleStatusChange(e.target.value)}
+            options={ORDER_STATUSES.map((s) => ({
+              label: s,
+              value: s,
+            }))}
+            onValueChange={handleStatusChange}
             disabled={updatingStatus}
-            className="block w-full text-xs border border-gray-200 rounded p-1.5 bg-white focus:outline-none focus:border-blue-500 disabled:opacity-50"
-          >
-            {ORDER_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+          />
         </div>
       </div>
 
@@ -186,15 +183,20 @@ export default function OrderDetailPage({
                   <td className="py-4 px-4 flex items-center gap-4">
                     <div className="w-12 h-12 relative flex-shrink-0 bg-gray-100 rounded overflow-hidden">
                       <Image
-                        src={item.product?.image || "/images/placeholder.png"}
+                        src={getOptimizedCloudinaryUrl(item.product?.image || "/images/placeholder.png", 160)}
                         alt={item.product?.title || "Product"}
                         fill
                         className="object-cover"
                         unoptimized
                       />
                     </div>
-                    <span className="font-medium text-gray-800 max-w-[400px] line-clamp-2">
-                      {item.product?.title || "Deleted Product"}
+                    <span className="font-medium text-gray-800 max-w-[400px] line-clamp-2 flex items-center gap-2">
+                      {item.product?.title || "Unknown Product"}
+                      {item.product?.deletedAt && (
+                        <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10">
+                          Deleted
+                        </span>
+                      )}
                     </span>
                   </td>
                   <td className="py-4 px-4 text-gray-600">

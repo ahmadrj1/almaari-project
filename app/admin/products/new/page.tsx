@@ -5,17 +5,24 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Upload, Plus, Trash2 } from "lucide-react";
-import { Color, Size, Variant, Category, ProductImageUpload } from "@/types";
+import { Color, Size, FormVariant as Variant, Category, ProductImageUpload } from "@/types";
 import { MAX_UPLOAD_SIZE } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+import { SortDropdown } from "@/components/ui/sort-dropdown";
 
+const formSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  price: z.number().min(0, "Price cannot be negative"),
+  categoryId: z.string().min(1, "Category is required"),
+});
 export default function AddProductPage() {
   const router = useRouter();
   const { showToast } = useToast();
   
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
-  const [quantity, setQuantity] = useState(""); // Overall quantity/stock
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   const [colors, setColors] = useState<Color[]>([]);
   const [sizes, setSizes] = useState<Size[]>([]);
@@ -155,23 +162,45 @@ export default function AddProductPage() {
       ]);
     }
 
-    setSelectedColor("");
     setSelectedSize("");
     setVariantQty("");
+    setErrors((prev) => ({ ...prev, variants: "" }));
   };
 
   const removeVariant = (id: string) => {
     setVariants(variants.filter(v => v.id !== id));
   };
 
+  const totalQuantity = variants.reduce((sum, v) => sum + Number(v.stock || 0), 0);
+
   const handleSave = async () => {
-    if (!title || !price || variants.length === 0) {
-      showToast("error", "Please fill required fields and add at least one variant.");
-      return;
-    }
-    
-    if (productImages.length === 0) {
-      showToast("error", "Please upload at least one image.");
+    try {
+      setErrors({});
+      formSchema.parse({
+        title,
+        price: Number(price),
+        categoryId: categoryId === "create_new" ? newCategoryName : categoryId,
+      });
+      
+      if (variants.length === 0) {
+        setErrors((prev) => ({ ...prev, variants: "At least one variant is required" }));
+        showToast("error", "At least one variant is required");
+        return;
+      }
+      if (productImages.length === 0) {
+        setErrors((prev) => ({ ...prev, images: "At least one image is required" }));
+        showToast("error", "At least one image is required");
+        return;
+      }
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        e.issues.forEach((err) => {
+          if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
+        });
+        setErrors(fieldErrors);
+        showToast("error", "Please fix the highlighted errors");
+      }
       return;
     }
 
@@ -218,6 +247,7 @@ export default function AddProductPage() {
       });
 
       if (res.ok) {
+        showToast("success", "Product added successfully!");
         router.push("/admin/products");
       } else {
         throw new Error("Failed to save product");
@@ -239,12 +269,12 @@ export default function AddProductPage() {
         <h1 className="text-2xl font-semibold text-slate-800">Add a Single Product</h1>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-8">
+      <div className="flex flex-col lg:flex-row gap-8">
         {/* Left: Multi-Image Upload */}
-        <div className="w-full md:w-1/3 flex flex-col gap-4">
-          <label className="block text-sm font-medium text-gray-700">Product Images</label>
+        <div className="w-full lg:w-1/3 flex flex-col gap-4">
+          <label className="block text-sm font-medium text-gray-700">Product Images <span className="text-red-500">*</span></label>
           <div 
-            className="border-2 border-dashed border-gray-200 rounded-lg p-4 bg-gray-50 flex flex-col items-center justify-center min-h-[150px] cursor-pointer hover:bg-gray-100 transition-colors"
+            className={`border-2 border-dashed ${errors.images ? 'border-red-500' : 'border-gray-200'} rounded-lg p-4 bg-gray-50 flex flex-col items-center justify-center min-h-[150px] cursor-pointer hover:bg-gray-100 transition-colors`}
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload size={24} className="text-gray-400 mb-2" />
@@ -271,146 +301,182 @@ export default function AddProductPage() {
                 <div className="relative aspect-video w-full bg-gray-100 rounded-md overflow-hidden">
                   <Image src={img.previewUrl} alt="Preview" fill className="object-contain" unoptimized />
                 </div>
-                <select
+                <SortDropdown
+                  className="w-full"
+                  buttonClassName="h-9 rounded-md px-2 text-xs"
+                  menuClassName="max-h-56"
                   value={img.colorId}
-                  onChange={(e) => handleImageColorChange(img.id, e.target.value)}
-                  className="w-full border border-gray-200 rounded p-1 text-xs bg-white focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">Global (Default)</option>
-                  {colors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                  placeholder="Global (Default)"
+                  options={colors.map((c) => ({
+                    label: c.name,
+                    value: c.id,
+                  }))}
+                  onValueChange={(value) => handleImageColorChange(img.id, value)}
+                />
               </div>
             ))}
           </div>
         </div>
 
         {/* Right: Form */}
-        <div className="w-full md:w-2/3 flex flex-col gap-6">
+        <div className="w-full lg:w-2/3 flex flex-col gap-6 min-w-0">
           
           <div>
-            <label className="block text-sm text-gray-700 mb-1">Product Name</label>
+            <label className="block text-sm text-gray-700 mb-1">Product Name <span className="text-red-500">*</span></label>
             <input 
               type="text" 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Cargo Trousers for Men"
-              className="w-full border border-gray-200 rounded p-2.5 text-sm focus:outline-none focus:border-blue-500"
+              className={`w-full border ${errors.title ? 'border-red-500' : 'border-gray-200'} rounded p-2.5 text-sm focus:outline-none focus:border-blue-500`}
             />
+            {errors.title && <span className="text-xs text-red-500 mt-1">{errors.title}</span>}
           </div>
 
-          <div className="flex gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex-1">
-              <label className="block text-sm text-gray-700 mb-1">Price</label>
+              <label className="block text-sm text-gray-700 mb-1">Price <span className="text-red-500">*</span></label>
               <input 
                 type="number" 
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="$00.00"
-                className="w-full border border-gray-200 rounded p-2.5 text-sm focus:outline-none focus:border-blue-500"
+                className={`w-full border ${errors.price ? 'border-red-500' : 'border-gray-200'} rounded p-2.5 text-sm focus:outline-none focus:border-blue-500`}
               />
+              {errors.price && <span className="text-xs text-red-500 mt-1">{errors.price}</span>}
             </div>
             <div className="flex-1">
-              <label className="block text-sm text-gray-700 mb-1">Quantity</label>
+              <label className="block text-sm text-gray-700 mb-1">Total Quantity</label>
               <input 
                 type="number" 
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                placeholder="Total Stock"
-                className="w-full border border-gray-200 rounded p-2.5 text-sm focus:outline-none focus:border-blue-500"
+                value={totalQuantity}
+                readOnly
+                placeholder="Calculated automatically"
+                className="w-full border border-gray-200 rounded p-2.5 text-sm bg-gray-50 text-gray-500 focus:outline-none cursor-not-allowed"
               />
             </div>
           </div>
 
           {/* Category selection */}
           <div className="border-t border-gray-100 pt-4">
-            <label className="block text-sm text-gray-700 mb-1 font-medium">Category</label>
-            <div className="flex gap-3 items-center">
-              <select 
-                value={categoryId}
-                onChange={(e) => {
-                  setCategoryId(e.target.value);
-                  if (e.target.value !== "create_new") {
-                    setNewCategoryName("");
-                  }
-                }}
-                className="flex-1 border border-gray-200 rounded p-2.5 text-sm bg-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="">Select Category</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                <option value="create_new" className="font-semibold text-blue-600">+ Create New Category</option>
-              </select>
+            <label className="block text-sm text-gray-700 mb-1 font-medium">Category <span className="text-red-500">*</span></label>
+            <div
+              className={`rounded-xl border ${
+                errors.categoryId ? "border-red-500" : "border-gray-200"
+              } bg-gray-50 p-4 space-y-3`}
+            >
+              <div className="relative">
+                <SortDropdown
+                  className={`w-full min-w-0 ${errors.categoryId ? "rounded-lg ring-1 ring-red-500" : ""}`}
+                  buttonClassName={`rounded-lg py-2.5 text-sm ${errors.categoryId ? "border-red-500" : "border-gray-200"}`}
+                  menuClassName="max-h-56"
+                  value={categoryId}
+                  placeholder="Select Category"
+                  options={[
+                    ...categories.map((c) => ({
+                      label: c.name,
+                      value: c.id,
+                    })),
+                    {
+                      label: <span className="font-semibold text-blue-600">+ Create New Category</span>,
+                      value: "create_new",
+                    },
+                  ]}
+                  onValueChange={(value) => {
+                    setCategoryId(value);
+                    if (value !== "create_new") {
+                      setNewCategoryName("");
+                    }
+                  }}
+                />
+              </div>
               
               {categoryId === "create_new" && (
-                <>
+                <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
                   <input 
                     type="text"
                     placeholder="Category name…"
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
-                    className="animate-slide-in flex-1 border border-gray-200 rounded p-2.5 text-sm bg-white focus:outline-none focus:border-blue-500"
+                    className={`animate-slide-in w-full min-w-0 border ${errors.categoryId ? 'border-red-500' : 'border-gray-200'} rounded-lg bg-white p-2.5 text-sm focus:outline-none focus:border-blue-500`}
                     autoFocus
                   />
                   <button 
                     onClick={handleCreateCategory}
                     disabled={isCreatingCategory || !newCategoryName.trim()}
-                    className="animate-slide-in bg-blue-500 text-white px-4 py-2.5 rounded text-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
+                    className="animate-slide-in w-full xl:w-auto bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 whitespace-nowrap"
                   >
                     Create
                   </button>
-                </>
+                </div>
               )}
+              {errors.categoryId && <span className="text-xs text-red-500">{errors.categoryId}</span>}
             </div>
           </div>
 
           {/* Variants section */}
-          <div className="space-y-3 border-t border-gray-100 pt-4">
-            <label className="block text-sm text-gray-700 mb-1 font-medium">Add Product Variants</label>
-            <div className="flex items-center gap-3">
-              <select 
+          <div className={`space-y-3 border-t border-gray-100 pt-4 ${errors.variants ? 'rounded-lg border-2 border-red-500 p-2' : ''}`}>
+            <label className="block text-sm text-gray-700 mb-1 font-medium">Add Product Variants <span className="text-red-500">*</span></label>
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+              <SortDropdown
+                className="w-full min-w-0"
+                buttonClassName="rounded p-2 text-sm h-10"
+                menuClassName="max-h-56"
                 value={selectedColor}
-                onChange={(e) => setSelectedColor(e.target.value)}
-                className="flex-1 border border-gray-200 rounded p-2 text-sm bg-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="">Select Color</option>
-                {colors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              <select 
+                placeholder="Select Color"
+                options={colors.map((c) => ({
+                  label: c.name,
+                  value: c.id,
+                }))}
+                onValueChange={setSelectedColor}
+              />
+              <SortDropdown
+                className="w-full min-w-0"
+                buttonClassName="rounded p-2 text-sm h-10"
+                menuClassName="max-h-56"
                 value={selectedSize}
-                onChange={(e) => setSelectedSize(e.target.value)}
-                className="flex-1 border border-gray-200 rounded p-2 text-sm bg-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="">Select Size</option>
-                {sizes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+                placeholder="Select Size"
+                options={sizes.map((s) => ({
+                  label: s.name,
+                  value: s.id,
+                }))}
+                onValueChange={setSelectedSize}
+              />
               <input 
                 type="number" 
                 value={variantQty}
                 onChange={(e) => setVariantQty(e.target.value)}
                 placeholder="Enter Qty"
-                className="flex-1 border border-gray-200 rounded p-2 text-sm focus:outline-none focus:border-blue-500"
+                className="w-full min-w-0 border border-gray-200 rounded p-2 text-sm focus:outline-none focus:border-blue-500"
               />
               <button 
                 onClick={addVariant}
-                className="w-9 h-9 border border-blue-200 text-blue-500 rounded flex items-center justify-center hover:bg-blue-50 transition-colors shrink-0"
+                className={`w-full xl:w-9 h-9 border rounded flex items-center justify-center transition-colors shrink-0 ${
+                  selectedColor && selectedSize && variantQty
+                    ? "bg-blue-500 text-white border-blue-500 hover:bg-blue-600"
+                    : "border-blue-200 text-blue-500 hover:bg-blue-50"
+                }`}
               >
                 <Plus size={16} />
               </button>
             </div>
 
             {/* Added variants list */}
-            {variants.map(variant => (
-              <div key={variant.id} className="flex items-center gap-3 bg-gray-50 p-2 rounded">
-                <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">{variant.colorName}</div>
-                <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">{variant.sizeName}</div>
-                <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">{variant.stock}</div>
-                <button 
-                  onClick={() => removeVariant(variant.id)}
-                  className="w-9 h-9 border border-red-200 text-red-500 rounded flex items-center justify-center hover:bg-red-50 transition-colors shrink-0 bg-white"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
+            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+              {variants.map(variant => (
+                <div key={variant.id} className="grid gap-3 bg-gray-50 p-2 rounded md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+                  <div className="min-w-0 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">{variant.colorName}</div>
+                  <div className="min-w-0 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">{variant.sizeName}</div>
+                  <div className="min-w-0 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">{variant.stock}</div>
+                  <button 
+                    onClick={() => removeVariant(variant.id)}
+                    className="w-full md:w-9 h-9 border border-red-200 text-red-500 rounded flex items-center justify-center hover:bg-red-50 transition-colors shrink-0 bg-white"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="flex justify-end mt-4">

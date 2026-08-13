@@ -3,10 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Edit, Trash2, Eye } from "lucide-react";
+import { Edit, Trash2, Eye, ShoppingBag } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import DeleteProductModal from "@/components/admin/DeleteProductModal";
 import ViewProductModal from "@/components/admin/ViewProductModal";
 import { Category, ProductSummary } from "@/types";
+import { Pagination } from "@/components/ui/pagination";
+import { ADMIN_PRODUCTS_PER_PAGE_DEFAULT } from "@/lib/constants";
+import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductSummary[]>([]);
@@ -14,17 +18,16 @@ export default function AdminProductsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [viewProductId, setViewProductId] = useState<string | null>(null);
 
-  const fetchProducts = useCallback(async (p: number, search: string, catId: string) => {
+  const fetchProducts = useCallback(async (p: number, search: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/products?page=${p}&limit=10&search=${encodeURIComponent(search)}&categoryId=${catId}`);
+      const res = await fetch(`/api/admin/products?page=${p}&limit=${ADMIN_PRODUCTS_PER_PAGE_DEFAULT}&search=${encodeURIComponent(search)}`);
       const data = await res.json();
       if (data.success) {
         setProducts(data.data.products);
@@ -56,8 +59,8 @@ export default function AdminProductsPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchProducts(page, searchQuery, selectedCategory);
-  }, [page, searchQuery, selectedCategory, fetchProducts]);
+    fetchProducts(page, searchQuery);
+  }, [page, searchQuery, fetchProducts]);
 
   const openDeleteModal = (id: string) => {
     setProductToDelete(id);
@@ -74,7 +77,7 @@ export default function AdminProductsPage() {
       if (res.ok) {
         setIsDeleteModalOpen(false);
         setProductToDelete(null);
-        fetchProducts(page, searchQuery, selectedCategory); // refresh
+        fetchProducts(page, searchQuery); // refresh
       }
     } catch (error) {
       console.error("Failed to delete product:", error);
@@ -94,7 +97,7 @@ export default function AdminProductsPage() {
           >
             + Add a Single Product
           </Link>
-          <button className="flex-1 sm:flex-none bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
+          <button className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
             + Add Multiple Products
           </button>
         </div>
@@ -105,7 +108,7 @@ export default function AdminProductsPage() {
         <div className="flex-1">
           <input
             type="text"
-            placeholder="Search products..."
+            placeholder="Search products or categories..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -114,23 +117,7 @@ export default function AdminProductsPage() {
             className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 hover:border-blue-500 focus:ring-blue-500"
           />
         </div>
-        <div className="w-full sm:w-48">
-          <select
-            value={selectedCategory}
-            onChange={(e) => {
-              setSelectedCategory(e.target.value);
-              setPage(1);
-            }}
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 hover:border-blue-500 focus:ring-blue-500 text-gray-600 bg-white"
-          >
-            <option value="">All Categories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
+
       </div>
 
       <div className="overflow-x-auto">
@@ -147,11 +134,21 @@ export default function AdminProductsPage() {
           <tbody className="text-sm">
             {loading ? (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-gray-500">Loading...</td>
+                <td colSpan={5} className="py-8">
+                  <div className="flex items-center justify-center text-gray-500">Loading...</div>
+                </td>
               </tr>
             ) : products.length === 0 ? (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-gray-500">No products found.</td>
+                <td colSpan={5} className="py-8">
+                  <div className="flex items-center justify-center">
+                    <EmptyState
+                      icon={<ShoppingBag className="w-12 h-12 text-gray-400" />}
+                      title="No products found"
+                      description="No products available."
+                    />
+                  </div>
+                </td>
               </tr>
             ) : (
               products.map((product) => (
@@ -159,7 +156,7 @@ export default function AdminProductsPage() {
                   <td className="py-4 flex items-center gap-4">
                     <div className="w-12 h-12 relative flex-shrink-0 bg-gray-100 rounded-md overflow-hidden">
                       <Image
-                        src={product.image || "/images/placeholder.png"}
+                        src={getOptimizedCloudinaryUrl(product.image || "/images/placeholder.png", 180)}
                         alt={product.title}
                         fill
                         className="object-cover"
@@ -209,39 +206,13 @@ export default function AdminProductsPage() {
       </div>
 
       {/* Pagination */}
-      {!loading && totalPages > 1 && (
-        <div className="flex justify-end mt-6 gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1 border border-gray-200 rounded text-sm text-blue-500 disabled:text-gray-400 disabled:border-gray-100 hover:bg-gray-50 disabled:hover:bg-transparent"
-          >
-            Previous
-          </button>
-          
-          {Array.from({ length: totalPages }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setPage(i + 1)}
-              className={`px-3 py-1 border rounded text-sm ${
-                page === i + 1 
-                  ? "bg-white border-gray-200 text-blue-500 shadow-sm font-medium" 
-                  : "border-transparent text-blue-500 hover:bg-gray-50"
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
-
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-3 py-1 border border-transparent rounded text-sm text-blue-500 disabled:text-gray-400 hover:bg-gray-50 disabled:hover:bg-transparent"
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <div className="flex justify-center mt-6">
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
+      </div>
 
       <DeleteProductModal
         isOpen={isDeleteModalOpen}

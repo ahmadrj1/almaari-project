@@ -19,7 +19,7 @@ export default function DeleteProductModal({ isOpen, onClose, onConfirm, isDelet
         
         <AlertTriangle className="text-yellow-400 w-24 h-24 mb-6" strokeWidth={1.5} />
         
-        <p className="text-lg font-medium text-gray-800 mb-8 whitespace-pre-line">
+        <p className="text-lg font-bold text-gray-800 mb-8 whitespace-pre-line">
           {"Are You Sure You Want To\nDelete The Item!"}
         </p>
 

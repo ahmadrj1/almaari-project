@@ -29,7 +29,6 @@ export function useNotifications() {
     if (status === "authenticated") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchNotifications();
-      // Poll every 10 seconds
       const intervalId = setInterval(fetchNotifications, POLLING_TIME);
       return () => clearInterval(intervalId);
     }
@@ -51,9 +50,24 @@ export function useNotifications() {
     }
   };
 
+  const toggleRead = async (notificationId: string) => {
+    if (status !== "authenticated") return;
+    try {
+      const res = await fetch(`/api/notifications/read?id=${notificationId}`, { method: "PATCH" });
+      const json = await res.json();
+      if (json.success) {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notificationId ? { ...n, isRead: !n.isRead } : n))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to toggle notification read", error);
+    }
+  };
+
   const displayedNotifications =
     activeTab === "unread" ? notifications.filter((n) => !n.isRead) : notifications;
-  
+
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return {
@@ -62,6 +76,7 @@ export function useNotifications() {
     activeTab,
     setActiveTab,
     markAllAsRead,
+    toggleRead,
     loading,
     refresh: fetchNotifications,
   };

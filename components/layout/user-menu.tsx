@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { LogOut, Package } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
+import { ChevronDown } from "lucide-react"
 
 export function UserMenu() {
   const [isOpen, setIsOpen] = React.useState(false)
@@ -24,7 +25,7 @@ export function UserMenu() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#2979FF] focus:ring-offset-2"
+        className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
       >
         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2979FF] text-xs font-semibold text-white">
           {getInitials(user?.name)}
@@ -32,6 +33,7 @@ export function UserMenu() {
         <span className="hidden max-w-[100px] truncate md:inline-block">
           {user?.name || "User"}
         </span>
+        <ChevronDown className="h-4 w-4 text-gray-400" />
       </button>
 
       {isOpen && (

@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Search, ArrowUpRight, ClipboardList, Box, Banknote } from "lucide-react";
-import { STATUS_COLORS } from "@/lib/constants";
+import { Search, ArrowUpRight, ClipboardList, Box, CircleDollarSign } from "lucide-react";
+import { STATUS_COLORS, ADMIN_ORDERS_PER_PAGE_DEFAULT } from "@/lib/constants";
 import { Order } from "@/types";
+import { Pagination } from "@/components/ui/pagination";
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -17,7 +18,7 @@ export default function AdminOrdersPage() {
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/orders?page=${page}&limit=10&search=${encodeURIComponent(search)}`);
+      const res = await fetch(`/api/admin/orders?page=${page}&limit=${ADMIN_ORDERS_PER_PAGE_DEFAULT}&search=${encodeURIComponent(search)}`);
       const data = await res.json();
       if (data.success) {
         setOrders(data.data.orders);
@@ -47,7 +48,7 @@ export default function AdminOrdersPage() {
         {[
           { label: "Total Orders:", value: stats.totalOrders, Icon: ClipboardList },
           { label: "Total Units:", value: stats.totalUnits, Icon: Box },
-          { label: "Total Amount:", value: `Rs. ${Number(stats.totalAmount).toFixed(2)}`, Icon: Banknote },
+          { label: "Total Amount:", value: `Rs. ${Number(stats.totalAmount).toFixed(2)}`, Icon: CircleDollarSign },
         ].map(({ label, value, Icon }) => (
           <div key={label} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex items-center justify-between">
             <div>
@@ -129,35 +130,13 @@ export default function AdminOrdersPage() {
           </table>
         </div>
 
-        {!loading && totalPages > 1 && (
-          <div className="flex justify-end mt-6 gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1 border border-gray-200 rounded text-sm text-blue-500 disabled:text-gray-400 disabled:border-gray-100 hover:bg-gray-50 disabled:hover:bg-transparent"
-            >
-              Previous
-            </button>
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setPage(i + 1)}
-                className={`px-3 py-1 border rounded text-sm ${
-                  page === i + 1 ? "bg-white border-gray-200 text-blue-500 shadow-sm font-medium" : "border-transparent text-blue-500 hover:bg-gray-50"
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="px-3 py-1 border border-transparent rounded text-sm text-blue-500 disabled:text-gray-400 hover:bg-gray-50 disabled:hover:bg-transparent"
-            >
-              Next
-            </button>
-          </div>
-        )}
+        <div className="flex justify-center">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+          />
+        </div>
       </div>
     </div>
   );

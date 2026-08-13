@@ -23,7 +23,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <div className="flex flex-col space-y-1.5 w-full">
         {label && (
           <label htmlFor={inputId} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-700">
-            {label}
+            {label.endsWith(' *') ? (
+              <>{label.slice(0, -2)} <span className="text-[#E53935]">*</span></>
+            ) : label.endsWith('*') ? (
+              <>{label.slice(0, -1)}<span className="text-[#E53935]">*</span></>
+            ) : label}
           </label>
         )}
         <div className="relative w-full flex items-center">

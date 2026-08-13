@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { X } from "lucide-react";
-import { ProductCard } from "@/components/ui/product-card";
-import type { FullProduct } from "@/types";
+import { ProductCard, type ProductCardProps } from "@/components/ui/product-card";
 
 interface ViewProductModalProps {
   productId: string | null;
@@ -11,7 +10,7 @@ interface ViewProductModalProps {
 }
 
 export default function ViewProductModal({ productId, onClose }: ViewProductModalProps) {
-  const [product, setProduct] = React.useState<FullProduct | null>(null);
+  const [product, setProduct] = React.useState<ProductCardProps['product'] | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [prevProductId, setPrevProductId] = React.useState<string | null>(null);
 
