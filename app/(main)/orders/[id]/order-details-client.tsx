@@ -64,7 +64,7 @@ export default function OrderDetailsPage() {
     : "—";
 
   return (
-    <div className="mx-auto px-4 py-8 max-w-6xl w-full">
+    <div className="w-full">
       {/* Title */}
       <div className="flex items-center gap-3 mb-6">
         <Link href="/orders" className="text-[#2979FF] hover:text-blue-700 transition-colors">
@@ -115,11 +115,11 @@ export default function OrderDetailsPage() {
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900">Product Information</h2>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[420px] custom-scrollbar">
           <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-                <th className="px-6 py-3">Product</th>
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b border-gray-100 bg-gray-50 text-xs text-gray-500 uppercase tracking-wide shadow-sm">
+                <th className="px-6 py-3 bg-gray-50">Product</th>
                 <th className="px-6 py-3">Color</th>
                 <th className="px-6 py-3">Size</th>
                 <th className="px-6 py-3">Rate</th>

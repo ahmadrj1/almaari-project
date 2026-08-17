@@ -32,9 +32,6 @@ function ProductsContent() {
   const { refresh } = useCartCount();
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>(
-    [],
-  );
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
     totalPages: 1,
@@ -49,18 +46,6 @@ function ProductsContent() {
 
   const [localSearch, setLocalSearch] = useState(searchParam);
   const debouncedSearch = useDebounce(localSearch);
-
-  const fetchCategories = useCallback(async () => {
-    try {
-      const res = await fetch("/api/categories");
-      const data = await res.json();
-      if (data.success) {
-        setCategories(data.data);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -91,11 +76,6 @@ function ProductsContent() {
       setLoading(false);
     }
   }, [searchParam, sort, page, categoryId]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchCategories();
-  }, [fetchCategories]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -155,20 +135,10 @@ function ProductsContent() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="w-full">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-primary">Our Products</h1>
         <div className="flex flex-row items-center gap-3 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-none">
-          <SortDropdown
-            className="w-40 sm:w-48 shrink-0"
-            value={categoryId}
-            placeholder="All Categories"
-            options={categories.map((c) => ({
-              label: c.name,
-              value: c.id,
-            }))}
-            onValueChange={(value) => updateParams({ categoryId: value })}
-          />
           <div className="min-w-0 flex-1 sm:w-80 sm:flex-none">
             <SearchBar
               placeholder="Search products..."

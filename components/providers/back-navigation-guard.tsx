@@ -1,43 +1,59 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { JUST_AUTHENTICATED_KEY } from "@/lib/constants";
 
-const AUTH_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/reset-link-expired"];
+const AUTH_PATHS = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/reset-link-expired",
+];
+
+function isJustAuthenticated(): boolean {
+  if (typeof window === "undefined") return false;
+  const inSession = sessionStorage.getItem(JUST_AUTHENTICATED_KEY) === "true";
+  const inCookie = document.cookie
+    .split("; ")
+    .some((c) => c.startsWith(`${JUST_AUTHENTICATED_KEY}=true`));
+  return inSession || inCookie;
+}
+
+function clearJustAuthenticated() {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(JUST_AUTHENTICATED_KEY);
+  document.cookie = `${JUST_AUTHENTICATED_KEY}=; path=/; max-age=0`;
+}
 
 export function BackNavigationGuard() {
   const pathname = usePathname();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const dialogOpenRef = useRef(false);
-  const landingPathnameRef = useRef<string | null>(null);
+  const initialPathnameRef = useRef<string | null>(null);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (AUTH_PATHS.some((path) => pathname.startsWith(path))) return;
 
-    const justAuthenticated = sessionStorage.getItem(JUST_AUTHENTICATED_KEY) === "true";
+    if (!isJustAuthenticated()) return;
 
-    // If user has navigated past the first post-auth page, clear flag and do nothing.
-    if (landingPathnameRef.current !== null && landingPathnameRef.current !== pathname) {
-      sessionStorage.removeItem(JUST_AUTHENTICATED_KEY);
+    if (
+      initialPathnameRef.current !== null &&
+      initialPathnameRef.current !== pathname
+    ) {
+      clearJustAuthenticated();
       return;
     }
 
-    if (!justAuthenticated) return;
+    initialPathnameRef.current = pathname;
 
-    // First post-auth page — record it and activate guard.
-    landingPathnameRef.current = pathname;
-
-    const guardState = { backGuard: true, path: pathname };
-    window.history.pushState(guardState, "", window.location.href);
+    window.history.pushState({ backGuard: true }, "", window.location.href);
 
     const handlePopState = (e: PopStateEvent) => {
       e.stopImmediatePropagation();
-      if (dialogOpenRef.current) return;
-      window.history.pushState(guardState, "", window.location.href);
-      dialogOpenRef.current = true;
+      window.history.pushState({ backGuard: true }, "", window.location.href);
       setIsDialogOpen(true);
     };
 
@@ -47,16 +63,12 @@ export function BackNavigationGuard() {
     };
   }, [pathname]);
 
-
   const handleCancel = () => {
-    dialogOpenRef.current = false;
-    window.history.pushState({ backGuard: true, path: pathname }, "", window.location.href);
     setIsDialogOpen(false);
   };
 
   const handleConfirm = () => {
-    sessionStorage.removeItem(JUST_AUTHENTICATED_KEY);
-    dialogOpenRef.current = false;
+    clearJustAuthenticated();
     setIsDialogOpen(false);
     void signOut({ callbackUrl: "/login" });
   };

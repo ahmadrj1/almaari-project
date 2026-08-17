@@ -35,10 +35,7 @@ export function ConfirmDialog({
           <Button variant="outline" fullWidth onClick={onClose}>
             {cancelText}
           </Button>
-          <Button variant={variant} fullWidth onClick={() => {
-            onConfirm()
-            onClose()
-          }}>
+          <Button variant={variant} fullWidth onClick={onConfirm}>
             {confirmText}
           </Button>
         </div>

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { getCsrfToken, signIn, useSession, signOut } from "next-auth/react";
+import { getCsrfToken, signIn, useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { loginSchema, LoginInput } from "@/lib/validations/auth";
@@ -30,12 +30,8 @@ export default function LoginPage() {
   useEffect(() => {
     if (skipAuthRedirect) return;
     if (status === "authenticated") {
-      const provider = (session?.user as { provider?: string })?.provider;
-      if (provider === "google") {
-        signOut({ callbackUrl: "/login" });
-      } else {
-        router.replace("/");
-      }
+      const role = (session?.user as { role?: string })?.role;
+      router.replace(role === "ADMIN" ? "/admin/products" : "/");
     }
   }, [skipAuthRedirect, status, session, router]);
 
@@ -94,11 +90,73 @@ export default function LoginPage() {
       } else if (resultUrl) {
         setSkipAuthRedirect(true);
         sessionStorage.setItem(JUST_AUTHENTICATED_KEY, "true");
+        document.cookie = `${JUST_AUTHENTICATED_KEY}=true; path=/; max-age=300; SameSite=Lax`;
         window.location.assign(resultUrl.toString());
       }
     } catch {
       showToast("error", "Something went wrong. Please try again.");
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      sessionStorage.setItem(JUST_AUTHENTICATED_KEY, "true");
+      document.cookie = `${JUST_AUTHENTICATED_KEY}=true; path=/; max-age=300; SameSite=Lax`;
+
+      const width = 500;
+      const height = 600;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+
+      const callbackUrl = new URL("/login/redirect?popup=true", window.location.origin).toString();
+      const res = await signIn("google", {
+        redirect: false,
+        callbackUrl,
+      }, {
+        prompt: "consent select_account",
+      });
+
+      if (res?.url) {
+        const popup = window.open(
+          res.url,
+          "google-oauth-popup",
+          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=yes`
+        );
+
+        if (!popup || popup.closed || typeof popup.closed === "undefined") {
+          window.location.assign(res.url);
+          return;
+        }
+
+        const handleMessage = (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          if (event.data?.type === "AUTH_SUCCESS") {
+            window.removeEventListener("message", handleMessage);
+            clearInterval(timer);
+            sessionStorage.setItem(JUST_AUTHENTICATED_KEY, "true");
+            document.cookie = `${JUST_AUTHENTICATED_KEY}=true; path=/; max-age=300; SameSite=Lax`;
+            setSkipAuthRedirect(true);
+            window.location.assign(event.data.targetUrl || "/");
+          }
+        };
+
+        window.addEventListener("message", handleMessage);
+
+        const timer = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(timer);
+            window.removeEventListener("message", handleMessage);
+            setIsLoading(false);
+          }
+        }, 500);
+      } else {
+        void signIn("google", { callbackUrl: "/login/redirect" }, { prompt: "consent select_account" });
+      }
+    } catch {
+      showToast("error", "Failed to initialize Google sign in");
       setIsLoading(false);
     }
   };
@@ -168,14 +226,11 @@ export default function LoginPage() {
 
       <Button
         type="button"
-      variant="outline"
-      fullWidth
-      disabled={isLoading}
-      onClick={() => {
-        sessionStorage.setItem(JUST_AUTHENTICATED_KEY, "true");
-        void signIn("google", { callbackUrl: "/" }, { prompt: "select_account" });
-      }}
-    >
+        variant="outline"
+        fullWidth
+        disabled={isLoading}
+        onClick={handleGoogleSignIn}
+      >
         <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
           <path fill="#4285F4" d="M488 261.8c0-16.7-1.5-32.9-4.3-48.5H248v91.8h134.8c-5.8 31.3-23.4 57.8-50 75.6v62.8h81c47.4-43.6 74.2-107.8 74.2-181.7z"></path>
           <path fill="#34A853" d="M248 504c69.1 0 127.1-22.9 169.5-62.1l-81-62.8c-22.4 15-51.2 23.9-88.5 23.9-68.1 0-125.8-46-146.4-108H19.7v64.8C62 443.8 147.2 504 248 504z"></path>

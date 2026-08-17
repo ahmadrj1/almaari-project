@@ -242,7 +242,7 @@ export default function CartPage() {
   const total = subTotal + tax;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="w-full">
       <h1 className="text-2xl font-semibold text-blue-600 flex items-center gap-2 mb-8">
         <Link href="/products" className="hover:text-blue-700 transition-colors">
           <ArrowLeft className="w-5 h-5" />
@@ -274,11 +274,11 @@ export default function CartPage() {
       })()}
 
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[460px] custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-500">
-                <th className="p-4 w-12 text-center">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-500 shadow-sm">
+                <th className="p-4 w-12 text-center bg-gray-50">
                   <input
                     type="checkbox"
                     checked={items.length > 0 && selectedItems.size === items.length}
