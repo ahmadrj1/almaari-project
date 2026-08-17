@@ -9,6 +9,7 @@ import { loginSchema, LoginInput } from "@/lib/validations/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
+import { JUST_AUTHENTICATED_KEY } from "@/lib/constants";
 
 export default function LoginPage() {
   const { data: session, status } = useSession();
@@ -92,6 +93,7 @@ export default function LoginPage() {
         setGlobalError("Invalid email or password");
       } else if (resultUrl) {
         setSkipAuthRedirect(true);
+        sessionStorage.setItem(JUST_AUTHENTICATED_KEY, "true");
         window.location.assign(resultUrl.toString());
       }
     } catch {
@@ -169,7 +171,10 @@ export default function LoginPage() {
       variant="outline"
       fullWidth
       disabled={isLoading}
-      onClick={() => signIn("google", { callbackUrl: "/" }, { prompt: "select_account" })}
+      onClick={() => {
+        sessionStorage.setItem(JUST_AUTHENTICATED_KEY, "true");
+        void signIn("google", { callbackUrl: "/" }, { prompt: "select_account" });
+      }}
     >
         <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
           <path fill="#4285F4" d="M488 261.8c0-16.7-1.5-32.9-4.3-48.5H248v91.8h134.8c-5.8 31.3-23.4 57.8-50 75.6v62.8h81c47.4-43.6 74.2-107.8 74.2-181.7z"></path>

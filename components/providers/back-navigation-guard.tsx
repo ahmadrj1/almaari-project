@@ -1,37 +1,52 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { JUST_AUTHENTICATED_KEY } from "@/lib/constants";
 
 const AUTH_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/reset-link-expired"];
 
 export function BackNavigationGuard() {
-  const { status } = useSession();
   const pathname = usePathname();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const dialogOpenRef = useRef(false);
+  const landingPathnameRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (status !== "authenticated") return;
+  useLayoutEffect(() => {
     if (AUTH_PATHS.some((path) => pathname.startsWith(path))) return;
 
-    const nextGuardState = { backGuard: true, path: pathname };
-    window.history.pushState(nextGuardState, "", window.location.href);
+    const justAuthenticated = sessionStorage.getItem(JUST_AUTHENTICATED_KEY) === "true";
 
-    const handlePopState = () => {
+    // If user has navigated past the first post-auth page, clear flag and do nothing.
+    if (landingPathnameRef.current !== null && landingPathnameRef.current !== pathname) {
+      sessionStorage.removeItem(JUST_AUTHENTICATED_KEY);
+      return;
+    }
+
+    if (!justAuthenticated) return;
+
+    // First post-auth page — record it and activate guard.
+    landingPathnameRef.current = pathname;
+
+    const guardState = { backGuard: true, path: pathname };
+    window.history.pushState(guardState, "", window.location.href);
+
+    const handlePopState = (e: PopStateEvent) => {
+      e.stopImmediatePropagation();
       if (dialogOpenRef.current) return;
-      window.history.pushState(nextGuardState, "", window.location.href);
+      window.history.pushState(guardState, "", window.location.href);
       dialogOpenRef.current = true;
       setIsDialogOpen(true);
     };
 
-    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("popstate", handlePopState, { capture: true });
     return () => {
-      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("popstate", handlePopState, { capture: true });
     };
-  }, [pathname, status]);
+  }, [pathname]);
+
 
   const handleCancel = () => {
     dialogOpenRef.current = false;
@@ -40,6 +55,7 @@ export function BackNavigationGuard() {
   };
 
   const handleConfirm = () => {
+    sessionStorage.removeItem(JUST_AUTHENTICATED_KEY);
     dialogOpenRef.current = false;
     setIsDialogOpen(false);
     void signOut({ callbackUrl: "/login" });

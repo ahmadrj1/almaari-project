@@ -30,3 +30,4 @@ export const STATUS_COLORS: Record<string, string> = {
 
 export const ORDER_STATUSES = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
 export const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+export const JUST_AUTHENTICATED_KEY = "just_authenticated";
