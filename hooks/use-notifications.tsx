@@ -57,7 +57,7 @@ export function useNotifications() {
       const json = await res.json();
       if (json.success) {
         setNotifications((prev) =>
-          prev.map((n) => (n.id === notificationId ? { ...n, isRead: !n.isRead } : n))
+          prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n))
         );
       }
     } catch (error) {

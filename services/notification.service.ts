@@ -43,17 +43,17 @@ export class NotificationService {
 
     if (notification.userId === null) {
       // Broadcast notification - uses NotificationRead table
-      if (notification.reads.length > 0) {
-        await prisma.notificationRead.deleteMany({ where: { userId, notificationId } });
-      } else {
+      if (notification.reads.length === 0) {
         await prisma.notificationRead.create({ data: { userId, notificationId } });
       }
     } else {
       // Personal notification - uses isRead field
-      await prisma.notification.update({
-        where: { id: notificationId },
-        data: { isRead: !notification.isRead },
-      });
+      if (!notification.isRead) {
+        await prisma.notification.update({
+          where: { id: notificationId },
+          data: { isRead: true },
+        });
+      }
     }
   }
 
