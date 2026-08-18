@@ -279,7 +279,7 @@ export default function AddProductPage() {
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm max-w-4xl min-h-[calc(100vh-8rem)]">
+    <div className="bg-white rounded-lg p-6 shadow-sm w-full min-h-[calc(100vh-8rem)]">
       <div className="flex items-center gap-4 border-b border-gray-200 pb-4 mb-6">
         <Link
           href="/admin/products"

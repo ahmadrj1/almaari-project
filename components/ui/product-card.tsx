@@ -88,7 +88,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               loading="lazy"
               sizes="50vw"
                 fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                className="object-cover transition-transform duration-300"
                 unoptimized
               />
             </div>

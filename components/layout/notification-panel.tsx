@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingBag, Package, Tag, Bell, Check, RotateCcw } from "lucide-react";
+import { ShoppingBag, Package, Tag, Bell, Check } from "lucide-react";
 import type { Notification } from "@/types";
 import { timeAgo } from "@/lib/notifications";
 
@@ -88,10 +88,10 @@ export function NotificationPanel({
             return (
               <button
                 key={n.id}
-                onClick={() => toggleRead(n.id)}
-                title={n.isRead ? "Mark as unread" : "Mark as read"}
-                className={`w-full text-left p-4 flex gap-3 transition-colors cursor-pointer group ${
-                  !n.isRead ? "bg-blue-50/40 hover:bg-blue-50/70" : "hover:bg-gray-50"
+                onClick={() => !n.isRead && toggleRead(n.id)}
+                title={n.isRead ? undefined : "Mark as read"}
+                className={`w-full text-left p-4 flex gap-3 transition-colors group ${
+                  !n.isRead ? "bg-blue-50/40 hover:bg-blue-50/70 cursor-pointer" : "hover:bg-gray-50 cursor-default"
                 }`}
               >
                 {/* Icon */}
@@ -110,12 +110,14 @@ export function NotificationPanel({
 
                 {/* Status indicator + hover action */}
                 <div className="flex flex-col items-center justify-start gap-1 flex-shrink-0 pt-0.5">
-                  {!n.isRead && (
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  )}
-                  <span className={`text-[10px] opacity-0 group-hover:opacity-100 transition-opacity ${n.isRead ? "text-gray-400" : "text-blue-500"}`}>
-                    {n.isRead ? <RotateCcw className="h-3 w-3" /> : <Check className="h-3 w-3" />}
-                  </span>
+                  {!n.isRead ? (
+                    <>
+                      <div className="w-2 h-2 rounded-full bg-blue-500 group-hover:hidden" />
+                      <span className="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity text-blue-500 hidden group-hover:inline">
+                        <Check className="h-3 w-3" />
+                      </span>
+                    </>
+                  ) : null}
                 </div>
               </button>
             );

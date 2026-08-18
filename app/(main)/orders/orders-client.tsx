@@ -47,7 +47,7 @@ export default function OrdersPage() {
 
   if (orders.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
+      <div className="w-full">
         <h1 className="text-2xl font-semibold text-[#2979FF] mb-8">My Orders</h1>
         <EmptyState
           icon={<PackageSearch className="w-12 h-12 text-gray-400" />}
@@ -59,7 +59,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
+    <div className="w-full">
       <h1 className="text-2xl font-semibold text-[#2979FF] mb-8">My Orders</h1>
       
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm mb-6">

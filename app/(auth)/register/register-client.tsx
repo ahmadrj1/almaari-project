@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { registerSchema, RegisterInput } from "@/lib/validations/auth";
 import { useToast } from "@/hooks/use-toast";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useEffect } from "react";
 
 export default function RegisterPage() {
@@ -28,12 +28,8 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      const provider = (session?.user as { provider?: string })?.provider;
-      if (provider === "google") {
-        signOut({ callbackUrl: "/register" });
-      } else {
-        router.replace("/");
-      }
+      const role = (session?.user as { role?: string })?.role;
+      router.replace(role === "ADMIN" ? "/admin/products" : "/");
     }
   }, [status, session, router]);
 

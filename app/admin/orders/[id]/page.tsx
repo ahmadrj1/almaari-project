@@ -95,7 +95,7 @@ export default function OrderDetailPage({
         </div>
         <div>
           <p className="text-sm text-gray-500 mb-1">Order #</p>
-          <p className="font-medium text-gray-800 font-mono text-xs">
+          <p className="font-medium text-gray-800">
             {order.id.slice(0, 8)}
           </p>
         </div>
@@ -151,14 +151,14 @@ export default function OrderDetailPage({
         Product Information
       </h2>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[420px] custom-scrollbar rounded-lg border border-gray-200">
         <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-600">
-              <th className="py-3 px-4 font-medium rounded-tl-lg">Title</th>
-              <th className="py-3 px-4 font-medium">Price</th>
-              <th className="py-3 px-4 font-medium">Quantity</th>
-              <th className="py-3 px-4 font-medium rounded-tr-lg">Stock</th>
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-600 shadow-sm">
+              <th className="py-3 px-4 font-medium bg-gray-50 rounded-tl-lg">Title</th>
+              <th className="py-3 px-4 font-medium bg-gray-50">Price</th>
+              <th className="py-3 px-4 font-medium bg-gray-50">Quantity</th>
+              <th className="py-3 px-4 font-medium bg-gray-50 rounded-tr-lg">Stock</th>
             </tr>
           </thead>
           <tbody className="text-sm">
