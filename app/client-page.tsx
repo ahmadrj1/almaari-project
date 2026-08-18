@@ -127,7 +127,7 @@ function HomeContent() {
   return (
     <>
       <Navbar />
-      <main className="container mx-auto flex-1 px-4 py-6 sm:py-8">
+      <main className="container mx-auto flex-1 px-3 sm:px-4 py-6 sm:py-8">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold text-primary">Our Products</h1>
           <div className="flex flex-row items-center gap-3 w-full sm:w-auto">
@@ -152,7 +152,7 @@ function HomeContent() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: PRODUCTS_PER_PAGE_DEFAULT }).map((_, i) => (
               <ProductCardSkeleton key={i} />
             ))}
@@ -165,7 +165,7 @@ function HomeContent() {
           />
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
               {products.map((product) => (
                 <ProductCard
                   key={product.id}
