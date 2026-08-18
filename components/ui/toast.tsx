@@ -30,9 +30,9 @@ export function Toast({ type, message, onClose }: ToastProps) {
       )}
     >
       <div className="flex items-center space-x-3">
-        {type === "success" && <CheckCircle className="h-5 w-5" />}
-        {type === "error" && <XCircle className="h-5 w-5" />}
-        {type === "info" && <Info className="h-5 w-5" />}
+        {type === "success" && <CheckCircle className="h-5 w-5 shrink-0" />}
+        {type === "error" && <XCircle className="h-5 w-5 shrink-0" />}
+        {type === "info" && <Info className="h-5 w-5 shrink-0" />}
         <p className="text-sm font-medium">{message}</p>
       </div>
       <button onClick={onClose} className="opacity-80 hover:opacity-100">

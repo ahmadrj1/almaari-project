@@ -179,6 +179,9 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         ) : (
           <div className="mt-3 flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-gray-400 whitespace-nowrap">
+                {isOutOfStock ? "Out of stock" : `${maxStock} in stock`}
+              </p>
               <QuantitySelector 
                 value={quantity} 
                 onChange={setQuantity} 
@@ -186,9 +189,6 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                 max={maxStock > 0 ? maxStock : 1} 
                 disabled={isOutOfStock} 
               />
-              <p className="text-xs text-gray-400 whitespace-nowrap">
-                {isOutOfStock ? "Out of stock" : `${maxStock} in stock`}
-              </p>
             </div>
             <Button
               size="sm"
@@ -197,7 +197,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                   onAddToCart?.(product.id, selectedVariant.id, quantity)
                 }
               }}
-              className="w-full whitespace-nowrap text-xs h-8 px-3"
+              className="w-full whitespace-nowrap text-xs h-9 px-3"
               disabled={isOutOfStock}
             >
               Add to Cart
