@@ -1,31 +1,33 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ShoppingBag } from "lucide-react";
 import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import { ProductCardSkeleton } from "@/components/ui/product-card-skeleton";
 
-const ProductCard = dynamic(() => import("@/components/ui/product-card").then((mod) => mod.ProductCard), {
-  ssr: false,
-  loading: () => <ProductCardSkeleton />
-});
+const ProductCard = dynamic(
+  () => import("@/components/ui/product-card").then((mod) => mod.ProductCard),
+  { ssr: false, loading: () => <ProductCardSkeleton /> },
+);
+
 import { SearchBar } from "@/components/ui/search-bar";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
-import { Pagination } from "@/components/ui/pagination";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { useCartCount } from "@/hooks/use-cart-count";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { useSession } from "next-auth/react";
-import { SORT_OPTIONS, PRODUCTS_PER_PAGE_DEFAULT, DEFAULT_SORT } from "@/lib/constants";
+import {
+  SORT_OPTIONS,
+  PRODUCTS_PER_PAGE_DEFAULT,
+  DEFAULT_SORT,
+} from "@/lib/constants";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import type { Product } from "@prisma/client";
-
-type Pagination = { page: number; totalPages: number; total: number };
-
-import { Suspense } from "react";
 
 function HomeContent() {
   const router = useRouter();
@@ -35,70 +37,131 @@ function HomeContent() {
   const { refresh } = useCartCount();
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, totalPages: 1, total: 0 });
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const searchParam = searchParams.get("search") || "";
   const sort = searchParams.get("sort") || DEFAULT_SORT;
-  const page = parseInt(searchParams.get("page") || "1");
 
   const [localSearch, setLocalSearch] = useState(searchParam);
   const debouncedSearch = useDebounce(localSearch);
 
-  // Reset filters on page refresh (not SPA navigation)
+  // Track current filter key to cancel stale fetches on param change
+  const filterKey = useRef(`${searchParam}__${sort}`);
+
+  // Reset filters on page reload
   useEffect(() => {
-    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    const nav = performance.getEntriesByType("navigation")[0] as
+      | PerformanceNavigationTiming
+      | undefined;
     const isReload = nav?.type === "reload";
-    if (isReload && (searchParams.get("search") || searchParams.get("sort") || searchParams.get("page"))) {
-      router.replace("/");
+    if (isReload) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLocalSearch("");
+      if (searchParams.get("search") || searchParams.get("sort")) {
+        router.replace("/");
+      }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-
-  const fetchProducts = useCallback(async () => {
-    setLoading(true)
-    try {
-      await new Promise((r) => setTimeout(r, 1000));
-      const paramsParams: Record<string, string> = { search: searchParam, sort, page: String(page), limit: String(PRODUCTS_PER_PAGE_DEFAULT) };
-      const params = new URLSearchParams(paramsParams);
-      const res = await fetch(`/api/products?${params}`, { method: "GET" });
-      
-      if (!res.ok) {
-        throw new Error("Failed to fetch products");
+  const fetchPage = useCallback(
+    async (cursor: string | null, isInitial: boolean) => {
+      const currentKey = `${searchParam}__${sort}`;
+      if (isInitial) {
+        setLoading(true);
+        setProducts([]);
+        setNextCursor(null);
+        setHasMore(true);
+      } else {
+        setLoadingMore(true);
       }
 
-      const data = await res.json();
-      if (data.success) {
-        setProducts(data.data.products);
-        setPagination(data.data.pagination);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [searchParam, sort, page]);
+      try {
+        // Pseudo network delay
+        if (!isInitial) {
+          await new Promise((r) => setTimeout(r, 100));
+        }
 
-  useEffect(() => { 
+        const params = new URLSearchParams({
+          search: searchParam,
+          sort,
+          limit: String(PRODUCTS_PER_PAGE_DEFAULT),
+          ...(cursor ? { cursor } : {}),
+        });
+
+        const res = await fetch(`/api/products/cursor?${params}`);
+        if (!res.ok) throw new Error("Failed to fetch products");
+
+        const json = await res.json();
+        if (!json.success) return;
+
+        // Discard result if filters changed while request was in-flight
+        if (filterKey.current !== currentKey) return;
+
+        const { products: newProducts, nextCursor: newCursor } = json.data;
+
+        setProducts((prev) =>
+          isInitial ? newProducts : [...prev, ...newProducts],
+        );
+        setNextCursor(newCursor);
+        setHasMore(newCursor !== null);
+      } finally {
+        if (filterKey.current === `${searchParam}__${sort}`) {
+          if (isInitial) setLoading(false);
+          else setLoadingMore(false);
+        }
+      }
+    },
+    [searchParam, sort],
+  );
+
+  // Initial fetch & refetch on filter change
+  useEffect(() => {
+    filterKey.current = `${searchParam}__${sort}`;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchProducts(); 
-  }, [fetchProducts]);
+    fetchPage(null, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParam, sort]);
 
-  const updateParams = useCallback((updates: Record<string, string>) => {
-    const params = new URLSearchParams(searchParams.toString());
-    Object.entries(updates).forEach(([k, v]) => {
-      if (v) params.set(k, v); else params.delete(k);
-    });
-    if (!updates.page) params.set("page", "1");
-    router.push(`?${params.toString()}`);
-  }, [searchParams, router]);
+  const loadMore = useCallback(() => {
+    if (!loadingMore && hasMore && nextCursor) {
+      fetchPage(nextCursor, false);
+    }
+  }, [loadingMore, hasMore, nextCursor, fetchPage]);
+
+  const { sentinelRef } = useInfiniteScroll({
+    onLoadMore: loadMore,
+    hasMore,
+    isLoading: loading || loadingMore,
+  });
+
+  const updateParams = useCallback(
+    (updates: Record<string, string>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      Object.entries(updates).forEach(([k, v]) => {
+        if (v) params.set(k, v);
+        else params.delete(k);
+      });
+      params.delete("page");
+      router.push(`?${params.toString()}`);
+    },
+    [searchParams, router],
+  );
 
   useEffect(() => {
     if (debouncedSearch !== searchParam) {
-      updateParams({ search: debouncedSearch, page: "1" });
+      updateParams({ search: debouncedSearch });
     }
   }, [debouncedSearch, searchParam, updateParams]);
 
-  const handleAddToCart = async (productId: string, variantId: string, quantity: number) => {
+  const handleAddToCart = async (
+    productId: string,
+    variantId: string,
+    quantity: number,
+  ) => {
     if (status !== "authenticated") {
       showToast("info", "Please log in to place an order");
       return;
@@ -114,7 +177,10 @@ function HomeContent() {
       if (data.success) {
         const product = products.find((p) => p.id === productId);
         const price = Number(product?.price ?? 0) * quantity;
-        showToast("success", `Added to cart! Total: PKR ${price.toLocaleString()}`);
+        showToast(
+          "success",
+          `Added to cart! Total: PKR ${price.toLocaleString()}`,
+        );
         refresh();
       } else {
         showToast("error", data.error || "Failed to add to cart");
@@ -161,7 +227,11 @@ function HomeContent() {
           <EmptyState
             icon={<ShoppingBag className="w-12 h-12 text-gray-400" />}
             title="No products found"
-            description={searchParam ? `No results for "${searchParam}". Try clearing the search.` : "No products available."}
+            description={
+              searchParam
+                ? `No results for "${searchParam}". Try clearing the search.`
+                : "No products available."
+            }
           />
         ) : (
           <>
@@ -173,14 +243,20 @@ function HomeContent() {
                   onAddToCart={handleAddToCart}
                 />
               ))}
+              {loadingMore &&
+                Array.from({ length: 4 }).map((_, i) => (
+                  <ProductCardSkeleton key={`skeleton-${i}`} />
+                ))}
             </div>
-            <div className="flex justify-center mt-auto pt-8">
-              <Pagination
-                currentPage={pagination.page}
-                totalPages={pagination.totalPages}
-                onPageChange={(p) => updateParams({ page: String(p) })}
-              />
-            </div>
+
+            {/* Infinite scroll sentinel */}
+            <div ref={sentinelRef} className="h-4" />
+
+            {!hasMore && (
+              <p className="mt-6 text-center text-sm text-gray-400">
+                You&apos;ve seen all products
+              </p>
+            )}
           </>
         )}
       </main>
@@ -191,11 +267,13 @@ function HomeContent() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      }
+    >
       <HomeContent />
     </Suspense>
   );
