@@ -85,7 +85,6 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             <Image
               src={getOptimizedCloudinaryUrl(img.url, 900)}
               alt={product.title}
-              loading="lazy"
               sizes="50vw"
                 fill
                 className="object-cover transition-transform duration-300"
