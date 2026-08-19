@@ -100,7 +100,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           </div>
         )}
       </div>
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
         <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-medium text-gray-900">
           {product.title}
         </h3>
@@ -126,14 +126,14 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               ))}
             </div>
 
-            {/* Mobile View: Show max 4 colors and a expand chevron if colors.length > 4 */}
-            <div className="flex sm:hidden gap-2 flex-wrap items-center">
-              {(isColorsExpanded ? colors : colors.slice(0, 4)).map(color => (
+            {/* Mobile View: Show max 3-4 colors on one line and an expand chevron if there are more */}
+            <div className={`flex sm:hidden gap-1.5 items-center ${isColorsExpanded ? "flex-wrap" : "flex-nowrap"}`}>
+              {(isColorsExpanded ? colors : (colors.length > 4 ? colors.slice(0, 3) : colors)).map(color => (
                 <button
                   key={color.id}
                   onClick={() => handleColorSelect(color.id)}
                   title={color.name}
-                  className={`w-6 h-6 rounded-full border-2 focus:outline-none transition-all ${
+                  className={`w-5 h-5 rounded-full border-2 focus:outline-none transition-all shrink-0 ${
                     selectedColorId === color.id ? "border-[#2979FF] scale-110" : "border-transparent"
                   }`}
                   style={{ backgroundColor: color.hexCode, boxShadow: "0 0 0 1px rgba(0,0,0,0.1)" }}
@@ -142,10 +142,10 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               {colors.length > 4 && (
                 <button
                   onClick={() => setIsColorsExpanded(!isColorsExpanded)}
-                  className="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+                  className="w-5 h-5 rounded-full border border-gray-200 flex items-center justify-center bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
                   title={isColorsExpanded ? "Show less colors" : "Show all colors"}
                 >
-                  <ChevronDown size={14} className={`transition-transform duration-200 ${isColorsExpanded ? "rotate-180" : ""}`} />
+                  <ChevronDown size={12} className={`transition-transform duration-200 ${isColorsExpanded ? "rotate-180" : ""}`} />
                 </button>
               )}
             </div>
@@ -154,12 +154,12 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
         {sizes.length > 0 && (
           <div className="mt-3">
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-1.5 sm:gap-2 flex-wrap">
               {sizes.map(size => (
                 <button
                   key={size.id}
                   onClick={() => setSelectedSizeId(size.id)}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md border transition-colors ${
+                  className={`px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold rounded-md border transition-colors ${
                     selectedSizeId === size.id
                       ? "bg-gray-900 text-white border-gray-900"
                       : "bg-white text-gray-700 border-gray-200 hover:border-gray-900"
@@ -172,19 +172,24 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           </div>
         )}
 
-        <p className="mt-3 text-xs text-gray-400">
-          {isOutOfStock ? "Out of stock" : `${maxStock} in stock`}
-        </p>
-        
-        {!isAdmin && (
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <QuantitySelector 
-              value={quantity} 
-              onChange={setQuantity} 
-              min={1} 
-              max={maxStock > 0 ? maxStock : 1} 
-              disabled={isOutOfStock} 
-            />
+        {isAdmin ? (
+          <p className="mt-3 text-xs text-gray-400">
+            {isOutOfStock ? "Out of stock" : `${maxStock} in stock`}
+          </p>
+        ) : (
+          <div className="mt-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-gray-400 whitespace-nowrap">
+                {isOutOfStock ? "Out of stock" : `${maxStock} in stock`}
+              </p>
+              <QuantitySelector 
+                value={quantity} 
+                onChange={setQuantity} 
+                min={1} 
+                max={maxStock > 0 ? maxStock : 1} 
+                disabled={isOutOfStock} 
+              />
+            </div>
             <Button
               size="sm"
               onClick={() => {
@@ -192,7 +197,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                   onAddToCart?.(product.id, selectedVariant.id, quantity)
                 }
               }}
-              className="whitespace-nowrap text-[10px] sm:text-xs md:text-sm h-7 sm:h-8 px-2 sm:px-3 flex-1 sm:flex-initial"
+              className="w-full whitespace-nowrap text-xs h-9 px-3"
               disabled={isOutOfStock}
             >
               Add to Cart

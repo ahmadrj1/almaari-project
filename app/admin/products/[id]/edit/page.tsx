@@ -148,6 +148,16 @@ export default function EditProductPage({
   const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
+      
+      const invalidTypes = files.filter(
+        (f) => !["image/jpeg", "image/jpg", "image/png"].includes(f.type) &&
+               !/\.(jpe?g|png)$/i.test(f.name)
+      );
+      if (invalidTypes.length > 0) {
+        showToast("error", "Only JPG, JPEG, and PNG images are allowed.");
+        return;
+      }
+
       const invalidFiles = files.filter((f) => f.size > MAX_UPLOAD_SIZE);
       if (invalidFiles.length > 0) {
         showToast("error", "Image upload size is max 10MB.");

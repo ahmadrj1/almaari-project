@@ -45,6 +45,50 @@ export class ProductService {
     return { products, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
   }
 
+  static async getProductsCursor({ search, sort, cursor, limit, inStock }: { search: string; sort: string; cursor?: string; limit: number; inStock: boolean }) {
+    const orderBy: Record<string, string> =
+      sort === "price_asc" ? { price: "asc" } :
+      sort === "price_desc" ? { price: "desc" } :
+      sort === "title_asc" ? { title: "asc" } :
+      sort === "title_desc" ? { title: "desc" } :
+      { createdAt: "desc" };
+
+    const where: Prisma.ProductWhereInput = { deletedAt: null };
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { category: { name: { contains: search, mode: "insensitive" } } },
+      ];
+    }
+
+    if (inStock) {
+      where.variants = { some: { stock: { gt: 0 } } };
+    }
+
+    const products = await prisma.product.findMany({
+      where,
+      orderBy,
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      include: {
+        category: true,
+        images: { orderBy: { sortOrder: "asc" } },
+        variants: {
+          include: { color: true, size: true },
+          orderBy: [{ color: { name: "asc" } }, { size: { sortOrder: "asc" } }],
+        },
+      },
+    });
+
+    const hasMore = products.length > limit;
+    if (hasMore) products.pop();
+
+    const nextCursor = hasMore ? products[products.length - 1]?.id ?? null : null;
+
+    return { products, nextCursor };
+  }
+
   static async getDemoProducts() {
     return prisma.product.findMany({
       orderBy: { createdAt: "desc" },

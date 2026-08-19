@@ -35,12 +35,15 @@ export class AuthService {
   }
 
   static async forgotPassword(email: string) {
+    const successMessage = "If user exists, an email will be sent with instructions.";
+
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
     if (!user) {
-      throw new AppError("Email not linked to any user", 404);
+      await new Promise((r) => setTimeout(r, 1000));
+      return successMessage;
     }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
@@ -85,7 +88,7 @@ export class AuthService {
       html: htmlTemplate,
     });
 
-    return "A reset link has been sent to your email.";
+    return successMessage;
   }
 
   static async verifyResetToken(token: string) {
