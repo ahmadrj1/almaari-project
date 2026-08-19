@@ -137,7 +137,7 @@ export default function LoginPage() {
             window.removeEventListener("message", handleMessage);
             clearInterval(timer);
             sessionStorage.setItem(JUST_AUTHENTICATED_KEY, "true");
-            document.cookie = `${JUST_AUTHENTICATED_KEY}=true; path=/; max-age=900; SameSite=Lax`;
+            document.cookie = `${JUST_AUTHENTICATED_KEY}=true; path=/; max-age=300; SameSite=Lax`;
             setSkipAuthRedirect(true);
             window.location.assign(event.data.targetUrl || "/");
           }
