@@ -2,9 +2,19 @@ import { prisma } from "@/lib/db";
 
 export class NotificationService {
   static async getNotifications(userId: string, filter: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { createdAt: true },
+    });
+
+    if (!user) return [];
+
     const notifications = await prisma.notification.findMany({
       where: {
         OR: [{ userId }, { userId: null }],
+        createdAt: {
+          gte: user.createdAt,
+        },
       },
       include: {
         reads: {
@@ -58,6 +68,13 @@ export class NotificationService {
   }
 
   static async markAllAsRead(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { createdAt: true },
+    });
+    
+    if (!user) return;
+
     await prisma.$transaction(async (tx) => {
       await tx.notification.updateMany({
         where: { userId, isRead: false },
@@ -67,6 +84,9 @@ export class NotificationService {
       const unreadBroadcasts = await tx.notification.findMany({
         where: {
           userId: null,
+          createdAt: {
+            gte: user.createdAt,
+          },
           NOT: {
             reads: {
               some: { userId },
