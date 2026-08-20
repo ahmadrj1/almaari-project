@@ -19,6 +19,11 @@ import {
 } from "@/lib/constants";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { Product } from "@prisma/client";
+import type { ProductVariant } from "@/types";
+
+type ProductWithVariants = Product & {
+  variants?: ProductVariant[];
+};
 
 type Pagination = { page: number; totalPages: number; total: number };
 
@@ -31,7 +36,7 @@ function ProductsContent() {
   const { showToast } = useToast();
   const { refresh } = useCartCount();
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithVariants[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
     totalPages: 1,
@@ -119,11 +124,20 @@ function ProductsContent() {
       });
       const data = await res.json();
       if (data.success) {
+        setProducts(prev => prev.map((p) => {
+          if (p.id === productId) {
+            return {
+              ...p,
+              variants: p.variants?.map((v) => v.id === variantId ? { ...v, stock: Math.max(0, v.stock - quantity) } : v)
+            }
+          }
+          return p;
+        }));
+        
         const product = products.find((p) => p.id === productId);
-        const price = Number(product?.price ?? 0) * quantity;
         showToast(
           "success",
-          `Added to cart! Total: PKR ${price.toLocaleString()}`,
+          `Added ${quantity} x ${product?.title || "product"} to cart!`,
         );
         refresh();
       } else {

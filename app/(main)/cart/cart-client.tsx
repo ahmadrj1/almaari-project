@@ -27,6 +27,7 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [isDeleteSelectedOpen, setIsDeleteSelectedOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
@@ -120,6 +121,30 @@ export default function CartPage() {
       showToast("error", "Failed to remove item");
     } finally {
       setItemToDelete(null);
+    }
+  };
+
+  const deleteSelectedItems = async () => {
+    if (selectedItems.size === 0) return;
+    try {
+      setSubmitting(true);
+      await Promise.all(
+        Array.from(selectedItems).map((cartItemId) =>
+          fetch("/api/cart", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cartItemId }),
+          })
+        )
+      );
+      setItems(items.filter((i) => !selectedItems.has(i.id)));
+      setSelectedItems(new Set());
+      refresh();
+      showToast("success", "Selected items removed from cart");
+    } catch {
+      showToast("error", "Failed to remove items");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -218,7 +243,7 @@ export default function CartPage() {
     return (
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <h1 className="text-2xl font-semibold text-blue-600 flex items-center gap-2 mb-8">
-          <Link href="/products" className="hover:text-blue-700 transition-colors">
+          <Link href="/" className="hover:text-blue-700 transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           Your Shopping Bag
@@ -228,7 +253,7 @@ export default function CartPage() {
           title="Your cart is empty"
           description="Looks like you haven't added anything to your cart yet."
           action={
-            <Button onClick={() => router.push("/products")}>Browse Products</Button>
+            <Button onClick={() => router.push("/")}>Browse Products</Button>
           }
         />
       </div>
@@ -243,12 +268,23 @@ export default function CartPage() {
 
   return (
     <div className="w-full">
-      <h1 className="text-2xl font-semibold text-blue-600 flex items-center gap-2 mb-8">
-        <Link href="/products" className="hover:text-blue-700 transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        Your Shopping Bag
-      </h1>
+      <div className="flex flex-row justify-between items-center gap-2 mb-8">
+        <h1 className="text-xl sm:text-2xl font-semibold text-blue-600 flex items-center gap-2">
+          <Link href="/" className="hover:text-blue-700 transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          Your Shopping Bag
+        </h1>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={selectedItems.size === 0}
+          className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 px-3 text-xs sm:text-sm whitespace-nowrap"
+          onClick={() => setIsDeleteSelectedOpen(true)}
+        >
+          Delete Items ({selectedItems.size})
+        </Button>
+      </div>
 
       {items.length > 0 && (() => {
         const earliestItem = [...items].sort((a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime())[0];
@@ -406,6 +442,20 @@ export default function CartPage() {
         onConfirm={deleteItem}
         title="Remove Product"
         message="Are You Sure You Want To Delete The Item!"
+        confirmText="Yes"
+        cancelText="No"
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={isDeleteSelectedOpen}
+        onClose={() => setIsDeleteSelectedOpen(false)}
+        onConfirm={() => {
+          setIsDeleteSelectedOpen(false);
+          deleteSelectedItems();
+        }}
+        title="Delete Selected Items"
+        message="Are you sure you want to delete the selected items?"
         confirmText="Yes"
         cancelText="No"
         variant="danger"

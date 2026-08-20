@@ -14,11 +14,27 @@ export class CartService {
 
   static async getCart(userId: string) {
     await this.purgeExpiredCartItems(userId);
-    return prisma.cartItem.findMany({
+    const items = await prisma.cartItem.findMany({
       where: { userId },
       include: { product: true, variant: { include: { color: true, size: true } } },
       orderBy: { createdAt: "desc" },
     });
+
+    const variantIds = items.map((i) => i.variantId);
+    if (variantIds.length > 0) {
+      const reservedList = await prisma.cartItem.groupBy({
+        by: ["variantId"],
+        _sum: { quantity: true },
+        where: { variantId: { in: variantIds }, userId: { not: userId } },
+      });
+      const reservedMap = new Map(reservedList.map((r) => [r.variantId, r._sum.quantity || 0]));
+      
+      items.forEach((item) => {
+        item.variant.stock = Math.max(0, item.variant.stock - (reservedMap.get(item.variantId) || 0));
+      });
+    }
+
+    return items;
   }
 
   static async getCartCount(userId: string) {
@@ -95,8 +111,19 @@ export class CartService {
       throw new AppError("Not found", 404);
     }
 
-    if (quantity > existing.variant.stock) {
-      throw new AppError(`Only ${existing.variant.stock} items available in stock`, 400);
+    const reserved = await prisma.cartItem.aggregate({
+      where: { variantId: existing.variantId },
+      _sum: { quantity: true },
+    });
+    
+    const reservedByOthers = (reserved._sum.quantity ?? 0) - existing.quantity;
+    const available = existing.variant.stock - reservedByOthers;
+
+    if (quantity > available) {
+      throw new AppError(
+        available <= 0 ? "This item is out of stock" : `Only ${available} items available in stock`,
+        400
+      );
     }
 
     if (quantity <= 0) {

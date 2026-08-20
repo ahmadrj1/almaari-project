@@ -71,7 +71,7 @@ export default function AdminOrdersPage() {
             </div>
             <input
               type="text"
-              placeholder="Search by user name, email or order ID"
+              placeholder="Search by user name, email, order ID or status"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
@@ -86,7 +86,7 @@ export default function AdminOrdersPage() {
                 <th className="pb-3 font-medium">Date</th>
                 <th className="pb-3 font-medium">Order #</th>
                 <th className="pb-3 font-medium">User</th>
-                <th className="pb-3 font-medium">Product(s)</th>
+                <th className="pb-3 font-medium">Unit(s)</th>
                 <th className="pb-3 font-medium">Amount</th>
                 <th className="pb-3 font-medium">Status</th>
                 <th className="pb-3 font-medium">Actions</th>
