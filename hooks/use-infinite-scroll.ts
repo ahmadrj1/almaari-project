@@ -1,38 +1,62 @@
 import { useEffect, useRef, useCallback } from "react";
 
 interface UseInfiniteScrollOptions {
-  onLoadMore: () => void;
-  hasMore: boolean;
+  onLoadMore?: () => void;
+  onLoadPrevious?: () => void;
+  hasMore?: boolean;
+  hasPrevious?: boolean;
   isLoading: boolean;
   rootMargin?: string;
 }
 
 export function useInfiniteScroll({
   onLoadMore,
-  hasMore,
+  onLoadPrevious,
+  hasMore = false,
+  hasPrevious = false,
   isLoading,
   rootMargin = "200px",
 }: UseInfiniteScrollOptions) {
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
+  const topSentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const handleIntersect = useCallback(
+  const handleBottomIntersect = useCallback(
     (entries: IntersectionObserverEntry[]) => {
-      if (entries[0]?.isIntersecting && hasMore && !isLoading) {
+      if (entries[0]?.isIntersecting && hasMore && !isLoading && onLoadMore) {
         onLoadMore();
       }
     },
     [onLoadMore, hasMore, isLoading],
   );
 
+  const handleTopIntersect = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      if (entries[0]?.isIntersecting && hasPrevious && !isLoading && onLoadPrevious) {
+        onLoadPrevious();
+      }
+    },
+    [onLoadPrevious, hasPrevious, isLoading],
+  );
+
   useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    const bottomSentinel = bottomSentinelRef.current;
+    let observer: IntersectionObserver | null = null;
+    if (bottomSentinel) {
+      observer = new IntersectionObserver(handleBottomIntersect, { rootMargin });
+      observer.observe(bottomSentinel);
+    }
+    return () => observer?.disconnect();
+  }, [handleBottomIntersect, rootMargin]);
 
-    const observer = new IntersectionObserver(handleIntersect, { rootMargin });
-    observer.observe(sentinel);
+  useEffect(() => {
+    const topSentinel = topSentinelRef.current;
+    let observer: IntersectionObserver | null = null;
+    if (topSentinel) {
+      observer = new IntersectionObserver(handleTopIntersect, { rootMargin });
+      observer.observe(topSentinel);
+    }
+    return () => observer?.disconnect();
+  }, [handleTopIntersect, rootMargin]);
 
-    return () => observer.disconnect();
-  }, [handleIntersect, rootMargin]);
-
-  return { sentinelRef };
+  return { bottomSentinelRef, topSentinelRef };
 }

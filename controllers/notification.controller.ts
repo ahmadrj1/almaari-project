@@ -11,8 +11,13 @@ export class NotificationController {
 
       const url = new URL(req.url);
       const filter = url.searchParams.get("filter") || "unread";
+      const limitStr = url.searchParams.get("limit");
+      const offsetStr = url.searchParams.get("offset");
 
-      const data = await NotificationService.getNotifications(session.user.id, filter);
+      const limit = limitStr ? parseInt(limitStr, 10) : undefined;
+      const offset = offsetStr ? parseInt(offsetStr, 10) : undefined;
+
+      const data = await NotificationService.getNotifications(session.user.id, filter, limit, offset);
       return NextResponse.json({ success: true, data });
     } catch (error) {
       return handleApiError(error, "NotificationController.getNotifications");

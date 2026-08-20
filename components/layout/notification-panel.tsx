@@ -26,6 +26,8 @@ export function NotificationPanel({
   markAllAsRead,
   toggleRead,
   loading,
+  loadMore,
+  hasMore,
 }: {
   notifications: Notification[];
   activeTab: "unread" | "all";
@@ -33,6 +35,8 @@ export function NotificationPanel({
   markAllAsRead: () => void;
   toggleRead: (id: string) => void;
   loading: boolean;
+  loadMore: () => void;
+  hasMore: boolean;
 }) {
   const getStyle = (type: string) =>
     TYPE_STYLES[type] ?? {
@@ -76,11 +80,25 @@ export function NotificationPanel({
       </div>
 
       {/* List */}
-      <div className="max-h-[380px] overflow-y-auto divide-y divide-gray-50">
+      <div
+        className="max-h-[380px] overflow-y-auto divide-y divide-gray-50"
+        onScroll={(e) => {
+          const target = e.currentTarget;
+          if (
+            target.scrollHeight - target.scrollTop <=
+              target.clientHeight + 10 &&
+            hasMore
+          ) {
+            loadMore();
+          }
+        }}
+      >
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-2">
             <Bell className="h-8 w-8 opacity-20" />
-            <p className="text-sm">No {activeTab === "unread" ? "unread " : ""}notifications</p>
+            <p className="text-sm">
+              No {activeTab === "unread" ? "unread " : ""}notifications
+            </p>
           </div>
         ) : (
           notifications.map((n) => {
@@ -91,21 +109,31 @@ export function NotificationPanel({
                 onClick={() => !n.isRead && toggleRead(n.id)}
                 title={n.isRead ? undefined : "Mark as read"}
                 className={`w-full text-left p-4 flex gap-3 transition-colors group ${
-                  !n.isRead ? "bg-blue-50/40 hover:bg-blue-50/70 cursor-pointer" : "hover:bg-gray-50 cursor-default"
+                  !n.isRead
+                    ? "bg-blue-50/40 hover:bg-blue-50/70 cursor-pointer"
+                    : "hover:bg-gray-50 cursor-default"
                 }`}
               >
                 {/* Icon */}
-                <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full ${bg} flex items-center justify-center`}>
+                <div
+                  className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full ${bg} flex items-center justify-center`}
+                >
                   {icon}
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold leading-tight ${n.isRead ? "text-gray-600" : "text-gray-900"}`}>
+                  <p
+                    className={`text-sm font-semibold leading-tight ${n.isRead ? "text-gray-600" : "text-gray-900"}`}
+                  >
                     {n.title}
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.message}</p>
-                  <p className="text-[11px] text-gray-400 mt-1">{timeAgo(n.createdAt)}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                    {n.message}
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    {timeAgo(n.createdAt)}
+                  </p>
                 </div>
 
                 {/* Status indicator + hover action */}

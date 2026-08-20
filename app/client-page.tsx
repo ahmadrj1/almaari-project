@@ -23,6 +23,7 @@ import {
   SORT_OPTIONS,
   PRODUCTS_PER_PAGE_DEFAULT,
   DEFAULT_SORT,
+  MAX_PRODUCTS_MEMORY,
 } from "@/lib/constants";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Navbar } from "@/components/layout/navbar";
@@ -42,10 +43,16 @@ function HomeContent() {
   const { refresh } = useCartCount();
 
   const [products, setProducts] = useState<ProductWithVariants[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
+  const [hasPrevious, setHasPrevious] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  // Use refs for cursor/products to avoid stale closures in fetchPage
+  const nextCursorRef = useRef<string | null>(null);
+  const prevCursorRef = useRef<string | null>(null);
+  const productsRef = useRef<ProductWithVariants[]>([]);
+  const isFetchingRef = useRef(false);
 
   const searchParam = searchParams.get("search") || "";
   const sort = searchParams.get("sort") || DEFAULT_SORT;
@@ -72,14 +79,32 @@ function HomeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const dedup = (arr: ProductWithVariants[]) => {
+    const seen = new Set<string>();
+    return arr.filter((p) => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+  };
+
   const fetchPage = useCallback(
-    async (cursor: string | null, isInitial: boolean) => {
+    async (direction: "next" | "prev" | "initial") => {
+      if (isFetchingRef.current && direction !== "initial") return;
+      isFetchingRef.current = true;
+
+      const isInitial = direction === "initial";
+      const cursor = direction === "prev" ? prevCursorRef.current : nextCursorRef.current;
+
       const currentKey = `${searchParam}__${sort}`;
       if (isInitial) {
         setLoading(true);
+        productsRef.current = [];
         setProducts([]);
-        setNextCursor(null);
+        nextCursorRef.current = null;
+        prevCursorRef.current = null;
         setHasMore(true);
+        setHasPrevious(false);
       } else {
         setLoadingMore(true);
       }
@@ -94,7 +119,7 @@ function HomeContent() {
           search: searchParam,
           sort,
           limit: String(PRODUCTS_PER_PAGE_DEFAULT),
-          ...(cursor ? { cursor } : {}),
+          ...(cursor ? { cursor, direction: direction === "prev" ? "prev" : "next" } : {}),
         });
 
         const res = await fetch(`/api/products/cursor?${params}`);
@@ -106,14 +131,44 @@ function HomeContent() {
         // Discard result if filters changed while request was in-flight
         if (filterKey.current !== currentKey) return;
 
-        const { products: newProducts, nextCursor: newCursor } = json.data;
+        const { products: newProducts, nextCursor: newCursor, prevCursor: newPrevCursor } = json.data;
+        const currentProducts = productsRef.current;
 
-        setProducts((prev) =>
-          isInitial ? newProducts : [...prev, ...newProducts],
-        );
-        setNextCursor(newCursor);
-        setHasMore(newCursor !== null);
+        let nextList: ProductWithVariants[];
+        if (isInitial) {
+          nextList = newProducts;
+        } else if (direction === "prev") {
+          nextList = dedup([...newProducts, ...currentProducts]).slice(0, MAX_PRODUCTS_MEMORY);
+        } else {
+          nextList = dedup([...currentProducts, ...newProducts]).slice(-MAX_PRODUCTS_MEMORY);
+        }
+
+        // Sync ref immediately before releasing lock
+        productsRef.current = nextList;
+        setProducts(nextList);
+
+        if (direction === "next" || isInitial) {
+          nextCursorRef.current = newCursor;
+          setHasMore(newCursor !== null);
+          if (isInitial) {
+            prevCursorRef.current = newPrevCursor;
+            setHasPrevious(newPrevCursor !== null);
+          } else if (currentProducts.length + newProducts.length > MAX_PRODUCTS_MEMORY) {
+            setHasPrevious(true);
+            prevCursorRef.current = nextList[0]?.id ?? null;
+          }
+        }
+
+        if (direction === "prev") {
+          prevCursorRef.current = newPrevCursor;
+          setHasPrevious(newPrevCursor !== null);
+          if (currentProducts.length + newProducts.length > MAX_PRODUCTS_MEMORY) {
+            setHasMore(true);
+            nextCursorRef.current = nextList[nextList.length - 1]?.id ?? null;
+          }
+        }
       } finally {
+        isFetchingRef.current = false;
         if (filterKey.current === `${searchParam}__${sort}`) {
           if (isInitial) setLoading(false);
           else setLoadingMore(false);
@@ -127,19 +182,27 @@ function HomeContent() {
   useEffect(() => {
     filterKey.current = `${searchParam}__${sort}`;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchPage(null, true);
+    fetchPage("initial");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParam, sort]);
 
   const loadMore = useCallback(() => {
-    if (!loadingMore && hasMore && nextCursor) {
-      fetchPage(nextCursor, false);
+    if (!loadingMore && hasMore) {
+      fetchPage("next");
     }
-  }, [loadingMore, hasMore, nextCursor, fetchPage]);
+  }, [loadingMore, hasMore, fetchPage]);
 
-  const { sentinelRef } = useInfiniteScroll({
+  const loadPrevious = useCallback(() => {
+    if (!loadingMore && hasPrevious) {
+      fetchPage("prev");
+    }
+  }, [loadingMore, hasPrevious, fetchPage]);
+
+  const { bottomSentinelRef, topSentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
+    onLoadPrevious: loadPrevious,
     hasMore,
+    hasPrevious,
     isLoading: loading || loadingMore,
   });
 
@@ -254,6 +317,9 @@ function HomeContent() {
           />
         ) : (
           <>
+            {/* Top Sentinel */}
+            <div ref={topSentinelRef} className="h-4" />
+            
             <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
               {products.map((product) => (
                 <ProductCard
@@ -268,8 +334,8 @@ function HomeContent() {
                 ))}
             </div>
 
-            {/* Infinite scroll sentinel */}
-            <div ref={sentinelRef} className="h-4" />
+            {/* Bottom Sentinel */}
+            <div ref={bottomSentinelRef} className="h-4" />
 
             {!hasMore && (
               <p className="mt-6 text-center text-sm text-gray-400">

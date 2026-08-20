@@ -7,12 +7,12 @@ export class ProductService {
     const limit = PRODUCTS_PER_PAGE_DEFAULT;
     const skip = (page - 1) * limit;
 
-    const orderBy: Record<string, string> =
-      sort === "price_asc" ? { price: "asc" } :
-      sort === "price_desc" ? { price: "desc" } :
-      sort === "title_asc" ? { title: "asc" } :
-      sort === "title_desc" ? { title: "desc" } :
-      { createdAt: "desc" };
+    const orderBy: Prisma.ProductOrderByWithRelationInput[] =
+      sort === "price_asc" ? [{ price: "asc" }, { id: "asc" }] :
+      sort === "price_desc" ? [{ price: "desc" }, { id: "asc" }] :
+      sort === "title_asc" ? [{ title: "asc" }, { id: "asc" }] :
+      sort === "title_desc" ? [{ title: "desc" }, { id: "asc" }] :
+      [{ createdAt: "desc" }, { id: "asc" }];
 
     const where: Prisma.ProductWhereInput = { deletedAt: null };
     
@@ -60,13 +60,13 @@ export class ProductService {
     return { products, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
   }
 
-  static async getProductsCursor({ search, sort, cursor, limit, inStock }: { search: string; sort: string; cursor?: string; limit: number; inStock: boolean }) {
-    const orderBy: Record<string, string> =
-      sort === "price_asc" ? { price: "asc" } :
-      sort === "price_desc" ? { price: "desc" } :
-      sort === "title_asc" ? { title: "asc" } :
-      sort === "title_desc" ? { title: "desc" } :
-      { createdAt: "desc" };
+  static async getProductsCursor({ search, sort, cursor, direction = "next", limit, inStock }: { search: string; sort: string; cursor?: string; direction?: string; limit: number; inStock: boolean }) {
+    const orderBy: Prisma.ProductOrderByWithRelationInput[] =
+      sort === "price_asc" ? [{ price: "asc" }, { id: "asc" }] :
+      sort === "price_desc" ? [{ price: "desc" }, { id: "asc" }] :
+      sort === "title_asc" ? [{ title: "asc" }, { id: "asc" }] :
+      sort === "title_desc" ? [{ title: "desc" }, { id: "asc" }] :
+      [{ createdAt: "desc" }, { id: "asc" }];
 
     const where: Prisma.ProductWhereInput = { deletedAt: null };
 
@@ -81,10 +81,11 @@ export class ProductService {
       where.variants = { some: { stock: { gt: 0 } } };
     }
 
+    const takeAmount = direction === "prev" ? -(limit + 1) : limit + 1;
     const products = await prisma.product.findMany({
       where,
       orderBy,
-      take: limit + 1,
+      take: takeAmount,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       include: {
         category: true,
@@ -112,11 +113,20 @@ export class ProductService {
     }
 
     const hasMore = products.length > limit;
-    if (hasMore) products.pop();
+    if (hasMore) {
+      if (direction === "prev") products.shift();
+      else products.pop();
+    }
 
-    const nextCursor = hasMore ? products[products.length - 1]?.id ?? null : null;
+    const nextCursor = direction === "prev" 
+      ? (cursor ? products[products.length - 1]?.id ?? null : null) 
+      : (hasMore ? products[products.length - 1]?.id ?? null : null);
+      
+    const prevCursor = direction === "prev"
+      ? (hasMore ? products[0]?.id ?? null : null)
+      : (cursor ? products[0]?.id ?? null : null);
 
-    return { products, nextCursor };
+    return { products, nextCursor, prevCursor };
   }
 
   static async getDemoProducts() {
