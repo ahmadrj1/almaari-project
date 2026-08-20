@@ -28,6 +28,11 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import type { Product } from "@prisma/client";
+import type { ProductVariant } from "@/types";
+
+type ProductWithVariants = Product & {
+  variants?: ProductVariant[];
+};
 
 function HomeContent() {
   const router = useRouter();
@@ -36,7 +41,7 @@ function HomeContent() {
   const { showToast } = useToast();
   const { refresh } = useCartCount();
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithVariants[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -175,10 +180,25 @@ function HomeContent() {
       });
       const data = await res.json();
       if (data.success) {
+        setProducts((prev) =>
+          prev.map((p) => {
+            if (p.id === productId) {
+              return {
+                ...p,
+                variants: p.variants?.map((v) =>
+                  v.id === variantId
+                    ? { ...v, stock: Math.max(0, v.stock - quantity) }
+                    : v,
+                ),
+              };
+            }
+            return p;
+          }),
+        );
         const product = products.find((p) => p.id === productId);
         showToast(
           "success",
-          `Added ${product?.title || "product"} to cart!`,
+          `Added ${quantity} x ${product?.title || "product"} to cart!`,
         );
         refresh();
       } else {

@@ -42,6 +42,21 @@ export class ProductService {
       prisma.product.count({ where }),
     ]);
 
+    const variantIds = products.flatMap(p => p.variants.map(v => v.id));
+    if (variantIds.length > 0) {
+      const reservedList = await prisma.cartItem.groupBy({
+        by: ['variantId'],
+        _sum: { quantity: true },
+        where: { variantId: { in: variantIds } },
+      });
+      const reservedMap = new Map(reservedList.map(r => [r.variantId, r._sum.quantity || 0]));
+      products.forEach(p => {
+        p.variants.forEach(v => {
+          v.stock = Math.max(0, v.stock - (reservedMap.get(v.id) || 0));
+        });
+      });
+    }
+
     return { products, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
   }
 
@@ -81,6 +96,21 @@ export class ProductService {
       },
     });
 
+    const variantIds = products.flatMap(p => p.variants.map(v => v.id));
+    if (variantIds.length > 0) {
+      const reservedList = await prisma.cartItem.groupBy({
+        by: ['variantId'],
+        _sum: { quantity: true },
+        where: { variantId: { in: variantIds } },
+      });
+      const reservedMap = new Map(reservedList.map(r => [r.variantId, r._sum.quantity || 0]));
+      products.forEach(p => {
+        p.variants.forEach(v => {
+          v.stock = Math.max(0, v.stock - (reservedMap.get(v.id) || 0));
+        });
+      });
+    }
+
     const hasMore = products.length > limit;
     if (hasMore) products.pop();
 
@@ -90,9 +120,33 @@ export class ProductService {
   }
 
   static async getDemoProducts() {
-    return prisma.product.findMany({
+    const products = await prisma.product.findMany({
       orderBy: { createdAt: "desc" },
       take: 12,
+      include: {
+        category: true,
+        images: { orderBy: { sortOrder: "asc" } },
+        variants: {
+          include: { color: true, size: true },
+        },
+      },
     });
+
+    const variantIds = products.flatMap(p => p.variants.map(v => v.id));
+    if (variantIds.length > 0) {
+      const reservedList = await prisma.cartItem.groupBy({
+        by: ['variantId'],
+        _sum: { quantity: true },
+        where: { variantId: { in: variantIds } },
+      });
+      const reservedMap = new Map(reservedList.map(r => [r.variantId, r._sum.quantity || 0]));
+      products.forEach(p => {
+        p.variants.forEach(v => {
+          v.stock = Math.max(0, v.stock - (reservedMap.get(v.id) || 0));
+        });
+      });
+    }
+    
+    return products;
   }
 }
