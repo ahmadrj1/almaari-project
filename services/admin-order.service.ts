@@ -8,12 +8,17 @@ export class AdminOrderService {
   static async getOrders({ search, page, limit = ADMIN_ORDERS_PER_PAGE_DEFAULT }: { search: string; page: number; limit?: number }) {
     const skip = (page - 1) * limit;
 
+    const matchingStatuses = Object.values(OrderStatus).filter(
+      (status) => status.toLowerCase().includes(search.toLowerCase())
+    );
+
     const where: Prisma.OrderWhereInput = search
       ? {
           OR: [
             { id: { contains: search, mode: "insensitive" } },
             { user: { fullName: { contains: search, mode: "insensitive" } } },
             { user: { email: { contains: search, mode: "insensitive" } } },
+            ...(matchingStatuses.length > 0 ? [{ status: { in: matchingStatuses } }] : []),
           ],
         }
       : {};
