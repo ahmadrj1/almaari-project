@@ -106,7 +106,7 @@ export default function OrderDetailPage({
           </p>
         </div>
         <div>
-          <p className="text-sm text-gray-500 mb-1">Products</p>
+          <p className="text-sm text-gray-500 mb-1">Unit(s)</p>
           <p className="font-medium text-gray-800">
             {String(totalProducts).padStart(2, "0")}
           </p>
@@ -137,10 +137,28 @@ export default function OrderDetailPage({
             buttonClassName={`h-9 rounded-full px-3 py-1.5 text-xs font-semibold justify-center border-0 ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}
             menuClassName="max-h-56"
             value={order.status}
-            options={ORDER_STATUSES.map((s) => ({
-              label: s,
-              value: s,
-            }))}
+            options={ORDER_STATUSES.map((s) => {
+              const STATUS_LEVELS: Record<string, number> = {
+                PENDING: 0,
+                PROCESSING: 1,
+                SHIPPED: 2,
+                DELIVERED: 3,
+                CANCELLED: 3
+              };
+              const currentLevel = STATUS_LEVELS[order.status] ?? 0;
+              const targetLevel = STATUS_LEVELS[s] ?? 0;
+              let disabled = false;
+              if (order.status === "CANCELLED" || order.status === "DELIVERED") {
+                disabled = s !== order.status;
+              } else {
+                disabled = s !== order.status && targetLevel <= currentLevel;
+              }
+              return {
+                label: s,
+                value: s,
+                disabled,
+              };
+            })}
             onValueChange={handleStatusChange}
             disabled={updatingStatus}
           />

@@ -86,7 +86,7 @@ export default function AdminOrdersPage() {
                 <th className="pb-3 font-medium">Date</th>
                 <th className="pb-3 font-medium">Order #</th>
                 <th className="pb-3 font-medium">User</th>
-                <th className="pb-3 font-medium">Product(s)</th>
+                <th className="pb-3 font-medium">Unit(s)</th>
                 <th className="pb-3 font-medium">Amount</th>
                 <th className="pb-3 font-medium">Status</th>
                 <th className="pb-3 font-medium">Actions</th>

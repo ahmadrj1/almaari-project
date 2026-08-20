@@ -95,8 +95,19 @@ export class CartService {
       throw new AppError("Not found", 404);
     }
 
-    if (quantity > existing.variant.stock) {
-      throw new AppError(`Only ${existing.variant.stock} items available in stock`, 400);
+    const reserved = await prisma.cartItem.aggregate({
+      where: { variantId: existing.variantId },
+      _sum: { quantity: true },
+    });
+    
+    const reservedByOthers = (reserved._sum.quantity ?? 0) - existing.quantity;
+    const available = existing.variant.stock - reservedByOthers;
+
+    if (quantity > available) {
+      throw new AppError(
+        available <= 0 ? "This item is out of stock" : `Only ${available} items available in stock`,
+        400
+      );
     }
 
     if (quantity <= 0) {

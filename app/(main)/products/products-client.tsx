@@ -120,10 +120,9 @@ function ProductsContent() {
       const data = await res.json();
       if (data.success) {
         const product = products.find((p) => p.id === productId);
-        const price = Number(product?.price ?? 0) * quantity;
         showToast(
           "success",
-          `Added to cart! Total: PKR ${price.toLocaleString()}`,
+          `Added ${product?.title || "product"} to cart!`,
         );
         refresh();
       } else {
