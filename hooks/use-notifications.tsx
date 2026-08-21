@@ -71,7 +71,11 @@ export function useNotifications() {
       const res = await fetch("/api/notifications/read", { method: "PATCH" });
       const json = await res.json();
       if (json.success) {
-        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+        if (activeTab === "unread") {
+          setNotifications([]);
+        } else {
+          setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+        }
         setUnreadCount(0);
       }
     } catch (error) {
@@ -89,11 +93,15 @@ export function useNotifications() {
       });
       const json = await res.json();
       if (json.success) {
-        setNotifications((prev) =>
-          prev.map((n) =>
-            n.id === notificationId ? { ...n, isRead: true } : n
-          )
-        );
+        if (activeTab === "unread") {
+          setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+        } else {
+          setNotifications((prev) =>
+            prev.map((n) =>
+              n.id === notificationId ? { ...n, isRead: true } : n
+            )
+          );
+        }
         setUnreadCount((c) => Math.max(0, c - 1));
       }
     } catch (error) {
