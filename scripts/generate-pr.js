@@ -6,8 +6,10 @@ const today = new Intl.DateTimeFormat("en-GB")
   .format(new Date())
   .replaceAll("/", "-");
 
+const baseBranch = process.env.PR_BASE || config.mainBranch;
+
 const commits = execSync(
-  `git log origin/${config.mainBranch}..HEAD --pretty=format:"%s"`,
+  `git log origin/${baseBranch}..HEAD --pretty=format:"%s"`,
   {
     encoding: "utf-8",
   }
