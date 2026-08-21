@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { OrderStatus, Prisma } from "@prisma/client";
-import { ADMIN_ORDERS_PER_PAGE_DEFAULT } from "@/lib/constants";
+import { ADMIN_ORDERS_PER_PAGE_DEFAULT, STATUS_LEVELS } from "@/lib/constants";
 import { AppError } from "@/lib/api-error";
 import { createNotification } from "@/lib/notifications";
 
@@ -87,6 +87,17 @@ export class AdminOrderService {
 
       if (!order) {
         throw new AppError("Order not found", 404);
+      }
+
+      if (status !== order.status) {
+        if (order.status === OrderStatus.CANCELLED || order.status === OrderStatus.DELIVERED) {
+          throw new AppError(`Cannot change status of a ${order.status.toLowerCase()} order`, 400);
+        }
+        const currentLevel = STATUS_LEVELS[order.status] ?? 0;
+        const targetLevel = STATUS_LEVELS[status] ?? 0;
+        if (targetLevel <= currentLevel) {
+          throw new AppError(`Cannot change status from ${order.status} to ${status}`, 400);
+        }
       }
 
       const isCancelling = status === OrderStatus.CANCELLED && order.status !== OrderStatus.CANCELLED;

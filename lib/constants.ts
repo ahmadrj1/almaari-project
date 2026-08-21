@@ -31,5 +31,12 @@ export const STATUS_COLORS: Record<string, string> = {
 };
 
 export const ORDER_STATUSES = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
+export const STATUS_LEVELS: Record<string, number> = {
+  PENDING: 0,
+  PROCESSING: 1,
+  SHIPPED: 2,
+  DELIVERED: 3,
+  CANCELLED: 3,
+};
 export const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB in bytes
 export const JUST_AUTHENTICATED_KEY = "just_authenticated";
