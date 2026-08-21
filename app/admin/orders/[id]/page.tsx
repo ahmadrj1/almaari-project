@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import React from "react";
-import { STATUS_COLORS, ORDER_STATUSES } from "@/lib/constants";
+import { STATUS_COLORS, ORDER_STATUSES, STATUS_LEVELS } from "@/lib/constants";
 import { OrderDetail, OrderItem } from "@/types";
 import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
@@ -138,13 +138,6 @@ export default function OrderDetailPage({
             menuClassName="max-h-56"
             value={order.status}
             options={ORDER_STATUSES.map((s) => {
-              const STATUS_LEVELS: Record<string, number> = {
-                PENDING: 0,
-                PROCESSING: 1,
-                SHIPPED: 2,
-                DELIVERED: 3,
-                CANCELLED: 3
-              };
               const currentLevel = STATUS_LEVELS[order.status] ?? 0;
               const targetLevel = STATUS_LEVELS[s] ?? 0;
               let disabled = false;
