@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Spinner } from "@/components/ui/spinner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ShoppingBag } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -47,6 +48,7 @@ function HomeContent() {
   const [hasPrevious, setHasPrevious] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadingPrevious, setLoadingPrevious] = useState(false);
 
   // Use refs for cursor/products to avoid stale closures in fetchPage
   const nextCursorRef = useRef<string | null>(null);
@@ -94,7 +96,8 @@ function HomeContent() {
       isFetchingRef.current = true;
 
       const isInitial = direction === "initial";
-      const cursor = direction === "prev" ? prevCursorRef.current : nextCursorRef.current;
+      const cursor =
+        direction === "prev" ? prevCursorRef.current : nextCursorRef.current;
 
       const currentKey = `${searchParam}__${sort}`;
       if (isInitial) {
@@ -107,15 +110,21 @@ function HomeContent() {
         setHasPrevious(false);
       } else {
         setLoadingMore(true);
+        if (direction === "prev") setLoadingPrevious(true);
       }
 
       try {
+        if (!isInitial && process.env.NEXT_PUBLIC_APP_ENV === "dev") {
+          await new Promise((r) => setTimeout(r, 1000));
+        }
 
         const params = new URLSearchParams({
           search: searchParam,
           sort,
           limit: String(PRODUCTS_PER_PAGE_DEFAULT),
-          ...(cursor ? { cursor, direction: direction === "prev" ? "prev" : "next" } : {}),
+          ...(cursor
+            ? { cursor, direction: direction === "prev" ? "prev" : "next" }
+            : {}),
         });
 
         const res = await fetch(`/api/products/cursor?${params}`);
@@ -127,16 +136,25 @@ function HomeContent() {
         // Discard result if filters changed while request was in-flight
         if (filterKey.current !== currentKey) return;
 
-        const { products: newProducts, nextCursor: newCursor, prevCursor: newPrevCursor } = json.data;
+        const {
+          products: newProducts,
+          nextCursor: newCursor,
+          prevCursor: newPrevCursor,
+        } = json.data;
         const currentProducts = productsRef.current;
 
         let nextList: ProductWithVariants[];
         if (isInitial) {
           nextList = newProducts;
         } else if (direction === "prev") {
-          nextList = dedup([...newProducts, ...currentProducts]).slice(0, MAX_PRODUCTS_MEMORY);
+          nextList = dedup([...newProducts, ...currentProducts]).slice(
+            0,
+            MAX_PRODUCTS_MEMORY,
+          );
         } else {
-          nextList = dedup([...currentProducts, ...newProducts]).slice(-MAX_PRODUCTS_MEMORY);
+          nextList = dedup([...currentProducts, ...newProducts]).slice(
+            -MAX_PRODUCTS_MEMORY,
+          );
         }
 
         // Sync ref immediately before releasing lock
@@ -149,7 +167,10 @@ function HomeContent() {
           if (isInitial) {
             prevCursorRef.current = newPrevCursor;
             setHasPrevious(newPrevCursor !== null);
-          } else if (currentProducts.length + newProducts.length > MAX_PRODUCTS_MEMORY) {
+          } else if (
+            currentProducts.length + newProducts.length >
+            MAX_PRODUCTS_MEMORY
+          ) {
             setHasPrevious(true);
             prevCursorRef.current = nextList[0]?.id ?? null;
           }
@@ -158,7 +179,10 @@ function HomeContent() {
         if (direction === "prev") {
           prevCursorRef.current = newPrevCursor;
           setHasPrevious(newPrevCursor !== null);
-          if (currentProducts.length + newProducts.length > MAX_PRODUCTS_MEMORY) {
+          if (
+            currentProducts.length + newProducts.length >
+            MAX_PRODUCTS_MEMORY
+          ) {
             setHasMore(true);
             nextCursorRef.current = nextList[nextList.length - 1]?.id ?? null;
           }
@@ -167,7 +191,10 @@ function HomeContent() {
         isFetchingRef.current = false;
         if (filterKey.current === `${searchParam}__${sort}`) {
           if (isInitial) setLoading(false);
-          else setLoadingMore(false);
+          else {
+            setLoadingMore(false);
+            setLoadingPrevious(false);
+          }
         }
       }
     },
@@ -315,7 +342,12 @@ function HomeContent() {
           <>
             {/* Top Sentinel */}
             <div ref={topSentinelRef} className="h-4" />
-            
+            {loadingPrevious && (
+              <div className="flex items-center justify-center py-4">
+                <Spinner size="md" />
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
               {products.map((product) => (
                 <ProductCard

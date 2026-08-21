@@ -69,6 +69,9 @@ GOOGLE_CLIENT_SECRET="your-google-client-secret"
 CLOUDINARY_CLOUD_NAME="your-cloud-name"
 CLOUDINARY_API_KEY="your-api-key"
 CLOUDINARY_API_SECRET="your-api-secret"
+
+# App Environment (set to "dev" to enable artificial loading delays)
+NEXT_PUBLIC_APP_ENV="dev"
 ```
 
 ### Variable Notes
@@ -79,6 +82,7 @@ CLOUDINARY_API_SECRET="your-api-secret"
 - `APP_URL` is used to build password-reset links. If omitted, the app falls back to `http://localhost:3000`.
 - `NODE_ENV` is set automatically by your runtime and is used internally for development vs production behavior.
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` power admin product image uploads and remote image delivery.
+- `NEXT_PUBLIC_APP_ENV` controls artificial loading delays for UX testing: set it to "dev" to enable delays (1–2 seconds on some flows), or "production" to run without delays.
 
 ## Getting Started
 

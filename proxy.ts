@@ -72,6 +72,30 @@ function applyFixedSessionCookie(req: NextRequest, response: Response, session: 
 }
 
 export default async function proxy(req: NextRequest) {
+  const isDev = process.env.NEXT_PUBLIC_APP_ENV === "dev";
+
+  if (isDev) {
+    const pathname = req.nextUrl.pathname;
+    const method = req.method;
+
+    const isTargetApi =
+      method === "GET" &&
+      (pathname.startsWith("/api/orders") ||
+       pathname.startsWith("/api/admin/orders") ||
+       pathname.startsWith("/api/admin/products") ||
+       pathname.startsWith("/api/cart") ||
+       pathname.startsWith("/api/categories") ||
+       pathname.startsWith("/api/admin/colors-sizes"));
+
+    if (isTargetApi) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+
+  if (req.nextUrl.pathname.startsWith('/api/') && req.nextUrl.pathname !== '/api/auth/session') {
+    return NextResponse.next();
+  }
+
   const session = await getToken({
     req,
     secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
@@ -132,5 +156,14 @@ export default async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/auth/session', '/((?!api|_next/static|_next/image|favicon\\.ico|images).*)'],
+  matcher: [
+    '/api/auth/session',
+    '/api/orders/:path*',
+    '/api/admin/orders/:path*',
+    '/api/admin/products/:path*',
+    '/api/cart/:path*',
+    '/api/categories/:path*',
+    '/api/admin/colors-sizes/:path*',
+    '/((?!api|_next/static|_next/image|favicon\\.ico|images).*)'
+  ],
 };
