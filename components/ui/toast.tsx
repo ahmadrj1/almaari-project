@@ -14,7 +14,7 @@ export interface ToastProps {
 
 export function Toast({ type, message, onClose }: ToastProps) {
   React.useEffect(() => {
-    const timer = setTimeout(onClose, 5000)
+    const timer = setTimeout(onClose, 3000)
     return () => clearTimeout(timer)
   }, [onClose])
 

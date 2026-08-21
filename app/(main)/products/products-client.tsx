@@ -55,7 +55,6 @@ function ProductsContent() {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 1000));
       const paramsParams: Record<string, string> = {
         search: searchParam,
         sort,

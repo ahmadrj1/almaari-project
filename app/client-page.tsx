@@ -110,10 +110,6 @@ function HomeContent() {
       }
 
       try {
-        // Pseudo network delay
-        if (!isInitial) {
-          await new Promise((r) => setTimeout(r, 100));
-        }
 
         const params = new URLSearchParams({
           search: searchParam,
