@@ -141,18 +141,46 @@ export class AdminProductService {
         },
       });
 
-      await tx.productVariant.deleteMany({
-        where: { productId: id }
+      // Upsert each variant to preserve existing IDs (and cascaded CartItems)
+      const existingVariants = await tx.productVariant.findMany({
+        where: { productId: id },
+        select: { id: true, colorId: true, sizeId: true },
       });
+      const existingMap = new Map(
+        existingVariants.map((v) => [`${v.colorId}:${v.sizeId}`, v.id])
+      );
 
-      await tx.productVariant.createMany({
-        data: variants.map((v: { colorId: string; sizeId: string; stock: string | number }) => ({
-          productId: id,
-          colorId: v.colorId,
-          sizeId: v.sizeId,
-          stock: Number(v.stock)
-        }))
-      });
+      const incomingKeys = new Set(
+        variants.map((v: { colorId: string; sizeId: string; stock: string | number }) => `${v.colorId}:${v.sizeId}`)
+      );
+
+      // Delete variants not present in the incoming list
+      const idsToDelete = existingVariants
+        .filter((v) => !incomingKeys.has(`${v.colorId}:${v.sizeId}`))
+        .map((v) => v.id);
+      if (idsToDelete.length > 0) {
+        await tx.productVariant.deleteMany({ where: { id: { in: idsToDelete } } });
+      }
+
+      // Upsert each incoming variant
+      for (const v of variants) {
+        const existingId = existingMap.get(`${v.colorId}:${v.sizeId}`);
+        if (existingId) {
+          await tx.productVariant.update({
+            where: { id: existingId },
+            data: { stock: Number(v.stock) },
+          });
+        } else {
+          await tx.productVariant.create({
+            data: {
+              productId: id,
+              colorId: v.colorId,
+              sizeId: v.sizeId,
+              stock: Number(v.stock),
+            },
+          });
+        }
+      }
 
       if (images) {
         await tx.productImage.deleteMany({

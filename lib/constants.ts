@@ -11,6 +11,8 @@ export const DEFAULT_SORT = "title_asc";
 export const SEARCH_DEBOUNCE_MS = 400;
 export const POLLING_TIME = 10 * 1000; // 10 seconds in milliseconds
 export const CART_ITEM_EXPIRY_MS = 60 * 60 * 1000; // 1 hour in milliseconds
+export const MAX_PRODUCTS_MEMORY = 16;
+export const MAX_NOTIFICATIONS_MEMORY = 12;
 
 export const SORT_OPTIONS = [
   { label: "Newest", value: "newest" },

@@ -21,6 +21,16 @@ import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary";
 
 const getTimestamp = () => Date.now();
 
+type StockIssue = {
+  type: "reduced" | "out_of_stock" | "deleted";
+  cartItemId: string;
+  title?: string;
+  color?: string;
+  size?: string;
+  requested?: number;
+  available?: number;
+};
+
 export default function CartPage() {
   const [items, setItems] = useState<CartItemWithProduct[]>([]);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -34,6 +44,8 @@ export default function CartPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newAddress, setNewAddress] = useState({ street: "", city: "", country: "", zipCode: "" });
+  const [stockIssues, setStockIssues] = useState<StockIssue[]>([]);
+  const [isStockIssueModalOpen, setIsStockIssueModalOpen] = useState(false);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const router = useRouter();
   const { showToast } = useToast();
@@ -47,13 +59,25 @@ export default function CartPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchCart = useCallback(async () => {
+  const fetchCart = useCallback(async (): Promise<number> => {
     try {
       const res = await fetch("/api/cart");
       const data = await res.json();
       if (data.success) {
-        setItems(data.data);
-        setSelectedItems(new Set(data.data.map((i: CartItemWithProduct) => i.id)));
+        const cartItems = data.data.items || [];
+        const adjustments: { title: string; oldQty: number; newQty: number }[] = data.data.adjustments || [];
+        
+        setItems(cartItems);
+        setSelectedItems(new Set(cartItems.map((i: CartItemWithProduct) => i.id)));
+
+        adjustments.forEach((adj) => {
+          if (adj.newQty === 0) {
+            showToast("info", `"${adj.title}" was removed from your cart as it is out of stock.`);
+          } else {
+            showToast("info", `Quantity for "${adj.title}" was reduced to ${adj.newQty} due to available stock.`);
+          }
+        });
+        return adjustments.length;
       }
     } catch (error) {
       console.error(error);
@@ -61,6 +85,7 @@ export default function CartPage() {
     } finally {
       setLoading(false);
     }
+    return 0;
   }, [showToast]);
 
   useEffect(() => {
@@ -170,6 +195,51 @@ export default function CartPage() {
     fetchAddresses();
   };
 
+  const handleValidateAndProceed = async () => {
+    if (selectedItems.size === 0) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/cart/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ selectedItemIds: Array.from(selectedItems) }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        showToast("error", "Failed to validate cart");
+        return;
+      }
+      const issues: StockIssue[] = (data.issues as StockIssue[]).map((issue) => {
+        if (issue.type === "deleted") {
+          const local = items.find((i) => i.id === issue.cartItemId);
+          return {
+            ...issue,
+            title: local?.product.title,
+            color: local?.variant.color.name,
+            size: local?.variant.size.name,
+          };
+        }
+        return issue;
+      });
+      if (issues.length > 0) {
+        setStockIssues(issues);
+        setIsStockIssueModalOpen(true);
+      } else {
+        openAddressModal();
+      }
+    } catch {
+      showToast("error", "Failed to validate cart");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleStockIssueOkay = async () => {
+    setIsStockIssueModalOpen(false);
+    setStockIssues([]);
+    await fetchCart();
+  };
+
   const handlePlaceOrder = async () => {
     let finalAddressId = selectedAddressId;
 
@@ -222,7 +292,14 @@ export default function CartPage() {
         setSubmitting(false);
         setSuccessOrderId(data.data.id);
       } else {
-        showToast("error", data.error || "Failed to place order");
+        // Close modal and re-sync cart to reflect stock changes
+        setIsAddressModalOpen(false);
+        setSubmitting(false);
+        const adjusted = await fetchCart();
+        if (adjusted === 0) {
+          // No quantity adjustments detected; show the raw error as info
+          showToast("info", data.error || "Some items could not be ordered. Please review your cart.");
+        }
       }
     } catch {
       showToast("error", "Failed to place order");
@@ -427,14 +504,47 @@ export default function CartPage() {
             <Button 
               className="w-full" 
               size="lg" 
-              onClick={openAddressModal}
-              disabled={selectedItems.size === 0}
+              onClick={handleValidateAndProceed}
+              loading={submitting}
+              disabled={selectedItems.size === 0 || submitting}
             >
               Place Order
             </Button>
           </div>
         </div>
       </div>
+
+      <Modal isOpen={isStockIssueModalOpen} onClose={handleStockIssueOkay} title="Stock Availability Issue">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            The following items in your cart have stock issues. Your cart will be updated to reflect current availability:
+          </p>
+          <ul className="space-y-3">
+            {stockIssues.map((issue) => (
+              <li key={issue.cartItemId} className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-gray-800">
+                    {issue.title || "Product"}{issue.color ? ` — ${issue.color}` : ""}{issue.size ? ` / ${issue.size}` : ""}
+                  </p>
+                  {issue.type === "deleted" ? (
+                    <p className="text-amber-700">This variant is no longer available and will be removed from your cart.</p>
+                  ) : issue.available === 0 ? (
+                    <p className="text-amber-700">Out of stock. Will be removed from your cart.</p>
+                  ) : (
+                    <p className="text-amber-700">
+                      Only <span className="font-semibold">{issue.available}</span> available (you had {issue.requested}). Quantity will be updated.
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="flex justify-end pt-2">
+            <Button onClick={handleStockIssueOkay}>Okay</Button>
+          </div>
+        </div>
+      </Modal>
 
       <ConfirmDialog
         isOpen={!!itemToDelete}

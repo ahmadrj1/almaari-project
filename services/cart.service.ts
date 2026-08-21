@@ -14,11 +14,13 @@ export class CartService {
 
   static async getCart(userId: string) {
     await this.purgeExpiredCartItems(userId);
-    const items = await prisma.cartItem.findMany({
+    let items = await prisma.cartItem.findMany({
       where: { userId },
       include: { product: true, variant: { include: { color: true, size: true } } },
       orderBy: { createdAt: "desc" },
     });
+
+    const adjustments: Array<{ title: string; oldQty: number; newQty: number }> = [];
 
     const variantIds = items.map((i) => i.variantId);
     if (variantIds.length > 0) {
@@ -29,12 +31,41 @@ export class CartService {
       });
       const reservedMap = new Map(reservedList.map((r) => [r.variantId, r._sum.quantity || 0]));
       
-      items.forEach((item) => {
-        item.variant.stock = Math.max(0, item.variant.stock - (reservedMap.get(item.variantId) || 0));
-      });
+      const itemsToKeep: typeof items = [];
+
+      for (const item of items) {
+        const reservedByOthers = reservedMap.get(item.variantId) || 0;
+        const available = Math.max(0, item.variant.stock - reservedByOthers);
+
+        if (available <= 0) {
+          adjustments.push({
+            title: item.product.title,
+            oldQty: item.quantity,
+            newQty: 0,
+          });
+          await prisma.cartItem.delete({ where: { id: item.id } });
+        } else if (item.quantity > available) {
+          adjustments.push({
+            title: item.product.title,
+            oldQty: item.quantity,
+            newQty: available,
+          });
+          const updated = await prisma.cartItem.update({
+            where: { id: item.id },
+            data: { quantity: available },
+            include: { product: true, variant: { include: { color: true, size: true } } },
+          });
+          updated.variant.stock = available;
+          itemsToKeep.push(updated);
+        } else {
+          item.variant.stock = available;
+          itemsToKeep.push(item);
+        }
+      }
+      items = itemsToKeep;
     }
 
-    return items;
+    return { items, adjustments };
   }
 
   static async getCartCount(userId: string) {
@@ -148,5 +179,53 @@ export class CartService {
 
     await prisma.cartItem.delete({ where: { id: cartItemId } });
     return { deleted: true };
+  }
+
+  static async validateCartItems(userId: string, selectedItemIds: string[]) {
+    const cartItems = await prisma.cartItem.findMany({
+      where: { userId, id: { in: selectedItemIds } },
+      include: { product: true, variant: { include: { color: true, size: true } } },
+    });
+
+    const foundIds = new Set(cartItems.map((i) => i.id));
+    const deletedItemIds = selectedItemIds.filter((id) => !foundIds.has(id));
+
+    const issues: Array<{
+      type: "reduced" | "out_of_stock" | "deleted";
+      cartItemId: string;
+      title?: string;
+      color?: string;
+      size?: string;
+      requested?: number;
+      available?: number;
+    }> = deletedItemIds.map((cartItemId) => ({ type: "deleted" as const, cartItemId }));
+
+    if (cartItems.length > 0) {
+      const variantIds = cartItems.map((i) => i.variantId);
+      const reservedList = await prisma.cartItem.groupBy({
+        by: ["variantId"],
+        _sum: { quantity: true },
+        where: { variantId: { in: variantIds }, userId: { not: userId } },
+      });
+      const reservedMap = new Map(reservedList.map((r) => [r.variantId, r._sum.quantity || 0]));
+
+      for (const item of cartItems) {
+        const reservedByOthers = reservedMap.get(item.variantId) || 0;
+        const available = Math.max(0, item.variant.stock - reservedByOthers);
+        if (item.quantity > available) {
+          issues.push({
+            type: available === 0 ? "out_of_stock" : "reduced",
+            cartItemId: item.id,
+            title: item.product.title,
+            color: item.variant.color.name,
+            size: item.variant.size.name,
+            requested: item.quantity,
+            available,
+          });
+        }
+      }
+    }
+
+    return issues;
   }
 }

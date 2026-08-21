@@ -7,12 +7,25 @@ import { NotificationPanel } from "./notification-panel";
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
-  const { notifications, unreadCount, activeTab, setActiveTab, markAllAsRead, toggleRead, loading } = useNotifications();
+  const {
+    notifications,
+    unreadCount,
+    activeTab,
+    setActiveTab,
+    markAllAsRead,
+    toggleRead,
+    loading,
+    loadMore,
+    hasMore,
+  } = useNotifications();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     }
@@ -30,7 +43,7 @@ export function NotificationBell() {
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
           <span className="absolute right-0 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-[#E53935] text-[10px] font-bold text-white">
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
@@ -43,6 +56,8 @@ export function NotificationBell() {
           markAllAsRead={markAllAsRead}
           toggleRead={toggleRead}
           loading={loading}
+          loadMore={loadMore}
+          hasMore={hasMore}
         />
       )}
     </div>

@@ -66,4 +66,16 @@ export class CartController {
       return handleApiError(error, "CartController.deleteCartItem");
     }
   }
+
+  static async validateCartItems(req: Request) {
+    try {
+      const session = await auth();
+      if (!session?.user?.id) throw new AppError("Unauthorized", 401);
+      const body = await req.json();
+      const issues = await CartService.validateCartItems(session.user.id, body.selectedItemIds || []);
+      return NextResponse.json({ success: true, issues });
+    } catch (error) {
+      return handleApiError(error, "CartController.validateCartItems");
+    }
+  }
 }

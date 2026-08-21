@@ -1,21 +1,48 @@
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 export class NotificationService {
-  static async getNotifications(userId: string, filter: string) {
+  static async getNotifications(userId: string, filter: string, limit?: number, offset?: number) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { createdAt: true },
     });
 
-    if (!user) return [];
+    if (!user) return { notifications: [], hasMore: false };
+
+    const whereClause: Prisma.NotificationWhereInput = {
+      OR: [{ userId }, { userId: null }],
+      createdAt: {
+        gte: user.createdAt,
+      },
+    };
+
+    if (filter === "unread") {
+      whereClause.AND = [
+        {
+          OR: [
+            {
+              userId: { not: null },
+              isRead: false,
+            },
+            {
+              userId: null,
+              reads: {
+                none: {
+                  userId,
+                },
+              },
+            },
+          ],
+        },
+      ];
+    }
+
+    const take = limit !== undefined ? limit + 1 : undefined;
+    const skip = offset;
 
     const notifications = await prisma.notification.findMany({
-      where: {
-        OR: [{ userId }, { userId: null }],
-        createdAt: {
-          gte: user.createdAt,
-        },
-      },
+      where: whereClause,
       include: {
         reads: {
           where: { userId },
@@ -23,9 +50,14 @@ export class NotificationService {
         },
       },
       orderBy: { createdAt: "desc" },
+      take,
+      skip,
     });
 
-    const mapped = notifications.map((n) => {
+    const hasMore = limit !== undefined ? notifications.length > limit : false;
+    const itemsToMap = limit !== undefined && hasMore ? notifications.slice(0, limit) : notifications;
+
+    const mapped = itemsToMap.map((n) => {
       let isRead = false;
       if (n.userId === null) {
         isRead = n.reads.length > 0;
@@ -38,10 +70,34 @@ export class NotificationService {
       return { ...rest, isRead };
     });
 
-    if (filter === "unread") {
-      return mapped.filter((n) => !n.isRead);
-    }
-    return mapped;
+    const unreadCount = await prisma.notification.count({
+      where: {
+        OR: [{ userId }, { userId: null }],
+        createdAt: {
+          gte: user.createdAt,
+        },
+        AND: [
+          {
+            OR: [
+              {
+                userId: { not: null },
+                isRead: false,
+              },
+              {
+                userId: null,
+                reads: {
+                  none: {
+                    userId,
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    return { notifications: mapped, hasMore, unreadCount };
   }
 
   static async toggleNotificationRead(userId: string, notificationId: string) {
