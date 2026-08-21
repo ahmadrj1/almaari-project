@@ -20,7 +20,6 @@ export default function OrdersPage() {
   const fetchOrders = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 1000));
       const res = await fetch(`/api/orders?page=${page}&limit=${ORDERS_PER_PAGE_DEFAULT}`);
       const data = await res.json();
       if (data.success) {

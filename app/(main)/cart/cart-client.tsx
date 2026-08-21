@@ -288,7 +288,7 @@ export default function CartPage() {
         refresh();
         setIsAddressModalOpen(false);
         setSubmitting(true);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         setSubmitting(false);
         setSuccessOrderId(data.data.id);
       } else {
