@@ -1,25 +1,25 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { LogOut, Package } from "lucide-react"
-import { useSession, signOut } from "next-auth/react"
-import { ChevronDown } from "lucide-react"
+import * as React from "react";
+import Link from "next/link";
+import { LogOut, Package } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { ChevronDown } from "lucide-react";
 
 export function UserMenu() {
-  const [isOpen, setIsOpen] = React.useState(false)
-  const { data: session } = useSession()
-  const user = session?.user
+  const [isOpen, setIsOpen] = React.useState(false);
+  const { data: session } = useSession();
+  const user = session?.user;
 
   const getInitials = (name?: string | null) => {
-    if (!name) return "U"
+    if (!name) return "U";
     return name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase()
-      .slice(0, 2)
-  }
+      .slice(0, 2);
+  };
 
   return (
     <div className="relative">
@@ -53,8 +53,8 @@ export function UserMenu() {
           <button
             className="flex w-full items-center px-4 py-2 text-left text-sm text-[#E53935] hover:bg-red-50"
             onClick={() => {
-              setIsOpen(false)
-              signOut({ callbackUrl: "/login" })
+              setIsOpen(false);
+              signOut({ callbackUrl: "/login" });
             }}
           >
             <LogOut className="mr-3 h-4 w-4 text-[#E53935]" />
@@ -63,5 +63,5 @@ export function UserMenu() {
         </div>
       )}
     </div>
-  )
+  );
 }

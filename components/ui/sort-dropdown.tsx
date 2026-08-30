@@ -11,8 +11,10 @@ export interface Option {
   disabled?: boolean;
 }
 
-export interface SortDropdownProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> {
+export interface SortDropdownProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  "onChange"
+> {
   options: readonly Option[];
   value: string;
   placeholder?: React.ReactNode;
@@ -22,7 +24,10 @@ export interface SortDropdownProps
   optionClassName?: string;
 }
 
-export const SortDropdown = React.forwardRef<HTMLButtonElement, SortDropdownProps>(
+export const SortDropdown = React.forwardRef<
+  HTMLButtonElement,
+  SortDropdownProps
+>(
   (
     {
       className,
@@ -49,7 +54,10 @@ export const SortDropdown = React.forwardRef<HTMLButtonElement, SortDropdownProp
     const selectedOption =
       options.find((option) => option.value === value) ?? null;
 
-    React.useImperativeHandle(ref, () => buttonRef.current as HTMLButtonElement);
+    React.useImperativeHandle(
+      ref,
+      () => buttonRef.current as HTMLButtonElement,
+    );
 
     const updateMenuPosition = React.useCallback(() => {
       const trigger = buttonRef.current;
@@ -111,7 +119,9 @@ export const SortDropdown = React.forwardRef<HTMLButtonElement, SortDropdownProp
       }
 
       updateMenuPosition();
-      const currentIndex = options.findIndex((option) => option.value === value);
+      const currentIndex = options.findIndex(
+        (option) => option.value === value,
+      );
       const firstEnabledIndex = options.findIndex((option) => !option.disabled);
       setActiveIndex(currentIndex >= 0 ? currentIndex : firstEnabledIndex);
       const handleReposition = () => updateMenuPosition();
@@ -162,7 +172,10 @@ export const SortDropdown = React.forwardRef<HTMLButtonElement, SortDropdownProp
         return;
       }
 
-      if (!isOpen && ["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
+      if (
+        !isOpen &&
+        ["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)
+      ) {
         event.preventDefault();
         openMenu();
         return;
@@ -207,10 +220,20 @@ export const SortDropdown = React.forwardRef<HTMLButtonElement, SortDropdownProp
           )}
           {...props}
         >
-          <span className={cn("min-w-0 truncate", selectedOption ? "text-slate-900" : "text-[#98A4C4]")}>
+          <span
+            className={cn(
+              "min-w-0 truncate",
+              selectedOption ? "text-slate-900" : "text-[#98A4C4]",
+            )}
+          >
             {selectedOption?.label ?? placeholder}
           </span>
-          <ChevronDown className={cn("h-4 w-4 shrink-0 text-[#64748B] transition-transform duration-150", isOpen && "rotate-180")} />
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 shrink-0 text-[#64748B] transition-transform duration-150",
+              isOpen && "rotate-180",
+            )}
+          />
         </button>
 
         {isOpen &&
@@ -245,12 +268,18 @@ export const SortDropdown = React.forwardRef<HTMLButtonElement, SortDropdownProp
                         : isActive
                           ? "bg-[#F7FAFF] text-slate-900"
                           : "text-slate-700 hover:bg-[#F7FAFF] hover:text-slate-900",
-                      option.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                      option.disabled
+                        ? "cursor-not-allowed opacity-50"
+                        : "cursor-pointer",
                       optionClassName,
                     )}
                   >
-                    <span className="min-w-0 flex-1 truncate">{option.label}</span>
-                    {isSelected && <Check className="h-4 w-4 shrink-0 text-primary" />}
+                    <span className="min-w-0 flex-1 truncate">
+                      {option.label}
+                    </span>
+                    {isSelected && (
+                      <Check className="h-4 w-4 shrink-0 text-primary" />
+                    )}
                   </button>
                 );
               })}

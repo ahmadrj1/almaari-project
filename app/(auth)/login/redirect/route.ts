@@ -5,7 +5,8 @@ import { JUST_AUTHENTICATED_KEY } from "@/lib/constants";
 
 export async function GET(request: Request) {
   const session = await getServerSessionSnapshot();
-  const targetPath = session?.user?.role === Role.ADMIN ? "/admin/products" : "/";
+  const targetPath =
+    session?.user?.role === Role.ADMIN ? "/admin/products" : "/";
   const url = new URL(request.url);
 
   if (url.searchParams.get("popup") === "true") {
@@ -43,4 +44,3 @@ export async function GET(request: Request) {
   });
   return response;
 }
-

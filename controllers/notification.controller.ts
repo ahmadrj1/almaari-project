@@ -17,7 +17,12 @@ export class NotificationController {
       const limit = limitStr ? parseInt(limitStr, 10) : undefined;
       const offset = offsetStr ? parseInt(offsetStr, 10) : undefined;
 
-      const data = await NotificationService.getNotifications(session.user.id, filter, limit, offset);
+      const data = await NotificationService.getNotifications(
+        session.user.id,
+        filter,
+        limit,
+        offset,
+      );
       return NextResponse.json({ success: true, data });
     } catch (error) {
       return handleApiError(error, "NotificationController.getNotifications");
@@ -33,7 +38,10 @@ export class NotificationController {
       const notificationId = url.searchParams.get("id");
       if (!notificationId) throw new AppError("Notification ID required", 400);
 
-      await NotificationService.toggleNotificationRead(session.user.id, notificationId);
+      await NotificationService.toggleNotificationRead(
+        session.user.id,
+        notificationId,
+      );
       return NextResponse.json({ success: true });
     } catch (error) {
       return handleApiError(error, "NotificationController.toggleRead");

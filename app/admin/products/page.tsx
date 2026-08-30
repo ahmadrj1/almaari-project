@@ -27,7 +27,9 @@ export default function AdminProductsPage() {
   const fetchProducts = useCallback(async (p: number, search: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/products?page=${p}&limit=${ADMIN_PRODUCTS_PER_PAGE_DEFAULT}&search=${encodeURIComponent(search)}`);
+      const res = await fetch(
+        `/api/admin/products?page=${p}&limit=${ADMIN_PRODUCTS_PER_PAGE_DEFAULT}&search=${encodeURIComponent(search)}`,
+      );
       const data = await res.json();
       if (data.success) {
         setProducts(data.data.products);
@@ -117,7 +119,6 @@ export default function AdminProductsPage() {
             className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 hover:border-blue-500 focus:ring-blue-500"
           />
         </div>
-
       </div>
 
       <div className="overflow-x-auto">
@@ -135,7 +136,9 @@ export default function AdminProductsPage() {
             {loading ? (
               <tr>
                 <td colSpan={5} className="py-8">
-                  <div className="flex items-center justify-center text-gray-500">Loading...</div>
+                  <div className="flex items-center justify-center text-gray-500">
+                    Loading...
+                  </div>
                 </td>
               </tr>
             ) : products.length === 0 ? (
@@ -152,11 +155,17 @@ export default function AdminProductsPage() {
               </tr>
             ) : (
               products.map((product) => (
-                <tr key={product.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <tr
+                  key={product.id}
+                  className="border-b border-gray-100 hover:bg-gray-50"
+                >
                   <td className="py-4 flex items-center gap-4">
                     <div className="w-12 h-12 relative flex-shrink-0 bg-gray-100 rounded-md overflow-hidden">
                       <Image
-                        src={getOptimizedCloudinaryUrl(product.image || "/images/placeholder.png", 180)}
+                        src={getOptimizedCloudinaryUrl(
+                          product.image || "/images/placeholder.png",
+                          180,
+                        )}
                         alt={product.title}
                         fill
                         className="object-cover"
@@ -167,12 +176,25 @@ export default function AdminProductsPage() {
                       {product.title}
                     </span>
                   </td>
-                  <td className="py-4 text-gray-600">Rs. {Number(product.price).toFixed(2)}</td>
-                  <td className="py-4 text-gray-600">{categories.find((c) => c.id === product.categoryId)?.name || "N/A"}</td>
+                  <td className="py-4 text-gray-600">
+                    Rs. {Number(product.price).toFixed(2)}
+                  </td>
+                  <td className="py-4 text-gray-600">
+                    {categories.find((c) => c.id === product.categoryId)
+                      ?.name || "N/A"}
+                  </td>
                   <td className="py-4 text-gray-600">
                     <div className="flex flex-wrap gap-2 items-center">
-                      <span className="font-semibold text-gray-800 mr-2">{product.totalStock}</span>
-                      <span className="text-gray-500">({product.variants?.length} {product.variants?.length === 1 ? "Variant" : "Variants"})</span>
+                      <span className="font-semibold text-gray-800 mr-2">
+                        {product.totalStock}
+                      </span>
+                      <span className="text-gray-500">
+                        ({product.variants?.length}{" "}
+                        {product.variants?.length === 1
+                          ? "Variant"
+                          : "Variants"}
+                        )
+                      </span>
                     </div>
                   </td>
                   <td className="py-4">

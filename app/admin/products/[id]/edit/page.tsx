@@ -6,7 +6,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Upload, Plus, Trash2 } from "lucide-react";
 import React from "react";
-import { Color, Size, FormVariant as Variant, Category, ProductImageUpload } from "@/types";
+import {
+  Color,
+  Size,
+  FormVariant as Variant,
+  Category,
+  ProductImageUpload,
+} from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { MAX_UPLOAD_SIZE } from "@/lib/constants";
@@ -73,7 +79,6 @@ export default function EditProductPage({
         setTitle(p.title);
         setPrice(p.price);
         setCategoryId(p.categoryId || "");
-
 
         setVariants(
           p.variants.map(
@@ -148,10 +153,11 @@ export default function EditProductPage({
   const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      
+
       const invalidTypes = files.filter(
-        (f) => !["image/jpeg", "image/jpg", "image/png"].includes(f.type) &&
-               !/\.(jpe?g|png)$/i.test(f.name)
+        (f) =>
+          !["image/jpeg", "image/jpg", "image/png"].includes(f.type) &&
+          !/\.(jpe?g|png)$/i.test(f.name),
       );
       if (invalidTypes.length > 0) {
         showToast("error", "Only JPG, JPEG, and PNG images are allowed.");
@@ -192,9 +198,7 @@ export default function EditProductPage({
     const qtyToAdd = Number(variantQty);
 
     const existingVariant = variants.find(
-      (v) =>
-        v.colorId === selectedColor &&
-        v.sizeId === selectedSize
+      (v) => v.colorId === selectedColor && v.sizeId === selectedSize,
     );
 
     if (existingVariant) {
@@ -206,8 +210,8 @@ export default function EditProductPage({
                 ...v,
                 stock: Number(v.stock) + qtyToAdd,
               }
-            : v
-        )
+            : v,
+        ),
       );
     } else {
       // Add new variant
@@ -233,7 +237,10 @@ export default function EditProductPage({
     setVariants(variants.filter((v) => v.id !== vid));
   };
 
-  const totalQuantity = variants.reduce((sum, v) => sum + Number(v.stock || 0), 0);
+  const totalQuantity = variants.reduce(
+    (sum, v) => sum + Number(v.stock || 0),
+    0,
+  );
 
   const handleUpdate = async () => {
     try {
@@ -243,14 +250,20 @@ export default function EditProductPage({
         price: Number(price),
         categoryId: categoryId === "create_new" ? newCategoryName : categoryId,
       });
-      
+
       if (variants.length === 0) {
-        setErrors((prev) => ({ ...prev, variants: "At least one variant is required" }));
+        setErrors((prev) => ({
+          ...prev,
+          variants: "At least one variant is required",
+        }));
         showToast("error", "At least one variant is required");
         return;
       }
       if (productImages.length === 0) {
-        setErrors((prev) => ({ ...prev, images: "At least one image is required" }));
+        setErrors((prev) => ({
+          ...prev,
+          images: "At least one image is required",
+        }));
         showToast("error", "At least one image is required");
         return;
       }
@@ -306,7 +319,8 @@ export default function EditProductPage({
           title,
           price: Number(price),
           image: primaryImage,
-          categoryId: categoryId && categoryId !== "create_new" ? categoryId : null,
+          categoryId:
+            categoryId && categoryId !== "create_new" ? categoryId : null,
           variants: variants.map((v) => ({
             colorId: v.colorId,
             sizeId: v.sizeId,
@@ -354,7 +368,7 @@ export default function EditProductPage({
             Product Images <span className="text-red-500">*</span>
           </label>
           <div
-            className={`border-2 border-dashed ${errors.images ? 'border-red-500' : 'border-gray-200'} rounded-lg p-4 bg-gray-50 flex flex-col items-center justify-center min-h-[150px] cursor-pointer hover:bg-gray-100 transition-colors`}
+            className={`border-2 border-dashed ${errors.images ? "border-red-500" : "border-gray-200"} rounded-lg p-4 bg-gray-50 flex flex-col items-center justify-center min-h-[150px] cursor-pointer hover:bg-gray-100 transition-colors`}
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload size={24} className="text-gray-400 mb-2" />
@@ -421,21 +435,29 @@ export default function EditProductPage({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className={`w-full border ${errors.title ? 'border-red-500' : 'border-gray-200'} rounded p-2.5 text-sm focus:outline-none focus:border-blue-500`}
+              className={`w-full border ${errors.title ? "border-red-500" : "border-gray-200"} rounded p-2.5 text-sm focus:outline-none focus:border-blue-500`}
             />
-            {errors.title && <span className="text-xs text-red-500 mt-1">{errors.title}</span>}
+            {errors.title && (
+              <span className="text-xs text-red-500 mt-1">{errors.title}</span>
+            )}
           </div>
 
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="block text-sm text-gray-700 mb-1">Price <span className="text-red-500">*</span></label>
+              <label className="block text-sm text-gray-700 mb-1">
+                Price <span className="text-red-500">*</span>
+              </label>
               <input
                 type="number"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                className={`w-full border ${errors.price ? 'border-red-500' : 'border-gray-200'} rounded p-2.5 text-sm focus:outline-none focus:border-blue-500`}
+                className={`w-full border ${errors.price ? "border-red-500" : "border-gray-200"} rounded p-2.5 text-sm focus:outline-none focus:border-blue-500`}
               />
-              {errors.price && <span className="text-xs text-red-500 mt-1">{errors.price}</span>}
+              {errors.price && (
+                <span className="text-xs text-red-500 mt-1">
+                  {errors.price}
+                </span>
+              )}
             </div>
             <div className="flex-1">
               <label className="block text-sm text-gray-700 mb-1">
@@ -456,58 +478,64 @@ export default function EditProductPage({
             <label className="block text-sm text-gray-700 mb-1 font-medium">
               Category <span className="text-red-500">*</span>
             </label>
-              <div className="relative">
-                <SortDropdown
-                  className={`w-full min-w-0 ${errors.categoryId ? "ring-1 ring-red-500 rounded-lg" : ""}`}
-                  buttonClassName={`rounded-lg py-2.5 text-sm ${errors.categoryId ? "border-red-500" : "border-gray-200"}`}
-                  menuClassName="max-h-56"
-                  value={categoryId}
-                  placeholder="Select Category"
-                  options={[
-                    ...categories.map((c) => ({
-                      label: c.name,
-                      value: c.id,
-                    })),
-                    {
-                      label: <span className="font-semibold text-blue-600">+ Create New Category</span>,
-                      value: "create_new",
-                    },
-                  ]}
-                  onValueChange={(value) => {
-                    setCategoryId(value);
-                    if (value !== "create_new") {
-                      setNewCategoryName("");
-                    }
-                  }}
-                />
-              </div>
+            <div className="relative">
+              <SortDropdown
+                className={`w-full min-w-0 ${errors.categoryId ? "ring-1 ring-red-500 rounded-lg" : ""}`}
+                buttonClassName={`rounded-lg py-2.5 text-sm ${errors.categoryId ? "border-red-500" : "border-gray-200"}`}
+                menuClassName="max-h-56"
+                value={categoryId}
+                placeholder="Select Category"
+                options={[
+                  ...categories.map((c) => ({
+                    label: c.name,
+                    value: c.id,
+                  })),
+                  {
+                    label: (
+                      <span className="font-semibold text-blue-600">
+                        + Create New Category
+                      </span>
+                    ),
+                    value: "create_new",
+                  },
+                ]}
+                onValueChange={(value) => {
+                  setCategoryId(value);
+                  if (value !== "create_new") {
+                    setNewCategoryName("");
+                  }
+                }}
+              />
+            </div>
 
-              {categoryId === "create_new" && (
-                <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] mt-5">
-                  <input
-                    type="text"
-                    placeholder="Category name…"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    className={`animate-slide-in w-full min-w-0 border ${errors.categoryId ? "border-red-500" : "border-gray-200"} rounded-lg bg-white p-2.5 text-sm focus:outline-none focus:border-blue-500`}
-                    autoFocus
-                  />
-                  <button
-                    onClick={handleCreateCategory}
-                    disabled={isCreatingCategory || !newCategoryName.trim()}
-                    className="animate-slide-in w-full xl:w-auto bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 whitespace-nowrap"
-                  >
-                    Create
-                  </button>
-                </div>
-              )}
-              {errors.categoryId && (
-                <span className="text-xs text-red-500">{errors.categoryId}</span>
-              )}
+            {categoryId === "create_new" && (
+              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] mt-5">
+                <input
+                  type="text"
+                  placeholder="Category name…"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className={`animate-slide-in w-full min-w-0 border ${errors.categoryId ? "border-red-500" : "border-gray-200"} rounded-lg bg-white p-2.5 text-sm focus:outline-none focus:border-blue-500`}
+                  autoFocus
+                />
+                <button
+                  onClick={handleCreateCategory}
+                  disabled={isCreatingCategory || !newCategoryName.trim()}
+                  className="animate-slide-in w-full xl:w-auto bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  Create
+                </button>
+              </div>
+            )}
+            {errors.categoryId && (
+              <span className="text-xs text-red-500">{errors.categoryId}</span>
+            )}
           </div>
 
           {/* Variants section */}
-          <div className={`space-y-3 border-t border-gray-100 pt-3 ${errors.variants ? 'rounded-lg border-2 border-red-500 p-2' : ''}`}>
+          <div
+            className={`space-y-3 border-t border-gray-100 pt-3 ${errors.variants ? "rounded-lg border-2 border-red-500 p-2" : ""}`}
+          >
             <label className="block text-sm text-gray-700 mb-1 font-medium">
               Add Product Variants <span className="text-red-500">*</span>
             </label>

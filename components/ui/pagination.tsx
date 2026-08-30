@@ -1,17 +1,21 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { Button } from "./button"
+import * as React from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "./button";
 
 export interface PaginationProps {
-  currentPage: number
-  totalPages: number
-  onPageChange: (page: number) => void
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
 }
 
-export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
-  const displayPages = Math.max(1, totalPages)
+export function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: PaginationProps) {
+  const displayPages = Math.max(1, totalPages);
 
   return (
     <div className="flex items-center justify-center space-x-2 mt-8">
@@ -35,5 +39,5 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         <ChevronRight className="h-4 w-4" />
       </Button>
     </div>
-  )
+  );
 }

@@ -23,7 +23,6 @@ import { getServerSessionSnapshot } from "@/lib/auth-session";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -32,10 +31,7 @@ export default async function RootLayout({
   const session = await getServerSessionSnapshot();
 
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} h-full`}
-    >
+    <html lang="en" className={`${inter.variable} h-full`}>
       <body className="min-h-full flex flex-col bg-[#F5F7FA]">
         <SessionProvider session={session} refetchOnWindowFocus={false}>
           <AuthProvider>

@@ -102,10 +102,11 @@ export default function AddProductPage() {
   const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      
+
       const invalidTypes = files.filter(
-        (f) => !["image/jpeg", "image/jpg", "image/png"].includes(f.type) &&
-               !/\.(jpe?g|png)$/i.test(f.name)
+        (f) =>
+          !["image/jpeg", "image/jpg", "image/png"].includes(f.type) &&
+          !/\.(jpe?g|png)$/i.test(f.name),
       );
       if (invalidTypes.length > 0) {
         showToast("error", "Only JPG, JPEG, and PNG images are allowed.");
@@ -421,54 +422,58 @@ export default function AddProductPage() {
             <label className="block text-sm text-gray-700 mb-1 font-medium">
               Category <span className="text-red-500">*</span>
             </label>
-              <div className="relative">
-                <SortDropdown
-                  className={`w-full min-w-0 ${errors.categoryId ? "ring-1 ring-red-500 rounded-lg" : ""}`}
-                  buttonClassName={`rounded-lg py-2.5 text-sm ${errors.categoryId ? "border-red-500" : "border-gray-200"}`}
-                  menuClassName="max-h-56"
-                  value={categoryId}
-                  placeholder="Select Category"
-                  options={[
-                    ...categories.map((c) => ({
-                      label: c.name,
-                      value: c.id,
-                    })),
-                    {
-                      label: <span className="font-semibold text-blue-600">+ Create New Category</span>,
-                      value: "create_new",
-                    },
-                  ]}
-                  onValueChange={(value) => {
-                    setCategoryId(value);
-                    if (value !== "create_new") {
-                      setNewCategoryName("");
-                    }
-                  }}
-                />
-              </div>
+            <div className="relative">
+              <SortDropdown
+                className={`w-full min-w-0 ${errors.categoryId ? "ring-1 ring-red-500 rounded-lg" : ""}`}
+                buttonClassName={`rounded-lg py-2.5 text-sm ${errors.categoryId ? "border-red-500" : "border-gray-200"}`}
+                menuClassName="max-h-56"
+                value={categoryId}
+                placeholder="Select Category"
+                options={[
+                  ...categories.map((c) => ({
+                    label: c.name,
+                    value: c.id,
+                  })),
+                  {
+                    label: (
+                      <span className="font-semibold text-blue-600">
+                        + Create New Category
+                      </span>
+                    ),
+                    value: "create_new",
+                  },
+                ]}
+                onValueChange={(value) => {
+                  setCategoryId(value);
+                  if (value !== "create_new") {
+                    setNewCategoryName("");
+                  }
+                }}
+              />
+            </div>
 
-              {categoryId === "create_new" && (
-                <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] mt-5">
-                  <input
-                    type="text"
-                    placeholder="Category name…"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    className={`animate-slide-in w-full min-w-0 border ${errors.categoryId ? "border-red-500" : "border-gray-200"} rounded-lg bg-white p-2.5 text-sm focus:outline-none focus:border-blue-500`}
-                    autoFocus
-                  />
-                  <button
-                    onClick={handleCreateCategory}
-                    disabled={isCreatingCategory || !newCategoryName.trim()}
-                    className="animate-slide-in w-full xl:w-auto bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 whitespace-nowrap"
-                  >
-                    Create
-                  </button>
-                </div>
-              )}
-              {errors.categoryId && (
-                <span className="text-xs text-red-500">{errors.categoryId}</span>
-              )}
+            {categoryId === "create_new" && (
+              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] mt-5">
+                <input
+                  type="text"
+                  placeholder="Category name…"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className={`animate-slide-in w-full min-w-0 border ${errors.categoryId ? "border-red-500" : "border-gray-200"} rounded-lg bg-white p-2.5 text-sm focus:outline-none focus:border-blue-500`}
+                  autoFocus
+                />
+                <button
+                  onClick={handleCreateCategory}
+                  disabled={isCreatingCategory || !newCategoryName.trim()}
+                  className="animate-slide-in w-full xl:w-auto bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  Create
+                </button>
+              </div>
+            )}
+            {errors.categoryId && (
+              <span className="text-xs text-red-500">{errors.categoryId}</span>
+            )}
           </div>
 
           {/* Variants section */}

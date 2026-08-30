@@ -12,8 +12,13 @@ export class ProductController {
       const page = parseInt(url.searchParams.get("page") || "1");
       const inStock = url.searchParams.get("inStock") === "true";
 
-      const data = await ProductService.getProducts({ search, sort, page, inStock });
-      
+      const data = await ProductService.getProducts({
+        search,
+        sort,
+        page,
+        inStock,
+      });
+
       return NextResponse.json({ success: true, data });
     } catch (error) {
       return handleApiError(error, "ProductController.getProducts");
@@ -27,10 +32,20 @@ export class ProductController {
       const sort = url.searchParams.get("sort") || DEFAULT_SORT;
       const cursor = url.searchParams.get("cursor") || undefined;
       const direction = url.searchParams.get("direction") || "next";
-      const limit = Math.min(parseInt(url.searchParams.get("limit") || "12"), 50);
+      const limit = Math.min(
+        parseInt(url.searchParams.get("limit") || "12"),
+        50,
+      );
       const inStock = url.searchParams.get("inStock") === "true";
 
-      const data = await ProductService.getProductsCursor({ search, sort, cursor, direction, limit, inStock });
+      const data = await ProductService.getProductsCursor({
+        search,
+        sort,
+        cursor,
+        direction,
+        limit,
+        inStock,
+      });
       return NextResponse.json({ success: true, data });
     } catch (error) {
       return handleApiError(error, "ProductController.getProductsCursor");

@@ -1,23 +1,39 @@
 import { prisma } from "@/lib/db";
-import { ORDERS_PER_PAGE_DEFAULT, TAX_PERCENTAGE, CART_ITEM_EXPIRY_MS } from "@/lib/constants";
+import {
+  ORDERS_PER_PAGE_DEFAULT,
+  TAX_PERCENTAGE,
+  CART_ITEM_EXPIRY_MS,
+} from "@/lib/constants";
 import { AppError } from "@/lib/api-error";
 import { createNotification } from "@/lib/notifications";
 
 export class OrderService {
-  static async createOrder(userId: string, body: { addressId: string; selectedItemIds: string[] }) {
+  static async createOrder(
+    userId: string,
+    body: { addressId: string; selectedItemIds: string[] },
+  ) {
     const addressId = body.addressId;
     const selectedItemIds = body.selectedItemIds;
     if (!addressId) throw new AppError("Address is required", 400);
-    if (!selectedItemIds || !Array.isArray(selectedItemIds) || selectedItemIds.length === 0) {
+    if (
+      !selectedItemIds ||
+      !Array.isArray(selectedItemIds) ||
+      selectedItemIds.length === 0
+    ) {
       throw new AppError("No items selected", 400);
     }
 
-    const address = await prisma.address.findFirst({ where: { id: addressId, userId } });
+    const address = await prisma.address.findFirst({
+      where: { id: addressId, userId },
+    });
     if (!address) throw new AppError("Invalid address", 400);
 
     const cartItems = await prisma.cartItem.findMany({
       where: { userId, id: { in: selectedItemIds } },
-      include: { product: true, variant: { include: { color: true, size: true } } },
+      include: {
+        product: true,
+        variant: { include: { color: true, size: true } },
+      },
     });
 
     if (cartItems.length === 0) {
@@ -26,10 +42,13 @@ export class OrderService {
 
     const now = Date.now();
     const hasExpiredItems = cartItems.some(
-      (item) => now - new Date(item.updatedAt).getTime() > CART_ITEM_EXPIRY_MS
+      (item) => now - new Date(item.updatedAt).getTime() > CART_ITEM_EXPIRY_MS,
     );
     if (hasExpiredItems) {
-      throw new AppError("Some items in your cart have expired. Please refresh the page to update your cart.", 400);
+      throw new AppError(
+        "Some items in your cart have expired. Please refresh the page to update your cart.",
+        400,
+      );
     }
 
     let subTotal = 0;
@@ -46,7 +65,10 @@ export class OrderService {
           SELECT stock FROM "ProductVariant" WHERE id = ${item.variantId} FOR UPDATE
         `;
         if (!variant || variant.stock < item.quantity) {
-          throw new AppError(`Insufficient stock for "${item.product.title}"`, 400);
+          throw new AppError(
+            `Insufficient stock for "${item.product.title}"`,
+            400,
+          );
         }
       }
 
@@ -76,7 +98,9 @@ export class OrderService {
         });
       }
 
-      await tx.cartItem.deleteMany({ where: { userId, id: { in: selectedItemIds } } });
+      await tx.cartItem.deleteMany({
+        where: { userId, id: { in: selectedItemIds } },
+      });
 
       return newOrder;
     });
@@ -86,7 +110,7 @@ export class OrderService {
       "ORDER_PLACED",
       "Order Placed Successfully",
       `Your order #${order.id.slice(0, 8)} has been placed.`,
-      { orderId: order.id }
+      { orderId: order.id },
     );
 
     return order;
@@ -107,7 +131,10 @@ export class OrderService {
       prisma.order.count({ where: { userId } }),
     ]);
 
-    return { orders, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+    return {
+      orders,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   static async getOrderById(userId: string, orderId: string) {
@@ -115,7 +142,7 @@ export class OrderService {
       where: { id: orderId, userId },
       include: {
         items: { include: { product: true } },
-        address: true
+        address: true,
       },
     });
 

@@ -1,6 +1,6 @@
 import LoginPage from "./login-client";
 import { Metadata } from "next";
-import { APP_NAME } from '@/lib/constants'
+import { APP_NAME } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: `Login | ${APP_NAME}`,
@@ -11,7 +11,9 @@ import { Suspense } from "react";
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="flex justify-center p-8">Loading...</div>}>
+    <Suspense
+      fallback={<div className="flex justify-center p-8">Loading...</div>}
+    >
       <LoginPage />
     </Suspense>
   );

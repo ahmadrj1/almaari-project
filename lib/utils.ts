@@ -6,7 +6,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number | string | unknown) {
-  const numericAmount = typeof amount === "string" ? parseFloat(amount) : Number(amount);
+  const numericAmount =
+    typeof amount === "string" ? parseFloat(amount) : Number(amount);
   return new Intl.NumberFormat("en-PK", {
     style: "currency",
     currency: "PKR",

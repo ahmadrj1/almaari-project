@@ -1,8 +1,8 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "success" | "warning" | "info" | "danger"
+  variant?: "success" | "warning" | "info" | "danger";
 }
 
 export function Badge({ className, variant = "info", ...props }: BadgeProps) {
@@ -16,9 +16,9 @@ export function Badge({ className, variant = "info", ...props }: BadgeProps) {
           "bg-[#2979FF]/10 text-[#2979FF]": variant === "info",
           "bg-[#E53935]/10 text-[#E53935]": variant === "danger",
         },
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }

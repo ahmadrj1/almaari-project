@@ -2,7 +2,12 @@ import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 
 export class NotificationService {
-  static async getNotifications(userId: string, filter: string, limit?: number, offset?: number) {
+  static async getNotifications(
+    userId: string,
+    filter: string,
+    limit?: number,
+    offset?: number,
+  ) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { createdAt: true },
@@ -55,7 +60,10 @@ export class NotificationService {
     });
 
     const hasMore = limit !== undefined ? notifications.length > limit : false;
-    const itemsToMap = limit !== undefined && hasMore ? notifications.slice(0, limit) : notifications;
+    const itemsToMap =
+      limit !== undefined && hasMore
+        ? notifications.slice(0, limit)
+        : notifications;
 
     const mapped = itemsToMap.map((n) => {
       let isRead = false;
@@ -110,7 +118,9 @@ export class NotificationService {
     if (notification.userId === null) {
       // Broadcast notification - uses NotificationRead table
       if (notification.reads.length === 0) {
-        await prisma.notificationRead.create({ data: { userId, notificationId } });
+        await prisma.notificationRead.create({
+          data: { userId, notificationId },
+        });
       }
     } else {
       // Personal notification - uses isRead field
@@ -128,7 +138,7 @@ export class NotificationService {
       where: { id: userId },
       select: { createdAt: true },
     });
-    
+
     if (!user) return;
 
     await prisma.$transaction(async (tx) => {

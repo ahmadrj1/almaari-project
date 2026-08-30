@@ -14,7 +14,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const { data: session, status } = useSession();
-  
+
   const [formData, setFormData] = useState<RegisterInput>({
     fullName: "",
     email: "",
@@ -22,7 +22,9 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
   });
-  const [errors, setErrors] = useState<Partial<Record<keyof RegisterInput, string[]>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof RegisterInput, string[]>>
+  >({});
   const [globalError, setGlobalError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -49,7 +51,7 @@ export default function RegisterPage() {
     setGlobalError("");
 
     const validation = registerSchema.safeParse(formData);
-    
+
     if (!validation.success) {
       setErrors(validation.error.flatten().fieldErrors);
       setIsLoading(false);
@@ -83,7 +85,7 @@ export default function RegisterPage() {
       <div className="text-center">
         <h1 className="text-2xl font-bold text-[#2979FF]">SignUp</h1>
       </div>
-      
+
       {globalError && (
         <div className="rounded border border-[#E53935] bg-red-50 p-3 text-sm text-[#E53935]">
           {globalError}
@@ -100,7 +102,7 @@ export default function RegisterPage() {
           placeholder="John Doe"
           disabled={isLoading}
         />
-        
+
         <Input
           label="Email Address *"
           name="email"
@@ -111,7 +113,7 @@ export default function RegisterPage() {
           placeholder="john@example.com"
           disabled={isLoading}
         />
-        
+
         <Input
           label="Mobile *"
           name="phone"
@@ -122,7 +124,7 @@ export default function RegisterPage() {
           placeholder="+1234567890"
           disabled={isLoading}
         />
-        
+
         <Input
           label="Password *"
           name="password"
@@ -134,7 +136,7 @@ export default function RegisterPage() {
           disabled={isLoading}
           showPasswordToggle
         />
-        
+
         <Input
           label="Confirm Password *"
           name="confirmPassword"
@@ -151,10 +153,17 @@ export default function RegisterPage() {
           SignUp
         </Button>
       </form>
-      
+
       <div className="text-center text-sm">
-        <span className="text-gray-600">Already have an account!
-          <Link href="/login" className="font-medium whitespace-pre text-[#2979FF] hover:text-[#2979FF]"> Login</Link>
+        <span className="text-gray-600">
+          Already have an account!
+          <Link
+            href="/login"
+            className="font-medium whitespace-pre text-[#2979FF] hover:text-[#2979FF]"
+          >
+            {" "}
+            Login
+          </Link>
         </span>
       </div>
     </div>

@@ -95,9 +95,7 @@ export default function OrderDetailPage({
         </div>
         <div>
           <p className="text-sm text-gray-500 mb-1">Order #</p>
-          <p className="font-medium text-gray-800">
-            {order.id.slice(0, 8)}
-          </p>
+          <p className="font-medium text-gray-800">{order.id.slice(0, 8)}</p>
         </div>
         <div>
           <p className="text-sm text-gray-500 mb-1">User</p>
@@ -141,7 +139,10 @@ export default function OrderDetailPage({
               const currentLevel = STATUS_LEVELS[order.status] ?? 0;
               const targetLevel = STATUS_LEVELS[s] ?? 0;
               let disabled = false;
-              if (order.status === "CANCELLED" || order.status === "DELIVERED") {
+              if (
+                order.status === "CANCELLED" ||
+                order.status === "DELIVERED"
+              ) {
                 disabled = s !== order.status;
               } else {
                 disabled = s !== order.status && targetLevel <= currentLevel;
@@ -166,10 +167,14 @@ export default function OrderDetailPage({
         <table className="w-full text-left border-collapse">
           <thead className="sticky top-0 z-10">
             <tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-600 shadow-sm">
-              <th className="py-3 px-4 font-medium bg-gray-50 rounded-tl-lg">Title</th>
+              <th className="py-3 px-4 font-medium bg-gray-50 rounded-tl-lg">
+                Title
+              </th>
               <th className="py-3 px-4 font-medium bg-gray-50">Price</th>
               <th className="py-3 px-4 font-medium bg-gray-50">Quantity</th>
-              <th className="py-3 px-4 font-medium bg-gray-50 rounded-tr-lg">Stock</th>
+              <th className="py-3 px-4 font-medium bg-gray-50 rounded-tr-lg">
+                Stock
+              </th>
             </tr>
           </thead>
           <tbody className="text-sm">
@@ -194,7 +199,10 @@ export default function OrderDetailPage({
                   <td className="py-4 px-4 flex items-center gap-4">
                     <div className="w-12 h-12 relative flex-shrink-0 bg-gray-100 rounded overflow-hidden">
                       <Image
-                        src={getOptimizedCloudinaryUrl(item.product?.image || "/images/placeholder.png", 160)}
+                        src={getOptimizedCloudinaryUrl(
+                          item.product?.image || "/images/placeholder.png",
+                          160,
+                        )}
                         alt={item.product?.title || "Product"}
                         fill
                         className="object-cover"

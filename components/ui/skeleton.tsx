@@ -1,11 +1,15 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
 export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "text" | "circle" | "rect"
+  variant?: "text" | "circle" | "rect";
 }
 
-export function Skeleton({ className, variant = "rect", ...props }: SkeletonProps) {
+export function Skeleton({
+  className,
+  variant = "rect",
+  ...props
+}: SkeletonProps) {
   return (
     <div
       className={cn(
@@ -15,9 +19,9 @@ export function Skeleton({ className, variant = "rect", ...props }: SkeletonProp
           "rounded-full": variant === "circle",
           "rounded-md": variant === "rect",
         },
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }

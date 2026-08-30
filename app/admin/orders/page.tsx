@@ -2,14 +2,24 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Search, ArrowUpRight, ClipboardList, Box, CircleDollarSign } from "lucide-react";
+import {
+  Search,
+  ArrowUpRight,
+  ClipboardList,
+  Box,
+  CircleDollarSign,
+} from "lucide-react";
 import { STATUS_COLORS, ADMIN_ORDERS_PER_PAGE_DEFAULT } from "@/lib/constants";
 import { Order } from "@/types";
 import { Pagination } from "@/components/ui/pagination";
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [stats, setStats] = useState({ totalOrders: 0, totalUnits: 0, totalAmount: 0 });
+  const [stats, setStats] = useState({
+    totalOrders: 0,
+    totalUnits: 0,
+    totalAmount: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -18,7 +28,9 @@ export default function AdminOrdersPage() {
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/orders?page=${page}&limit=${ADMIN_ORDERS_PER_PAGE_DEFAULT}&search=${encodeURIComponent(search)}`);
+      const res = await fetch(
+        `/api/admin/orders?page=${page}&limit=${ADMIN_ORDERS_PER_PAGE_DEFAULT}&search=${encodeURIComponent(search)}`,
+      );
       const data = await res.json();
       if (data.success) {
         setOrders(data.data.orders);
@@ -38,7 +50,11 @@ export default function AdminOrdersPage() {
   }, [fetchOrders]);
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
+    return new Date(dateStr).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
   };
 
   return (
@@ -46,11 +62,22 @@ export default function AdminOrdersPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {[
-          { label: "Total Orders:", value: stats.totalOrders, Icon: ClipboardList },
+          {
+            label: "Total Orders:",
+            value: stats.totalOrders,
+            Icon: ClipboardList,
+          },
           { label: "Total Units:", value: stats.totalUnits, Icon: Box },
-          { label: "Total Amount:", value: `Rs. ${Number(stats.totalAmount).toFixed(2)}`, Icon: CircleDollarSign },
+          {
+            label: "Total Amount:",
+            value: `Rs. ${Number(stats.totalAmount).toFixed(2)}`,
+            Icon: CircleDollarSign,
+          },
         ].map(({ label, value, Icon }) => (
-          <div key={label} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex items-center justify-between">
+          <div
+            key={label}
+            className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex items-center justify-between"
+          >
             <div>
               <p className="text-sm font-medium text-gray-800 mb-1">{label}</p>
               <p className="text-3xl font-bold text-blue-600">{value}</p>
@@ -73,7 +100,10 @@ export default function AdminOrdersPage() {
               type="text"
               placeholder="Search by user name, email, order ID or status"
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -94,24 +124,51 @@ export default function AdminOrdersPage() {
             </thead>
             <tbody className="text-sm">
               {loading ? (
-                <tr><td colSpan={7} className="py-8 text-center text-gray-500">Loading...</td></tr>
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-gray-500">
+                    Loading...
+                  </td>
+                </tr>
               ) : orders.length === 0 ? (
-                <tr><td colSpan={7} className="py-8 text-center text-gray-500">No orders found.</td></tr>
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-gray-500">
+                    No orders found.
+                  </td>
+                </tr>
               ) : (
                 orders.map((order) => (
-                  <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-4 text-gray-600">{formatDate(order.createdAt)}</td>
-                    <td className="py-4 text-gray-800 font-mono text-xs">{order.id.slice(0, 8)}...</td>
+                  <tr
+                    key={order.id}
+                    className="border-b border-gray-100 hover:bg-gray-50"
+                  >
+                    <td className="py-4 text-gray-600">
+                      {formatDate(order.createdAt)}
+                    </td>
+                    <td className="py-4 text-gray-800 font-mono text-xs">
+                      {order.id.slice(0, 8)}...
+                    </td>
                     <td className="py-4">
-                      <div className="text-gray-800 font-medium">{order.user?.fullName || "Unknown"}</div>
-                      <div className="text-xs text-gray-400">{order.user?.id?.slice(0, 8)}...</div>
+                      <div className="text-gray-800 font-medium">
+                        {order.user?.fullName || "Unknown"}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {order.user?.id?.slice(0, 8)}...
+                      </div>
                     </td>
                     <td className="py-4 text-gray-600">
-                      {order.items.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0)}
+                      {order.items.reduce(
+                        (sum: number, item: { quantity: number }) =>
+                          sum + item.quantity,
+                        0,
+                      )}
                     </td>
-                    <td className="py-4 text-gray-800 font-medium">Rs. {Number(order.total).toFixed(2)}</td>
+                    <td className="py-4 text-gray-800 font-medium">
+                      Rs. {Number(order.total).toFixed(2)}
+                    </td>
                     <td className="py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}
+                      >
                         {order.status}
                       </span>
                     </td>
