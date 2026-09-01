@@ -38,7 +38,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     if (!selectedVariant || !onAddToCart) return;
     setIsAdding(true);
     try {
-      onAddToCart(product.id, selectedVariant.id, quantity);
+      await Promise.all([
+        // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
+        onAddToCart(product.id, selectedVariant.id, quantity),
+        new Promise((resolve) => setTimeout(resolve, 400)),
+      ]);
     } finally {
       setIsAdding(false);
     }
@@ -253,7 +257,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               className="w-full whitespace-nowrap text-xs h-9 px-3"
               disabled={isOutOfStock || isAdding}
             >
-              Add to Cart
+              {isAdding ? "Adding..." : "Add to Cart"}
             </Button>
           </div>
         )}
