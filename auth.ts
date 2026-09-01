@@ -153,6 +153,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         (session.user as { rememberMe?: boolean }).rememberMe =
           token.rememberMe as boolean;
       }
+      if (token.picture || token.image) {
+        session.user.image = (token.picture || token.image) as string;
+      }
       if (token.exp) {
         (session as { expires?: string }).expires = new Date(
           (token.exp as number) * 1000,
