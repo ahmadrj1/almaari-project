@@ -355,13 +355,7 @@ export default function CartPage() {
         subTotal={checkoutSubtotal}
         tax={checkoutTax}
         total={checkoutTotal}
-        onBack={() => {
-          if (retryOrderId) {
-            router.push("/cart");
-          } else {
-            setIsCheckoutMode(false);
-          }
-        }}
+        onBack={() => router.push("/cart")}
         onSuccess={(orderId) => {
           setSuccessOrderId(orderId);
           setIsCheckoutMode(false);

@@ -173,24 +173,29 @@ export default function OrderDetailPage({
                 const currentLevel = STATUS_LEVELS[order.status] ?? 0;
                 const targetLevel = STATUS_LEVELS[s] ?? 0;
                 let disabled = false;
-                if (
-                  order.paymentMethod === "CREDIT_DEBIT_CARD" &&
-                  order.paymentStatus === "FAILED"
-                ) {
-                  disabled = s !== order.status && s !== "CANCELLED";
+
+                if (s === order.status) {
+                  // Always keep current status selectable (no-op)
+                  disabled = false;
                 } else if (
                   order.status === "CANCELLED" ||
                   order.status === "DELIVERED"
                 ) {
-                  disabled = s !== order.status;
+                  // Terminal states: no changes allowed
+                  disabled = true;
+                } else if (
+                  order.paymentMethod === "CREDIT_DEBIT_CARD" &&
+                  order.paymentStatus === "FAILED" &&
+                  order.status === "PENDING"
+                ) {
+                  // Failed payment on a PENDING order: only CANCELLED is allowed
+                  disabled = s !== "CANCELLED";
                 } else {
-                  disabled = s !== order.status && targetLevel <= currentLevel;
+                  // Normal flow: only exactly one step forward is allowed
+                  disabled = targetLevel !== currentLevel + 1;
                 }
-                return {
-                  label: s,
-                  value: s,
-                  disabled,
-                };
+
+                return { label: s, value: s, disabled };
               })}
               onValueChange={handleStatusChange}
               disabled={updatingStatus}
