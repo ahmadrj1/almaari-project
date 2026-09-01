@@ -29,6 +29,8 @@ interface CheckoutFlowProps {
   subTotal: number;
   tax: number;
   total: number;
+  step?: 1 | 2;
+  onStepChange?: (step: 1 | 2) => void;
   onBack: () => void;
   onSuccess: (orderId: string) => void;
   onCartRefresh: () => void;
@@ -42,13 +44,21 @@ export default function CheckoutFlow({
   subTotal,
   tax,
   total,
+  step: propStep,
+  onStepChange,
   onBack,
   onSuccess,
   onCartRefresh,
   retryOrderId,
   initialAddressId,
 }: CheckoutFlowProps) {
-  const [step, setStep] = useState<1 | 2>(retryOrderId ? 2 : 1);
+  const [internalStep, setInternalStep] = useState<1 | 2>(retryOrderId ? 2 : 1);
+  const step = propStep ?? internalStep;
+
+  const setStep = (s: 1 | 2) => {
+    setInternalStep(s);
+    onStepChange?.(s);
+  };
   const [loading, setLoading] = useState(false);
 
   // Addresses
