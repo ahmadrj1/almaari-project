@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { AuthService } from "@/services/auth.service";
 import { handleApiError, AppError } from "@/lib/api-error";
-import { registerSchema, forgotPasswordSchema, resetPasswordSchema } from "@/lib/validations/auth";
+import {
+  registerSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from "@/lib/validations/auth";
 import { logger } from "@/lib/logger";
 
 export class AuthController {
@@ -10,15 +14,15 @@ export class AuthController {
     try {
       const body = await req.json();
       const validatedData = registerSchema.safeParse(body);
-      
+
       if (!validatedData.success) {
         return NextResponse.json(
-          { 
-            success: false, 
-            error: "Validation failed", 
-            details: validatedData.error.flatten().fieldErrors 
+          {
+            success: false,
+            error: "Validation failed",
+            details: validatedData.error.flatten().fieldErrors,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -33,11 +37,15 @@ export class AuthController {
     try {
       const body = await req.json();
       const result = forgotPasswordSchema.safeParse(body);
-  
+
       if (!result.success) {
         return NextResponse.json(
-          { success: false, error: "Invalid data", details: result.error.flatten().fieldErrors },
-          { status: 400 }
+          {
+            success: false,
+            error: "Invalid data",
+            details: result.error.flatten().fieldErrors,
+          },
+          { status: 400 },
         );
       }
 
@@ -82,8 +90,12 @@ export class AuthController {
 
       if (!result.success) {
         return NextResponse.json(
-          { success: false, error: "Invalid data", details: result.error.flatten().fieldErrors },
-          { status: 400 }
+          {
+            success: false,
+            error: "Invalid data",
+            details: result.error.flatten().fieldErrors,
+          },
+          { status: 400 },
         );
       }
 
@@ -94,8 +106,11 @@ export class AuthController {
         throw new AppError("No active password reset session.", 401);
       }
 
-      const message = await AuthService.resetPassword(token, result.data.password);
-      
+      const message = await AuthService.resetPassword(
+        token,
+        result.data.password,
+      );
+
       cookieStore.delete("reset_session");
       return NextResponse.json({ success: true, message });
     } catch (error) {

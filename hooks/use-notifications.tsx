@@ -23,7 +23,9 @@ export function useNotifications() {
     if (status !== "authenticated") return;
     try {
       const currentLimit = stateRef.current.page * MAX_NOTIFICATIONS_MEMORY;
-      const res = await fetch(`/api/notifications?filter=${stateRef.current.activeTab}&limit=${currentLimit}&offset=0`);
+      const res = await fetch(
+        `/api/notifications?filter=${stateRef.current.activeTab}&limit=${currentLimit}&offset=0`,
+      );
       const json = await res.json();
       if (json.success) {
         setNotifications(json.data.notifications);
@@ -42,7 +44,9 @@ export function useNotifications() {
       setPage(1);
       setHasMore(false);
       setLoading(true);
-      fetch(`/api/notifications?filter=${activeTab}&limit=${MAX_NOTIFICATIONS_MEMORY}&offset=0`)
+      fetch(
+        `/api/notifications?filter=${activeTab}&limit=${MAX_NOTIFICATIONS_MEMORY}&offset=0`,
+      )
         .then((res) => res.json())
         .then((json) => {
           if (json.success) {
@@ -94,12 +98,14 @@ export function useNotifications() {
       const json = await res.json();
       if (json.success) {
         if (activeTab === "unread") {
-          setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+          setNotifications((prev) =>
+            prev.filter((n) => n.id !== notificationId),
+          );
         } else {
           setNotifications((prev) =>
             prev.map((n) =>
-              n.id === notificationId ? { ...n, isRead: true } : n
-            )
+              n.id === notificationId ? { ...n, isRead: true } : n,
+            ),
           );
         }
         setUnreadCount((c) => Math.max(0, c - 1));
@@ -115,7 +121,9 @@ export function useNotifications() {
     try {
       const nextPage = page + 1;
       const offset = page * MAX_NOTIFICATIONS_MEMORY;
-      const res = await fetch(`/api/notifications?filter=${activeTab}&limit=${MAX_NOTIFICATIONS_MEMORY}&offset=${offset}`);
+      const res = await fetch(
+        `/api/notifications?filter=${activeTab}&limit=${MAX_NOTIFICATIONS_MEMORY}&offset=${offset}`,
+      );
       const json = await res.json();
       if (json.success) {
         setNotifications((prev) => [...prev, ...json.data.notifications]);

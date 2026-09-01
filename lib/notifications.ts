@@ -7,7 +7,7 @@ export async function createNotification(
   type: string,
   title: string,
   message: string,
-  metadata?: NotificationMetadata
+  metadata?: NotificationMetadata,
 ) {
   try {
     await prisma.notification.create({
@@ -28,7 +28,7 @@ export async function createBroadcastNotification(
   type: string,
   title: string,
   message: string,
-  metadata?: NotificationMetadata
+  metadata?: NotificationMetadata,
 ) {
   try {
     await prisma.notification.create({

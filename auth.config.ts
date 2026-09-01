@@ -20,10 +20,23 @@ export default {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const userRole = (auth?.user as { role?: string })?.role;
-      const isAuthPage = ["/login", "/register", "/forgot-password", "/reset-password"].includes(nextUrl.pathname);
+      const isAuthPage = [
+        "/login",
+        "/register",
+        "/forgot-password",
+        "/reset-password",
+      ].includes(nextUrl.pathname);
 
-      const protectedRoutes = ["/cart", "/checkout", "/profile", "/orders", "/notifications"];
-      const isProtectedRoute = protectedRoutes.some((p) => nextUrl.pathname.startsWith(p));
+      const protectedRoutes = [
+        "/cart",
+        "/checkout",
+        "/profile",
+        "/orders",
+        "/notifications",
+      ];
+      const isProtectedRoute = protectedRoutes.some((p) =>
+        nextUrl.pathname.startsWith(p),
+      );
       const isAdminRoute = nextUrl.pathname.startsWith("/admin");
 
       if (isAuthPage && isLoggedIn) {
@@ -35,7 +48,12 @@ export default {
 
       if (isAdminRoute) {
         if (!isLoggedIn) {
-          return Response.redirect(new URL(`/login?callbackUrl=${encodeURIComponent(nextUrl.pathname)}`, nextUrl));
+          return Response.redirect(
+            new URL(
+              `/login?callbackUrl=${encodeURIComponent(nextUrl.pathname)}`,
+              nextUrl,
+            ),
+          );
         }
         if (userRole !== "ADMIN") {
           return Response.redirect(new URL("/", nextUrl));

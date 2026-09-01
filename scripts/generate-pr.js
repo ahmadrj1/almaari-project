@@ -12,11 +12,10 @@ const commits = execSync(
   `git log origin/${baseBranch}..HEAD --pretty=format:"%s"`,
   {
     encoding: "utf-8",
-  }
+  },
 )
   .split("\n")
   .filter(Boolean);
-
 
 const sections = {
   features: [],
@@ -29,16 +28,11 @@ const sections = {
   chores: [],
 };
 
-
 const cleanMessage = (message) => {
   return message
-    .replace(
-      /^(feat|fix|refactor|perf|docs|test|ci|chore|style):\s*/i,
-      ""
-    )
+    .replace(/^(feat|fix|refactor|perf|docs|test|ci|chore|style):\s*/i, "")
     .replace(/^./, (char) => char.toUpperCase());
 };
-
 
 for (const commit of commits) {
   const lower = commit.toLowerCase();
@@ -63,7 +57,6 @@ for (const commit of commits) {
   }
 }
 
-
 const createSection = (title, items) => {
   if (!items.length) return "";
 
@@ -73,7 +66,6 @@ const createSection = (title, items) => {
 ${items.map((item) => `- ${item}`).join("\n")}
 `;
 };
-
 
 const body = `
 ## 🧠 Introduction
@@ -113,10 +105,6 @@ ${createSection("🔧 Chores", sections.chores)}
 Generated: ${today}
 `;
 
-
-fs.writeFileSync(
-  "pr-body.md",
-  body.trim()
-);
+fs.writeFileSync("pr-body.md", body.trim());
 
 console.log("PR body generated successfully");

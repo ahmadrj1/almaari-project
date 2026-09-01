@@ -5,38 +5,49 @@ import { AppError } from "@/lib/api-error";
 import { createBroadcastNotification } from "@/lib/notifications";
 
 export class AdminProductService {
-  static async getProducts({ search, page, limit = ADMIN_PRODUCTS_PER_PAGE_DEFAULT }: { search: string; page: number; limit?: number }) {
+  static async getProducts({
+    search,
+    page,
+    limit = ADMIN_PRODUCTS_PER_PAGE_DEFAULT,
+  }: {
+    search: string;
+    page: number;
+    limit?: number;
+  }) {
     const skip = (page - 1) * limit;
     const where: Prisma.ProductWhereInput = { deletedAt: null };
-    
+
     if (search) {
       where.OR = [
         { title: { contains: search, mode: "insensitive" } },
-        { category: { name: { contains: search, mode: "insensitive" } } }
+        { category: { name: { contains: search, mode: "insensitive" } } },
       ];
     }
 
     const [products, total] = await Promise.all([
-      prisma.product.findMany({ 
-        where, 
+      prisma.product.findMany({
+        where,
         orderBy: { createdAt: "desc" },
-        skip, 
+        skip,
         take: limit,
         include: {
           variants: {
-            include: { color: true }
-          }
-        }
+            include: { color: true },
+          },
+        },
       }),
       prisma.product.count({ where }),
     ]);
 
-    const productsWithStock = products.map(product => {
+    const productsWithStock = products.map((product) => {
       const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
       return { ...product, totalStock };
     });
 
-    return { products: productsWithStock, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+    return {
+      products: productsWithStock,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   static async createProduct(body: {
@@ -48,7 +59,8 @@ export class AdminProductService {
     variants: { colorId: string; sizeId: string; stock: string | number }[];
     images?: { url: string; colorId: string | null }[];
   }) {
-    const { title, description, price, image, categoryId, variants, images } = body;
+    const { title, description, price, image, categoryId, variants, images } =
+      body;
 
     if (!title || !price || !image || !variants || variants.length === 0) {
       throw new AppError("Missing required fields", 400);
@@ -63,21 +75,34 @@ export class AdminProductService {
           image,
           categoryId: categoryId || null,
           variants: {
-            create: variants.map((v: { colorId: string; sizeId: string; stock: string | number }) => ({
-              colorId: v.colorId,
-              sizeId: v.sizeId,
-              stock: Number(v.stock)
-            }))
+            create: variants.map(
+              (v: {
+                colorId: string;
+                sizeId: string;
+                stock: string | number;
+              }) => ({
+                colorId: v.colorId,
+                sizeId: v.sizeId,
+                stock: Number(v.stock),
+              }),
+            ),
           },
-          images: images ? {
-            create: images.map((img: { url: string; colorId: string | null }, idx: number) => ({
-              colorId: img.colorId || null,
-              url: img.url,
-              sortOrder: idx
-            }))
-          } : undefined
+          images: images
+            ? {
+                create: images.map(
+                  (
+                    img: { url: string; colorId: string | null },
+                    idx: number,
+                  ) => ({
+                    colorId: img.colorId || null,
+                    url: img.url,
+                    sortOrder: idx,
+                  }),
+                ),
+              }
+            : undefined,
         },
-        include: { variants: true, images: true }
+        include: { variants: true, images: true },
       });
       return product;
     });
@@ -86,7 +111,7 @@ export class AdminProductService {
       "NEW_PRODUCT",
       "New Product Available!",
       `${title} is now available in our store.`,
-      { productId: newProduct.id }
+      { productId: newProduct.id },
     );
 
     return newProduct;
@@ -99,8 +124,8 @@ export class AdminProductService {
         category: true,
         images: true,
         variants: {
-          include: { color: true, size: true }
-        }
+          include: { color: true, size: true },
+        },
       },
     });
 
@@ -121,9 +146,10 @@ export class AdminProductService {
       categoryId?: string | null;
       variants: { colorId: string; sizeId: string; stock: string | number }[];
       images?: { url: string; colorId: string | null }[];
-    }
+    },
   ) {
-    const { title, description, price, image, categoryId, variants, images } = body;
+    const { title, description, price, image, categoryId, variants, images } =
+      body;
 
     if (!title || !price || !variants || variants.length === 0) {
       throw new AppError("Missing required fields", 400);
@@ -147,11 +173,14 @@ export class AdminProductService {
         select: { id: true, colorId: true, sizeId: true },
       });
       const existingMap = new Map(
-        existingVariants.map((v) => [`${v.colorId}:${v.sizeId}`, v.id])
+        existingVariants.map((v) => [`${v.colorId}:${v.sizeId}`, v.id]),
       );
 
       const incomingKeys = new Set(
-        variants.map((v: { colorId: string; sizeId: string; stock: string | number }) => `${v.colorId}:${v.sizeId}`)
+        variants.map(
+          (v: { colorId: string; sizeId: string; stock: string | number }) =>
+            `${v.colorId}:${v.sizeId}`,
+        ),
       );
 
       // Delete variants not present in the incoming list
@@ -159,7 +188,9 @@ export class AdminProductService {
         .filter((v) => !incomingKeys.has(`${v.colorId}:${v.sizeId}`))
         .map((v) => v.id);
       if (idsToDelete.length > 0) {
-        await tx.productVariant.deleteMany({ where: { id: { in: idsToDelete } } });
+        await tx.productVariant.deleteMany({
+          where: { id: { in: idsToDelete } },
+        });
       }
 
       // Upsert each incoming variant
@@ -184,15 +215,17 @@ export class AdminProductService {
 
       if (images) {
         await tx.productImage.deleteMany({
-          where: { productId: id }
+          where: { productId: id },
         });
         await tx.productImage.createMany({
-          data: images.map((img: { url: string; colorId: string | null }, idx: number) => ({
-            productId: id,
-            colorId: img.colorId || null,
-            url: img.url,
-            sortOrder: idx
-          }))
+          data: images.map(
+            (img: { url: string; colorId: string | null }, idx: number) => ({
+              productId: id,
+              colorId: img.colorId || null,
+              url: img.url,
+              sortOrder: idx,
+            }),
+          ),
         });
       }
 
@@ -201,8 +234,8 @@ export class AdminProductService {
         include: {
           category: true,
           images: true,
-          variants: { include: { color: true, size: true } }
-        }
+          variants: { include: { color: true, size: true } },
+        },
       });
     });
   }
@@ -212,7 +245,7 @@ export class AdminProductService {
       await tx.cartItem.deleteMany({ where: { productId: id } });
       await tx.product.update({
         where: { id },
-        data: { deletedAt: new Date() }
+        data: { deletedAt: new Date() },
       });
     });
     return "Product deleted successfully";

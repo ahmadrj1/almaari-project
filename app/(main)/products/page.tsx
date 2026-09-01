@@ -1,6 +1,6 @@
 import ProductsPage from "./products-client";
 import { Metadata } from "next";
-import { APP_NAME } from '@/lib/constants'
+import { APP_NAME } from "@/lib/constants";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
@@ -10,7 +10,11 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="flex justify-center p-8">Loading products...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex justify-center p-8">Loading products...</div>
+      }
+    >
       <ProductsPage />
     </Suspense>
   );

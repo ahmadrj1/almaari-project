@@ -17,7 +17,11 @@ export class AdminProductController {
       const page = parseInt(url.searchParams.get("page") || "1");
       const limit = parseInt(url.searchParams.get("limit") || "10");
 
-      const data = await AdminProductService.getProducts({ search, page, limit });
+      const data = await AdminProductService.getProducts({
+        search,
+        page,
+        limit,
+      });
       return NextResponse.json({ success: true, data });
     } catch (error) {
       return handleApiError(error, "AdminProductController.getProducts");

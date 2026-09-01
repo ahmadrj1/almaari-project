@@ -123,16 +123,22 @@ function ProductsContent() {
       });
       const data = await res.json();
       if (data.success) {
-        setProducts(prev => prev.map((p) => {
-          if (p.id === productId) {
-            return {
-              ...p,
-              variants: p.variants?.map((v) => v.id === variantId ? { ...v, stock: Math.max(0, v.stock - quantity) } : v)
+        setProducts((prev) =>
+          prev.map((p) => {
+            if (p.id === productId) {
+              return {
+                ...p,
+                variants: p.variants?.map((v) =>
+                  v.id === variantId
+                    ? { ...v, stock: Math.max(0, v.stock - quantity) }
+                    : v,
+                ),
+              };
             }
-          }
-          return p;
-        }));
-        
+            return p;
+          }),
+        );
+
         const product = products.find((p) => p.id === productId);
         showToast(
           "success",

@@ -48,18 +48,22 @@ export type OrderDetail = {
     id: string;
     fullName: string;
   } | null;
+  paymentMethod?: string;
+  paymentStatus?: string;
 };
 
-export type NotificationType = "ORDER_PLACED" | "ORDER_STATUS_UPDATED" | "NEW_PRODUCT" | string;
+export type NotificationType =
+  "ORDER_PLACED" | "ORDER_STATUS_UPDATED" | "NEW_PRODUCT" | string;
 
 export type NotificationMetadata = Prisma.InputJsonObject;
 
 export type SavedAddress = {
   id: string;
   street: string;
-  city?: string;
-  country?: string;
-  zipCode?: string;
+  city?: string | null;
+  country?: string | null;
+  zipCode?: string | null;
+  isDefault?: boolean;
 };
 
 export type Order = {
@@ -72,8 +76,9 @@ export type Order = {
     fullName: string;
   } | null;
   items: { quantity: number }[];
+  paymentMethod?: string;
+  paymentStatus?: string;
 };
-
 
 export interface Notification {
   id: string;
@@ -84,7 +89,6 @@ export interface Notification {
   metadata?: Record<string, unknown>;
   createdAt: string;
 }
-
 
 export interface Color {
   id: string;
@@ -159,4 +163,5 @@ export interface OrderItem {
   } | null;
 }
 
-export type OrderStatus = "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+export type OrderStatus =
+  "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";

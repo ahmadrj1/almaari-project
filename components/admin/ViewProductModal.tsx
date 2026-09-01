@@ -2,15 +2,23 @@
 
 import * as React from "react";
 import { X } from "lucide-react";
-import { ProductCard, type ProductCardProps } from "@/components/ui/product-card";
+import {
+  ProductCard,
+  type ProductCardProps,
+} from "@/components/ui/product-card";
 
 interface ViewProductModalProps {
   productId: string | null;
   onClose: () => void;
 }
 
-export default function ViewProductModal({ productId, onClose }: ViewProductModalProps) {
-  const [product, setProduct] = React.useState<ProductCardProps['product'] | null>(null);
+export default function ViewProductModal({
+  productId,
+  onClose,
+}: ViewProductModalProps) {
+  const [product, setProduct] = React.useState<
+    ProductCardProps["product"] | null
+  >(null);
   const [loading, setLoading] = React.useState(false);
   const [prevProductId, setPrevProductId] = React.useState<string | null>(null);
 
@@ -33,7 +41,9 @@ export default function ViewProductModal({ productId, onClose }: ViewProductModa
 
   React.useEffect(() => {
     if (!productId) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     document.addEventListener("keydown", handler);
     document.body.style.overflow = "hidden";
     return () => {
@@ -46,7 +56,10 @@ export default function ViewProductModal({ productId, onClose }: ViewProductModa
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <div
         className="relative z-50 w-full max-w-sm rounded-2xl bg-white shadow-2xl"
         role="dialog"

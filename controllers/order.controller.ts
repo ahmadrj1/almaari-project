@@ -10,7 +10,12 @@ export class OrderController {
       if (!session?.user?.id) throw new AppError("Unauthorized", 401);
 
       const body = await req.json();
-      const data = await OrderService.createOrder(session.user.id, body);
+      const data = await OrderService.createOrder(session.user.id, {
+        addressId: body.addressId,
+        selectedItemIds: body.selectedItemIds,
+        paymentMethod: body.paymentMethod,
+        paymentMethodId: body.paymentMethodId,
+      });
       return NextResponse.json({ success: true, data });
     } catch (error) {
       return handleApiError(error, "OrderController.createOrder");
@@ -43,6 +48,25 @@ export class OrderController {
       return NextResponse.json({ success: true, data });
     } catch (error) {
       return handleApiError(error, "OrderController.getOrderById");
+    }
+  }
+
+  static async retryPayment(req: Request, orderId: string) {
+    try {
+      const session = await auth();
+      if (!session?.user?.id) throw new AppError("Unauthorized", 401);
+
+      if (!orderId) throw new AppError("Missing order ID", 400);
+
+      const body = await req.json();
+      const data = await OrderService.retryPayment(session.user.id, orderId, {
+        addressId: body.addressId,
+        paymentMethod: body.paymentMethod,
+        paymentMethodId: body.paymentMethodId,
+      });
+      return NextResponse.json({ success: true, data });
+    } catch (error) {
+      return handleApiError(error, "OrderController.retryPayment");
     }
   }
 }

@@ -31,7 +31,12 @@ export function useInfiniteScroll({
 
   const handleTopIntersect = useCallback(
     (entries: IntersectionObserverEntry[]) => {
-      if (entries[0]?.isIntersecting && hasPrevious && !isLoading && onLoadPrevious) {
+      if (
+        entries[0]?.isIntersecting &&
+        hasPrevious &&
+        !isLoading &&
+        onLoadPrevious
+      ) {
         onLoadPrevious();
       }
     },
@@ -42,7 +47,9 @@ export function useInfiniteScroll({
     const bottomSentinel = bottomSentinelRef.current;
     let observer: IntersectionObserver | null = null;
     if (bottomSentinel) {
-      observer = new IntersectionObserver(handleBottomIntersect, { rootMargin });
+      observer = new IntersectionObserver(handleBottomIntersect, {
+        rootMargin,
+      });
       observer.observe(bottomSentinel);
     }
     return () => observer?.disconnect();

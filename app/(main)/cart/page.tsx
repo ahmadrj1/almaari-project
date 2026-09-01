@@ -1,6 +1,6 @@
 import CartPage from "./cart-client";
 import { Metadata } from "next";
-import { APP_NAME } from '@/lib/constants'
+import { APP_NAME } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: `Shopping Cart | ${APP_NAME}`,
