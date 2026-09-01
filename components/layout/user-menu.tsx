@@ -8,6 +8,7 @@ import { ChevronDown } from "lucide-react";
 
 export function UserMenu() {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [imgError, setImgError] = React.useState(false);
   const { data: session } = useSession();
   const user = session?.user;
 
@@ -27,8 +28,18 @@ export function UserMenu() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
       >
-        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2979FF] text-xs font-semibold text-white">
-          {getInitials(user?.name)}
+        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2979FF] text-xs font-semibold text-white overflow-hidden shrink-0">
+          {user?.image && !imgError ? (
+            <img
+              src={user.image}
+              alt={user.name || "User"}
+              className="h-full w-full object-cover"
+              referrerPolicy="no-referrer"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            getInitials(user?.name)
+          )}
         </div>
         <span className="hidden max-w-[100px] truncate md:inline-block">
           {user?.name || "User"}
@@ -38,9 +49,26 @@ export function UserMenu() {
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl border border-gray-100 bg-white py-1.5 shadow-lg ring-1 ring-black/5 focus:outline-none z-50">
-          <div className="border-b border-gray-50 px-4 py-2 text-xs">
-            <p className="font-semibold text-gray-900 truncate">{user?.name}</p>
-            <p className="text-gray-500 truncate">{user?.email}</p>
+          <div className="border-b border-gray-50 px-4 py-2 text-xs flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2979FF] text-xs font-semibold text-white overflow-hidden shrink-0">
+              {user?.image && !imgError ? (
+                <img
+                  src={user.image}
+                  alt={user.name || "User"}
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                getInitials(user?.name)
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-900 truncate">
+                {user?.name}
+              </p>
+              <p className="text-gray-500 truncate">{user?.email}</p>
+            </div>
           </div>
           <Link
             href="/orders"

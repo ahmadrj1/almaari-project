@@ -35,9 +35,18 @@ export default async function AdminLayout({
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-end px-6">
           <div className="relative group">
             <button className="flex items-center gap-2 hover:bg-gray-50 p-2 rounded-lg transition-colors">
-              {/* Initials avatar */}
-              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                {initials}
+              {/* Initials/Image avatar */}
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
+                {user?.image ? (
+                  <img
+                    src={user.image}
+                    alt={name}
+                    className="h-full w-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  initials
+                )}
               </div>
               <span className="text-sm font-medium text-blue-600">{name}</span>
               <ChevronDown size={16} className="text-gray-500" />
@@ -48,8 +57,17 @@ export default async function AdminLayout({
               {/* User info header */}
               <div className="p-4 border-b border-gray-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
-                    {initials}
+                  <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold shrink-0 overflow-hidden">
+                    {user?.image ? (
+                      <img
+                        src={user.image}
+                        alt={name}
+                        className="h-full w-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      initials
+                    )}
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-800 truncate">
