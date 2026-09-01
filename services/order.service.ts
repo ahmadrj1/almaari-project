@@ -131,7 +131,7 @@ export class OrderService {
           customer: stripeCustomerId,
           payment_method: body.paymentMethodId,
           confirm: body.paymentMethodId ? true : false,
-          return_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success?orderId=${order.id}`,
+          return_url: `${process.env.APP_URL}/payment/success?orderId=${order.id}`,
           metadata: {
             orderId: order.id,
             userId,
@@ -407,7 +407,7 @@ export class OrderService {
           customer: stripeCustomerId,
           payment_method: body.paymentMethodId,
           confirm: body.paymentMethodId ? true : false,
-          return_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success?orderId=${order.id}`,
+          return_url: `${process.env.APP_URL}/payment/success?orderId=${order.id}`,
           metadata: {
             orderId: order.id,
             userId,

@@ -85,7 +85,7 @@ NEXT_PUBLIC_APP_ENV="dev"
 - `NEXT_PUBLIC_APP_ENV` controls artificial loading delays for UX testing: set it to "dev" to enable delays (1–2 seconds on some flows), or "production" to run without delays.
 - `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are retrieved from the Stripe Dashboard.
 - `STRIPE_WEBHOOK_SECRET` is obtained after configuring a webhook endpoint pointing to `/api/stripe/webhook` in the Stripe Dashboard.
-- `NEXT_PUBLIC_APP_URL` defines the base URL (e.g. `http://localhost:3000`) for payment redirect return URLs.
+- `APP_URL` defines the base URL (e.g. `http://localhost:3000`) for payment redirect return URLs.
 
 ## Stripe Configuration
 
