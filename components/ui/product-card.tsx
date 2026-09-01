@@ -28,10 +28,21 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
   const [quantity, setQuantity] = React.useState(1);
+  const [isAdding, setIsAdding] = React.useState(false);
   const variants = React.useMemo(
     () => product.variants || [],
     [product.variants],
   );
+
+  const handleAddToCart = async () => {
+    if (!selectedVariant || !onAddToCart) return;
+    setIsAdding(true);
+    try {
+      onAddToCart(product.id, selectedVariant.id, quantity);
+    } finally {
+      setIsAdding(false);
+    }
+  };
 
   // Extract unique colors and sizes
   const colors = React.useMemo(() => {
@@ -237,13 +248,10 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             </div>
             <Button
               size="sm"
-              onClick={() => {
-                if (selectedVariant) {
-                  onAddToCart?.(product.id, selectedVariant.id, quantity);
-                }
-              }}
+              loading={isAdding}
+              onClick={handleAddToCart}
               className="w-full whitespace-nowrap text-xs h-9 px-3"
-              disabled={isOutOfStock}
+              disabled={isOutOfStock || isAdding}
             >
               Add to Cart
             </Button>
