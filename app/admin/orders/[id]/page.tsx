@@ -86,7 +86,7 @@ export default function OrderDetailPage({
       </div>
 
       {/* Top Summary Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-8 gap-4 mb-10 pb-6 border-b border-gray-100 items-start">
+      <div className="grid grid-cols-2 md:grid-cols-10 gap-4 mb-10 pb-6 border-b border-gray-100 items-start">
         <div>
           <p className="text-sm text-gray-500 mb-1">Date</p>
           <p className="font-medium text-gray-800">
@@ -127,35 +127,75 @@ export default function OrderDetailPage({
             Rs. {Number(order.total).toFixed(2)}
           </p>
         </div>
+        <div>
+          <p className="text-sm text-gray-500 mb-1">Payment Method</p>
+          <p className="font-medium text-gray-800">
+            {order.paymentMethod === "CREDIT_DEBIT_CARD" ? "💳 Card" : "🏠 COD"}
+          </p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-500 mb-1">Payment Status</p>
+          <span
+            className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${
+              order.paymentStatus === "PAID"
+                ? "bg-green-100 text-green-800"
+                : order.paymentStatus === "PROCESSING"
+                  ? "bg-yellow-100 text-yellow-800"
+                  : order.paymentStatus === "FAILED"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-blue-100 text-blue-800"
+            }`}
+          >
+            {order.paymentStatus}
+          </span>
+        </div>
         {/* Status with change control */}
         <div className="relative">
           <p className="text-sm text-gray-500 mb-1">Status</p>
-          <SortDropdown
-            className="inline-block w-full"
-            buttonClassName={`h-9 rounded-full px-3 py-1.5 text-xs font-semibold justify-center border-0 ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}
-            menuClassName="max-h-56"
-            value={order.status}
-            options={ORDER_STATUSES.map((s) => {
-              const currentLevel = STATUS_LEVELS[order.status] ?? 0;
-              const targetLevel = STATUS_LEVELS[s] ?? 0;
-              let disabled = false;
-              if (
-                order.status === "CANCELLED" ||
-                order.status === "DELIVERED"
-              ) {
-                disabled = s !== order.status;
-              } else {
-                disabled = s !== order.status && targetLevel <= currentLevel;
-              }
-              return {
-                label: s,
-                value: s,
-                disabled,
-              };
-            })}
-            onValueChange={handleStatusChange}
-            disabled={updatingStatus}
-          />
+          {order.paymentMethod === "CREDIT_DEBIT_CARD" &&
+          order.paymentStatus === "PROCESSING" ? (
+            <div title="Status cannot be changed until payment is confirmed or fails.">
+              <button
+                disabled
+                className="h-9 rounded-full px-3 py-1.5 text-xs font-semibold justify-center border border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed w-full flex items-center justify-between"
+              >
+                <span>{order.status}</span>
+                <span className="text-[10px]">🔒</span>
+              </button>
+            </div>
+          ) : (
+            <SortDropdown
+              className="inline-block w-full"
+              buttonClassName={`h-9 rounded-full px-3 py-1.5 text-xs font-semibold justify-center border-0 ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}
+              menuClassName="max-h-56"
+              value={order.status}
+              options={ORDER_STATUSES.map((s) => {
+                const currentLevel = STATUS_LEVELS[order.status] ?? 0;
+                const targetLevel = STATUS_LEVELS[s] ?? 0;
+                let disabled = false;
+                if (
+                  order.paymentMethod === "CREDIT_DEBIT_CARD" &&
+                  order.paymentStatus === "FAILED"
+                ) {
+                  disabled = s !== order.status && s !== "CANCELLED";
+                } else if (
+                  order.status === "CANCELLED" ||
+                  order.status === "DELIVERED"
+                ) {
+                  disabled = s !== order.status;
+                } else {
+                  disabled = s !== order.status && targetLevel <= currentLevel;
+                }
+                return {
+                  label: s,
+                  value: s,
+                  disabled,
+                };
+              })}
+              onValueChange={handleStatusChange}
+              disabled={updatingStatus}
+            />
+          )}
         </div>
       </div>
 

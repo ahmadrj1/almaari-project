@@ -22,7 +22,7 @@ export class AuthService {
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         email,
         passwordHash,
@@ -30,6 +30,21 @@ export class AuthService {
         phone,
       },
     });
+
+    try {
+      const { stripe } = await import("@/lib/stripe");
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.fullName,
+        metadata: { userId: user.id },
+      });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { stripeCustomerId: customer.id },
+      });
+    } catch (_e) {
+      // Non-fatal, will be lazily created on checkout
+    }
 
     return "User registered successfully";
   }

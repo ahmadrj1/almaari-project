@@ -24,6 +24,7 @@ model User {
   addresses         Address[]
   notifications     Notification[]
   notificationReads NotificationRead[]
+  stripeCustomerId  String?  @unique
 }
 
 enum Role {
@@ -129,6 +130,23 @@ model Order {
   user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   address Address     @relation(fields: [addressId], references: [id])
   items   OrderItem[]
+  
+  paymentMethod          PaymentMethod  @default(CASH_ON_DELIVERY)
+  paymentStatus          PaymentStatus  @default(PENDING)
+  paymentIntentId        String?        @unique
+  stripePaymentMethodId  String?
+}
+
+enum PaymentMethod {
+  CASH_ON_DELIVERY
+  CREDIT_DEBIT_CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
 }
 
 model OrderItem {
@@ -159,6 +177,7 @@ model Address {
   city      String?
   country   String?
   zipCode   String?
+  isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

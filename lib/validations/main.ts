@@ -5,6 +5,15 @@ export const addressSchema = z.object({
   city: z.string().optional(),
   country: z.string().optional(),
   zipCode: z.string().optional(),
+  isDefault: z.boolean().optional(),
+});
+
+export const patchAddressSchema = z.object({
+  street: z.string().optional(),
+  city: z.string().optional(),
+  country: z.string().optional(),
+  zipCode: z.string().optional(),
+  isDefault: z.boolean().optional(),
 });
 
 export const cartItemSchema = z.object({

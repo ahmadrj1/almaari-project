@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
@@ -11,13 +11,54 @@ import { ArrowLeft } from "lucide-react";
 import { STATUS_COLORS } from "@/lib/constants";
 import type { OrderDetail } from "@/types";
 import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary";
+import { useCartCount } from "@/hooks/use-cart-count";
 
 export default function OrderDetailsPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reordering, setReordering] = useState(false);
   const { showToast } = useToast();
+  const { refresh } = useCartCount();
+
+  const handleReorder = async () => {
+    setReordering(true);
+    try {
+      const res = await fetch(`/api/orders/${id}/reorder`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        if (data.addedCount === 0) {
+          showToast("error", "Sorry, the item is now out of stock.");
+          return;
+        }
+        data.skippedItems.forEach((item: { title: string }) => {
+          showToast(
+            "info",
+            `"${item.title}" is currently unavailable and was skipped.`,
+          );
+        });
+        data.adjustedItems.forEach(
+          (item: { title: string; addedQty: number }) => {
+            showToast(
+              "info",
+              `"${item.title}" quantity adjusted to ${item.addedQty} (max available).`,
+            );
+          },
+        );
+        showToast("success", "Items added to cart.");
+        refresh();
+        router.push("/cart");
+      } else {
+        showToast("error", data.error || "Failed to reorder items");
+      }
+    } catch {
+      showToast("error", "Failed to reorder items");
+    } finally {
+      setReordering(false);
+    }
+  };
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -84,14 +125,33 @@ export default function OrderDetailsPage() {
   return (
     <div className="w-full">
       {/* Title */}
-      <div className="flex items-center gap-3 mb-6">
-        <Link
-          href="/orders"
-          className="text-[#2979FF] hover:text-blue-700 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <h1 className="text-2xl font-bold text-[#2979FF]">Order Detail</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/orders"
+            className="text-[#2979FF] hover:text-blue-700 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <h1 className="text-2xl font-bold text-[#2979FF]">Order Detail</h1>
+        </div>
+        {order.status === "CANCELLED" && (
+          <button
+            onClick={handleReorder}
+            disabled={reordering}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition duration-150 shadow-sm text-sm disabled:opacity-50"
+          >
+            {reordering ? "Adding to Cart..." : "Order Again"}
+          </button>
+        )}
+        {order.status === "PENDING" && order.paymentStatus === "FAILED" && (
+          <Link
+            href={`/cart?retryOrderId=${order.id}`}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition duration-150 shadow-sm text-sm"
+          >
+            Retry Payment
+          </Link>
+        )}
       </div>
 
       {/* Subheader summary */}
@@ -148,12 +208,46 @@ export default function OrderDetailsPage() {
             </p>
           </div>
         </div>
-        {/* Address row */}
-        <div className="border-t border-gray-100 px-6 py-4 bg-gray-50">
-          <span className="text-xs font-medium text-gray-400 uppercase tracking-wide mr-3">
-            Delivery Address
-          </span>
-          <span className="text-sm text-gray-700">{addressLine}</span>
+        {/* Address and Payment details */}
+        <div className="border-t border-gray-100 px-6 py-4 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <span className="text-xs font-medium text-gray-400 uppercase tracking-wide mr-3">
+              Delivery Address
+            </span>
+            <span className="text-sm text-gray-700">{addressLine}</span>
+          </div>
+          <div className="flex items-center gap-4 text-sm">
+            <div>
+              <span className="text-xs font-medium text-gray-400 uppercase tracking-wide mr-2">
+                Payment Method:
+              </span>
+              <span className="text-gray-700 font-medium">
+                {order.paymentMethod === "CREDIT_DEBIT_CARD"
+                  ? "💳 Card"
+                  : "🏠 Cash on Delivery"}
+              </span>
+            </div>
+            {order.paymentMethod === "CREDIT_DEBIT_CARD" && (
+              <div>
+                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide mr-2">
+                  Payment Status:
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    order.paymentStatus === "PAID"
+                      ? "bg-green-100 text-green-800"
+                      : order.paymentStatus === "PROCESSING"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : order.paymentStatus === "FAILED"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-blue-100 text-blue-800"
+                  }`}
+                >
+                  {order.paymentStatus}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

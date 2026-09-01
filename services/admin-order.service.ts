@@ -104,6 +104,24 @@ export class AdminOrderService {
         throw new AppError("Order not found", 404);
       }
 
+      if (order.paymentMethod === "CREDIT_DEBIT_CARD") {
+        if (order.paymentStatus === "PROCESSING") {
+          throw new AppError(
+            `Cannot update order status. Payment is ${order.paymentStatus.toLowerCase()}. Status can only be changed after payment is confirmed.`,
+            400,
+          );
+        }
+        if (
+          order.paymentStatus === "FAILED" &&
+          status !== OrderStatus.CANCELLED
+        ) {
+          throw new AppError(
+            `Cannot update order status to ${status}. Since the payment failed, you can only cancel the order.`,
+            400,
+          );
+        }
+      }
+
       if (status !== order.status) {
         if (
           order.status === OrderStatus.CANCELLED ||
@@ -132,6 +150,7 @@ export class AdminOrderService {
         order.status === OrderStatus.CANCELLED;
 
       if (isCancelling) {
+        // Stock is always reserved/decremented upfront for both COD and card payments
         for (const item of order.items) {
           const variant = await tx.productVariant.findFirst({
             where: {
@@ -167,9 +186,27 @@ export class AdminOrderService {
 
       return await tx.order.update({
         where: { id },
-        data: { status: status as OrderStatus },
+        data: {
+          status: status as OrderStatus,
+          ...(status === OrderStatus.CANCELLED
+            ? { paymentStatus: "FAILED" }
+            : {}),
+        },
       });
     });
+
+    if (
+      status === OrderStatus.CANCELLED &&
+      updated.paymentMethod === "CREDIT_DEBIT_CARD" &&
+      updated.paymentIntentId
+    ) {
+      try {
+        const { stripe } = await import("@/lib/stripe");
+        await stripe.paymentIntents.cancel(updated.paymentIntentId);
+      } catch (stripeError) {
+        console.error("Failed to cancel payment intent:", stripeError);
+      }
+    }
 
     createNotification(
       updated.userId,
