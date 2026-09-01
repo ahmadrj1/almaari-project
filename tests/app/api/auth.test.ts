@@ -257,6 +257,57 @@ describe("Auth API / Controller Tests", () => {
     });
   });
 
+  describe("GET /api/auth/verify-reset", () => {
+    it("redirects to /reset-password on valid token", async () => {
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue({
+        id: "user-id-123",
+        email: "john@example.com",
+      });
+
+      const { cookies } = await import("next/headers");
+      (cookies as jest.Mock).mockResolvedValue({
+        get: jest.fn(),
+        set: jest.fn(),
+        delete: jest.fn(),
+      });
+
+      const req = new Request(
+        "http://localhost/api/auth/verify-reset?token=valid-token",
+        { method: "GET" },
+      );
+
+      const response = await AuthController.verifyResetToken(req);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toMatch(/\/reset-password/);
+    });
+
+    it("redirects to /reset-link-expired when token is missing", async () => {
+      const req = new Request("http://localhost/api/auth/verify-reset", {
+        method: "GET",
+      });
+
+      const response = await AuthController.verifyResetToken(req);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toMatch(/\/reset-link-expired/);
+    });
+
+    it("redirects to /reset-link-expired when token is invalid/expired", async () => {
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
+
+      const req = new Request(
+        "http://localhost/api/auth/verify-reset?token=bad-token",
+        { method: "GET" },
+      );
+
+      const response = await AuthController.verifyResetToken(req);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toMatch(/\/reset-link-expired/);
+    });
+  });
+
   describe("Credentials authorize / login", () => {
     beforeAll(() => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
