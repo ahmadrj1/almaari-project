@@ -1,12 +1,21 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useLayoutEffect,
+} from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ShoppingBag } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import { ProductCardSkeleton } from "@/components/ui/product-card-skeleton";
+
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 const ProductCard = dynamic(
   () => import("@/components/ui/product-card").then((mod) => mod.ProductCard),
@@ -50,11 +59,30 @@ function HomeContent() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadingPrevious, setLoadingPrevious] = useState(false);
 
-  // Use refs for cursor/products to avoid stale closures in fetchPage
   const nextCursorRef = useRef<string | null>(null);
   const prevCursorRef = useRef<string | null>(null);
   const productsRef = useRef<ProductWithVariants[]>([]);
   const isFetchingRef = useRef(false);
+  const anchorRef = useRef<{ id: string; top: number } | null>(null);
+
+  useIsomorphicLayoutEffect(() => {
+    if (anchorRef.current) {
+      const { id, top: prevTop } = anchorRef.current;
+      const adjustScroll = () => {
+        const el = document.getElementById(`product-${id}`);
+        if (el) {
+          const newTop = el.getBoundingClientRect().top;
+          const diff = newTop - prevTop;
+          if (Math.abs(diff) > 1) {
+            window.scrollBy({ top: diff, behavior: "instant" });
+          }
+        }
+      };
+      adjustScroll();
+      requestAnimationFrame(adjustScroll);
+      anchorRef.current = null;
+    }
+  }, [products]);
 
   const searchParam = searchParams.get("search") || "";
   const sort = searchParams.get("sort") || DEFAULT_SORT;
@@ -154,6 +182,17 @@ function HomeContent() {
           nextList = dedup([...currentProducts, ...newProducts]).slice(
             -MAX_PRODUCTS_MEMORY,
           );
+        }
+
+        if (direction === "prev" && currentProducts.length > 0) {
+          const firstId = currentProducts[0].id;
+          const el = document.getElementById(`product-${firstId}`);
+          if (el) {
+            anchorRef.current = {
+              id: firstId,
+              top: el.getBoundingClientRect().top,
+            };
+          }
         }
 
         // Sync ref immediately before releasing lock
@@ -349,11 +388,12 @@ function HomeContent() {
 
             <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
               {products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAddToCart={handleAddToCart}
-                />
+                <div key={product.id} id={`product-${product.id}`}>
+                  <ProductCard
+                    product={product}
+                    onAddToCart={handleAddToCart}
+                  />
+                </div>
               ))}
               {loadingMore &&
                 Array.from({ length: 4 }).map((_, i) => (
