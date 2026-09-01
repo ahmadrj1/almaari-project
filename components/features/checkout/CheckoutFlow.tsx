@@ -407,7 +407,7 @@ export default function CheckoutFlow({
         </div>
 
         {/* Step indicator */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 self-center sm:self-auto">
           <div className="flex flex-col items-center">
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors ${step >= 1 ? "bg-blue-600 text-white shadow-sm" : "bg-gray-100 text-gray-400"}`}

@@ -132,13 +132,21 @@ export class AdminOrderService {
             400,
           );
         }
-        const currentLevel = STATUS_LEVELS[order.status] ?? 0;
-        const targetLevel = STATUS_LEVELS[status] ?? 0;
-        if (targetLevel <= currentLevel) {
-          throw new AppError(
-            `Cannot change status from ${order.status} to ${status}`,
-            400,
-          );
+        const isFailedPaymentCancellation =
+          order.paymentMethod === "CREDIT_DEBIT_CARD" &&
+          order.paymentStatus === "FAILED" &&
+          order.status === OrderStatus.PENDING &&
+          status === OrderStatus.CANCELLED;
+
+        if (!isFailedPaymentCancellation) {
+          const currentLevel = STATUS_LEVELS[order.status] ?? 0;
+          const targetLevel = STATUS_LEVELS[status] ?? 0;
+          if (targetLevel !== currentLevel + 1) {
+            throw new AppError(
+              `Cannot change status from ${order.status} to ${status}. Status must advance one step at a time.`,
+              400,
+            );
+          }
         }
       }
 
