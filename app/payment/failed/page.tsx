@@ -74,7 +74,7 @@ export default function PaymentFailedPage(props: PageProps) {
             href={orderId ? `/orders/${orderId}` : "/orders"}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition duration-150 shadow-sm"
           >
-            View Order Status
+            View Order Status and Retry Payment
           </Link>
           <Link
             href="/cart"
