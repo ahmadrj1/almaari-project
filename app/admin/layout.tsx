@@ -5,7 +5,11 @@ import { LogOut, ChevronDown } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { getServerSessionSnapshot } from "@/lib/auth-session";
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const session = await getServerSessionSnapshot();
   const user = session?.user;
 
@@ -48,7 +52,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                     {initials}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{name}</p>
+                    <p className="text-sm font-semibold text-gray-800 truncate">
+                      {name}
+                    </p>
                     <p className="text-xs text-gray-500 truncate">{email}</p>
                   </div>
                 </div>
@@ -72,9 +78,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
         </header>
 
-        <main className="flex-1 p-6 overflow-y-auto">
-          {children}
-        </main>
+        <main className="flex-1 p-6 overflow-y-auto">{children}</main>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import ForgotPasswordPage from "./forgot-password-client";
 import { Metadata } from "next";
-import { APP_NAME } from '@/lib/constants'
+import { APP_NAME } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: `Forgot Password | ${APP_NAME}`,

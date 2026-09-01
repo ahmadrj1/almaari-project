@@ -9,10 +9,17 @@ export class UploadService {
     }
 
     const slug = title
-      ? title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+      ? title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "")
       : "product";
 
-    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    if (
+      !process.env.CLOUDINARY_CLOUD_NAME ||
+      !process.env.CLOUDINARY_API_KEY ||
+      !process.env.CLOUDINARY_API_SECRET
+    ) {
       throw new AppError("Cloudinary is not configured", 500);
     }
 
@@ -20,24 +27,26 @@ export class UploadService {
     const folder = "almaari/products";
     const publicId = `${slug}-${Date.now().toString().slice(-6)}`;
 
-    const result = await new Promise<{ secure_url?: string }>((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder,
-          public_id: publicId,
-          resource_type: "image",
-        },
-        (error, result) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-          resolve(result || {});
-        }
-      );
+    const result = await new Promise<{ secure_url?: string }>(
+      (resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder,
+            public_id: publicId,
+            resource_type: "image",
+          },
+          (error, result) => {
+            if (error) {
+              reject(error);
+              return;
+            }
+            resolve(result || {});
+          },
+        );
 
-      Readable.from(buffer).pipe(uploadStream);
-    });
+        Readable.from(buffer).pipe(uploadStream);
+      },
+    );
 
     if (!result.secure_url) {
       throw new AppError("Failed to upload image to Cloudinary", 500);

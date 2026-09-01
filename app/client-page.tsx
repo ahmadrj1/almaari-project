@@ -68,8 +68,7 @@ function HomeContent() {
   // Reset filters on page reload
   useEffect(() => {
     const nav = performance.getEntriesByType("navigation")[0] as
-      | PerformanceNavigationTiming
-      | undefined;
+      PerformanceNavigationTiming | undefined;
     const isReload = nav?.type === "reload";
     if (isReload) {
       // eslint-disable-next-line react-hooks/set-state-in-effect

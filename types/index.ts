@@ -50,7 +50,8 @@ export type OrderDetail = {
   } | null;
 };
 
-export type NotificationType = "ORDER_PLACED" | "ORDER_STATUS_UPDATED" | "NEW_PRODUCT" | string;
+export type NotificationType =
+  "ORDER_PLACED" | "ORDER_STATUS_UPDATED" | "NEW_PRODUCT" | string;
 
 export type NotificationMetadata = Prisma.InputJsonObject;
 
@@ -74,7 +75,6 @@ export type Order = {
   items: { quantity: number }[];
 };
 
-
 export interface Notification {
   id: string;
   type: NotificationType;
@@ -84,7 +84,6 @@ export interface Notification {
   metadata?: Record<string, unknown>;
   createdAt: string;
 }
-
 
 export interface Color {
   id: string;
@@ -159,4 +158,5 @@ export interface OrderItem {
   } | null;
 }
 
-export type OrderStatus = "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+export type OrderStatus =
+  "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";

@@ -1,8 +1,8 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
 export interface SpinnerProps extends React.SVGProps<SVGSVGElement> {
-  size?: "sm" | "md" | "lg"
+  size?: "sm" | "md" | "lg";
 }
 
 export function Spinner({ className, size = "md", ...props }: SpinnerProps) {
@@ -24,11 +24,11 @@ export function Spinner({ className, size = "md", ...props }: SpinnerProps) {
           "h-6 w-6": size === "md",
           "h-8 w-8": size === "lg",
         },
-        className
+        className,
       )}
       {...props}
     >
       <path d="M21 12a9 9 0 1 1-6.219-8.56" />
     </svg>
-  )
+  );
 }

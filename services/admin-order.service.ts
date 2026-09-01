@@ -5,11 +5,19 @@ import { AppError } from "@/lib/api-error";
 import { createNotification } from "@/lib/notifications";
 
 export class AdminOrderService {
-  static async getOrders({ search, page, limit = ADMIN_ORDERS_PER_PAGE_DEFAULT }: { search: string; page: number; limit?: number }) {
+  static async getOrders({
+    search,
+    page,
+    limit = ADMIN_ORDERS_PER_PAGE_DEFAULT,
+  }: {
+    search: string;
+    page: number;
+    limit?: number;
+  }) {
     const skip = (page - 1) * limit;
 
-    const matchingStatuses = Object.values(OrderStatus).filter(
-      (status) => status.toLowerCase().includes(search.toLowerCase())
+    const matchingStatuses = Object.values(OrderStatus).filter((status) =>
+      status.toLowerCase().includes(search.toLowerCase()),
     );
 
     const where: Prisma.OrderWhereInput = search
@@ -18,30 +26,33 @@ export class AdminOrderService {
             { id: { contains: search, mode: "insensitive" } },
             { user: { fullName: { contains: search, mode: "insensitive" } } },
             { user: { email: { contains: search, mode: "insensitive" } } },
-            ...(matchingStatuses.length > 0 ? [{ status: { in: matchingStatuses } }] : []),
+            ...(matchingStatuses.length > 0
+              ? [{ status: { in: matchingStatuses } }]
+              : []),
           ],
         }
       : {};
 
-    const [orders, total, totalOrdersOverall, totalAmountRaw, totalUnitsRaw] = await Promise.all([
-      prisma.order.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-        include: { user: true, items: true },
-      }),
-      prisma.order.count({ where }),
-      prisma.order.count({ where: { status: { not: "CANCELLED" } } }),
-      prisma.order.aggregate({
-        where: { status: { not: "CANCELLED" } },
-        _sum: { total: true }
-      }),
-      prisma.orderItem.aggregate({
-        where: { order: { status: { not: "CANCELLED" } } },
-        _sum: { quantity: true }
-      })
-    ]);
+    const [orders, total, totalOrdersOverall, totalAmountRaw, totalUnitsRaw] =
+      await Promise.all([
+        prisma.order.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+          include: { user: true, items: true },
+        }),
+        prisma.order.count({ where }),
+        prisma.order.count({ where: { status: { not: "CANCELLED" } } }),
+        prisma.order.aggregate({
+          where: { status: { not: "CANCELLED" } },
+          _sum: { total: true },
+        }),
+        prisma.orderItem.aggregate({
+          where: { order: { status: { not: "CANCELLED" } } },
+          _sum: { quantity: true },
+        }),
+      ]);
 
     const stats = {
       totalOrders: totalOrdersOverall,
@@ -49,7 +60,11 @@ export class AdminOrderService {
       totalAmount: totalAmountRaw._sum.total || 0,
     };
 
-    return { orders, stats, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+    return {
+      orders,
+      stats,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   static async getOrderById(id: string) {
@@ -61,10 +76,10 @@ export class AdminOrderService {
         items: {
           include: {
             product: {
-              include: { variants: true }
-            }
-          }
-        }
+              include: { variants: true },
+            },
+          },
+        },
       },
     });
 
@@ -82,7 +97,7 @@ export class AdminOrderService {
     const updated = await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id },
-        include: { items: true }
+        include: { items: true },
       });
 
       if (!order) {
@@ -90,18 +105,31 @@ export class AdminOrderService {
       }
 
       if (status !== order.status) {
-        if (order.status === OrderStatus.CANCELLED || order.status === OrderStatus.DELIVERED) {
-          throw new AppError(`Cannot change status of a ${order.status.toLowerCase()} order`, 400);
+        if (
+          order.status === OrderStatus.CANCELLED ||
+          order.status === OrderStatus.DELIVERED
+        ) {
+          throw new AppError(
+            `Cannot change status of a ${order.status.toLowerCase()} order`,
+            400,
+          );
         }
         const currentLevel = STATUS_LEVELS[order.status] ?? 0;
         const targetLevel = STATUS_LEVELS[status] ?? 0;
         if (targetLevel <= currentLevel) {
-          throw new AppError(`Cannot change status from ${order.status} to ${status}`, 400);
+          throw new AppError(
+            `Cannot change status from ${order.status} to ${status}`,
+            400,
+          );
         }
       }
 
-      const isCancelling = status === OrderStatus.CANCELLED && order.status !== OrderStatus.CANCELLED;
-      const isRestoring = status !== OrderStatus.CANCELLED && order.status === OrderStatus.CANCELLED;
+      const isCancelling =
+        status === OrderStatus.CANCELLED &&
+        order.status !== OrderStatus.CANCELLED;
+      const isRestoring =
+        status !== OrderStatus.CANCELLED &&
+        order.status === OrderStatus.CANCELLED;
 
       if (isCancelling) {
         for (const item of order.items) {
@@ -109,13 +137,13 @@ export class AdminOrderService {
             where: {
               productId: item.productId,
               color: { name: item.colorName },
-              size: { name: item.sizeName }
-            }
+              size: { name: item.sizeName },
+            },
           });
           if (variant) {
             await tx.productVariant.update({
               where: { id: variant.id },
-              data: { stock: { increment: item.quantity } }
+              data: { stock: { increment: item.quantity } },
             });
           }
         }
@@ -125,13 +153,13 @@ export class AdminOrderService {
             where: {
               productId: item.productId,
               color: { name: item.colorName },
-              size: { name: item.sizeName }
-            }
+              size: { name: item.sizeName },
+            },
           });
           if (variant) {
             await tx.productVariant.update({
               where: { id: variant.id },
-              data: { stock: { decrement: item.quantity } }
+              data: { stock: { decrement: item.quantity } },
             });
           }
         }
@@ -148,7 +176,7 @@ export class AdminOrderService {
       "ORDER_STATUS_UPDATED",
       "Order Status Updated",
       `Your order #${id.slice(0, 8)} is now ${status.toLowerCase()}.`,
-      { orderId: id, status }
+      { orderId: id, status },
     );
 
     return updated;

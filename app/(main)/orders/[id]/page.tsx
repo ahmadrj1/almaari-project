@@ -1,6 +1,6 @@
 import OrderDetailsPage from "./order-details-client";
 import { Metadata } from "next";
-import { APP_NAME } from '@/lib/constants'
+import { APP_NAME } from "@/lib/constants";
 
 type Props = {
   params: Promise<{ id: string }>;

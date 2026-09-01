@@ -7,7 +7,7 @@ export class AppError extends Error {
   constructor(
     message: string,
     public statusCode: number = 500,
-    public details?: Record<string, string[]>
+    public details?: Record<string, string[]>,
   ) {
     super(message);
     this.name = "AppError";
@@ -24,7 +24,7 @@ export function handleApiError(error: unknown, context: string): NextResponse {
     }
     return NextResponse.json(
       { success: false, error: error.message, details: error.details },
-      { status: error.statusCode }
+      { status: error.statusCode },
     );
   }
 
@@ -34,7 +34,7 @@ export function handleApiError(error: unknown, context: string): NextResponse {
     logger.warn({ context, details }, "Validation error");
     return NextResponse.json(
       { success: false, error: "Validation failed", details },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -44,18 +44,18 @@ export function handleApiError(error: unknown, context: string): NextResponse {
     if (error.code === "P2025") {
       return NextResponse.json(
         { success: false, error: "Record not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
     if (error.code === "P2002") {
       return NextResponse.json(
         { success: false, error: "Record already exists" },
-        { status: 409 }
+        { status: 409 },
       );
     }
     return NextResponse.json(
       { success: false, error: "Database operation failed" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -63,6 +63,6 @@ export function handleApiError(error: unknown, context: string): NextResponse {
   logger.error({ err: error, context }, "Unhandled error");
   return NextResponse.json(
     { success: false, error: "Internal server error" },
-    { status: 500 }
+    { status: 500 },
   );
 }

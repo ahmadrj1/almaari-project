@@ -43,7 +43,12 @@ export default function CartPage() {
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [isAddingNew, setIsAddingNew] = useState(false);
-  const [newAddress, setNewAddress] = useState({ street: "", city: "", country: "", zipCode: "" });
+  const [newAddress, setNewAddress] = useState({
+    street: "",
+    city: "",
+    country: "",
+    zipCode: "",
+  });
   const [stockIssues, setStockIssues] = useState<StockIssue[]>([]);
   const [isStockIssueModalOpen, setIsStockIssueModalOpen] = useState(false);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
@@ -65,16 +70,25 @@ export default function CartPage() {
       const data = await res.json();
       if (data.success) {
         const cartItems = data.data.items || [];
-        const adjustments: { title: string; oldQty: number; newQty: number }[] = data.data.adjustments || [];
-        
+        const adjustments: { title: string; oldQty: number; newQty: number }[] =
+          data.data.adjustments || [];
+
         setItems(cartItems);
-        setSelectedItems(new Set(cartItems.map((i: CartItemWithProduct) => i.id)));
+        setSelectedItems(
+          new Set(cartItems.map((i: CartItemWithProduct) => i.id)),
+        );
 
         adjustments.forEach((adj) => {
           if (adj.newQty === 0) {
-            showToast("info", `"${adj.title}" was removed from your cart as it is out of stock.`);
+            showToast(
+              "info",
+              `"${adj.title}" was removed from your cart as it is out of stock.`,
+            );
           } else {
-            showToast("info", `Quantity for "${adj.title}" was reduced to ${adj.newQty} due to available stock.`);
+            showToast(
+              "info",
+              `Quantity for "${adj.title}" was reduced to ${adj.newQty} due to available stock.`,
+            );
           }
         });
         return adjustments.length;
@@ -104,7 +118,7 @@ export default function CartPage() {
       if (data.success) {
         if (quantity <= 0) {
           setItems(items.filter((i) => i.id !== cartItemId));
-          setSelectedItems(prev => {
+          setSelectedItems((prev) => {
             const next = new Set(prev);
             next.delete(cartItemId);
             return next;
@@ -113,8 +127,8 @@ export default function CartPage() {
         } else {
           setItems(
             items.map((i) =>
-              i.id === cartItemId ? { ...i, quantity: data.data.quantity } : i
-            )
+              i.id === cartItemId ? { ...i, quantity: data.data.quantity } : i,
+            ),
           );
         }
       }
@@ -134,7 +148,7 @@ export default function CartPage() {
       });
       if (res.ok) {
         setItems(items.filter((i) => i.id !== itemToDelete));
-        setSelectedItems(prev => {
+        setSelectedItems((prev) => {
           const next = new Set(prev);
           next.delete(itemToDelete);
           return next;
@@ -159,8 +173,8 @@ export default function CartPage() {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ cartItemId }),
-          })
-        )
+          }),
+        ),
       );
       setItems(items.filter((i) => !selectedItems.has(i.id)));
       setSelectedItems(new Set());
@@ -209,18 +223,20 @@ export default function CartPage() {
         showToast("error", "Failed to validate cart");
         return;
       }
-      const issues: StockIssue[] = (data.issues as StockIssue[]).map((issue) => {
-        if (issue.type === "deleted") {
-          const local = items.find((i) => i.id === issue.cartItemId);
-          return {
-            ...issue,
-            title: local?.product.title,
-            color: local?.variant.color.name,
-            size: local?.variant.size.name,
-          };
-        }
-        return issue;
-      });
+      const issues: StockIssue[] = (data.issues as StockIssue[]).map(
+        (issue) => {
+          if (issue.type === "deleted") {
+            const local = items.find((i) => i.id === issue.cartItemId);
+            return {
+              ...issue,
+              title: local?.product.title,
+              color: local?.variant.color.name,
+              size: local?.variant.size.name,
+            };
+          }
+          return issue;
+        },
+      );
       if (issues.length > 0) {
         setStockIssues(issues);
         setIsStockIssueModalOpen(true);
@@ -278,9 +294,9 @@ export default function CartPage() {
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           addressId: finalAddressId,
-          selectedItemIds: Array.from(selectedItems) 
+          selectedItemIds: Array.from(selectedItems),
         }),
       });
       const data = await res.json();
@@ -288,7 +304,12 @@ export default function CartPage() {
         refresh();
         setIsAddressModalOpen(false);
         setSubmitting(true);
-        await new Promise((resolve) => setTimeout(resolve, process.env.NEXT_PUBLIC_APP_ENV === "dev"? 2000 : 1000));
+        await new Promise((resolve) =>
+          setTimeout(
+            resolve,
+            process.env.NEXT_PUBLIC_APP_ENV === "dev" ? 2000 : 1000,
+          ),
+        );
         setSubmitting(false);
         setSuccessOrderId(data.data.id);
       } else {
@@ -298,7 +319,11 @@ export default function CartPage() {
         const adjusted = await fetchCart();
         if (adjusted === 0) {
           // No quantity adjustments detected; show the raw error as info
-          showToast("info", data.error || "Some items could not be ordered. Please review your cart.");
+          showToast(
+            "info",
+            data.error ||
+              "Some items could not be ordered. Please review your cart.",
+          );
         }
       }
     } catch {
@@ -338,7 +363,7 @@ export default function CartPage() {
   }
 
   const subTotal = items
-    .filter(item => selectedItems.has(item.id))
+    .filter((item) => selectedItems.has(item.id))
     .reduce((sum, item) => sum + Number(item.product.price) * item.quantity, 0);
   const tax = subTotal * TAX_PERCENTAGE;
   const total = subTotal + tax;
@@ -363,28 +388,35 @@ export default function CartPage() {
         </Button>
       </div>
 
-      {items.length > 0 && (() => {
-        const earliestItem = [...items].sort((a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime())[0];
-        if (!earliestItem) return null;
-        
-        const expiryTime = new Date(earliestItem.updatedAt).getTime() + CART_ITEM_EXPIRY_MS;
-        const timeLeft = Math.max(0, expiryTime - getTimestamp());
-        
-        if (timeLeft <= 0) return null;
+      {items.length > 0 &&
+        (() => {
+          const earliestItem = [...items].sort(
+            (a, b) =>
+              new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime(),
+          )[0];
+          if (!earliestItem) return null;
 
-        const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-        
-        return (
-          <p className="text-sm text-gray-500 mb-4">
-            Items in your cart are reserved. The earliest item will expire in{" "}
-            <span className="font-medium text-gray-700">
-              {hours}h {minutes}m {seconds}s
-            </span>
-          </p>
-        );
-      })()}
+          const expiryTime =
+            new Date(earliestItem.updatedAt).getTime() + CART_ITEM_EXPIRY_MS;
+          const timeLeft = Math.max(0, expiryTime - getTimestamp());
+
+          if (timeLeft <= 0) return null;
+
+          const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+          const minutes = Math.floor(
+            (timeLeft % (1000 * 60 * 60)) / (1000 * 60),
+          );
+          const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+          return (
+            <p className="text-sm text-gray-500 mb-4">
+              Items in your cart are reserved. The earliest item will expire in{" "}
+              <span className="font-medium text-gray-700">
+                {hours}h {minutes}m {seconds}s
+              </span>
+            </p>
+          );
+        })()}
 
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
         <div className="overflow-auto max-h-[460px] custom-scrollbar">
@@ -394,10 +426,12 @@ export default function CartPage() {
                 <th className="p-4 w-12 text-center bg-gray-50">
                   <input
                     type="checkbox"
-                    checked={items.length > 0 && selectedItems.size === items.length}
+                    checked={
+                      items.length > 0 && selectedItems.size === items.length
+                    }
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setSelectedItems(new Set(items.map(i => i.id)));
+                        setSelectedItems(new Set(items.map((i) => i.id)));
                       } else {
                         setSelectedItems(new Set());
                       }
@@ -419,13 +453,16 @@ export default function CartPage() {
                 const rate = Number(item.product.price);
                 const lineTotal = rate * item.quantity;
                 return (
-                  <tr key={item.id} className={`hover:bg-gray-50/50 transition-colors ${!selectedItems.has(item.id) ? 'opacity-50' : ''}`}>
+                  <tr
+                    key={item.id}
+                    className={`hover:bg-gray-50/50 transition-colors ${!selectedItems.has(item.id) ? "opacity-50" : ""}`}
+                  >
                     <td className="p-4 text-center">
                       <input
                         type="checkbox"
                         checked={selectedItems.has(item.id)}
                         onChange={(e) => {
-                          setSelectedItems(prev => {
+                          setSelectedItems((prev) => {
                             const next = new Set(prev);
                             if (e.target.checked) next.add(item.id);
                             else next.delete(item.id);
@@ -439,19 +476,34 @@ export default function CartPage() {
                       <div className="flex items-center gap-3">
                         <div className="relative w-12 h-12 rounded bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
                           {item.product.image ? (
-                            <Image src={getOptimizedCloudinaryUrl(item.product.image, 160)} alt={item.product.title} fill sizes="64px" className="object-cover" />
+                            <Image
+                              src={getOptimizedCloudinaryUrl(
+                                item.product.image,
+                                160,
+                              )}
+                              alt={item.product.title}
+                              fill
+                              sizes="64px"
+                              className="object-cover"
+                            />
                           ) : null}
                         </div>
-                        <span className="font-medium text-gray-800 line-clamp-2">{item.product.title}</span>
+                        <span className="font-medium text-gray-800 line-clamp-2">
+                          {item.product.title}
+                        </span>
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        <span 
-                          className="w-4 h-4 rounded-full border border-gray-200" 
-                          style={{ backgroundColor: item.variant.color.hexCode }} 
+                        <span
+                          className="w-4 h-4 rounded-full border border-gray-200"
+                          style={{
+                            backgroundColor: item.variant.color.hexCode,
+                          }}
                         />
-                        <span className="text-sm text-gray-700">{item.variant.color.name}</span>
+                        <span className="text-sm text-gray-700">
+                          {item.variant.color.name}
+                        </span>
                       </div>
                     </td>
                     <td className="p-4">
@@ -467,17 +519,21 @@ export default function CartPage() {
                         max={item.variant.stock ?? 99}
                       />
                     </td>
-                    <td className="p-4 font-medium text-gray-600">{formatCurrency(rate)}</td>
-                    <td className="p-4 font-bold text-gray-900">{formatCurrency(lineTotal)}</td>
-                  <td className="p-4 text-center">
-                    <button
-                      onClick={() => setItemToDelete(item.id)}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded transition-colors"
-                      aria-label="Remove item"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
+                    <td className="p-4 font-medium text-gray-600">
+                      {formatCurrency(rate)}
+                    </td>
+                    <td className="p-4 font-bold text-gray-900">
+                      {formatCurrency(lineTotal)}
+                    </td>
+                    <td className="p-4 text-center">
+                      <button
+                        onClick={() => setItemToDelete(item.id)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded transition-colors"
+                        aria-label="Remove item"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -490,20 +546,26 @@ export default function CartPage() {
         <div className="w-full max-w-sm space-y-3 text-sm text-gray-600">
           <div className="flex justify-between">
             <span>Sub Total:</span>
-            <span className="font-bold text-gray-800">{formatCurrency(subTotal)}</span>
+            <span className="font-bold text-gray-800">
+              {formatCurrency(subTotal)}
+            </span>
           </div>
           <div className="flex justify-between">
             <span>Tax:</span>
-            <span className="font-bold text-gray-800">{formatCurrency(tax)}</span>
+            <span className="font-bold text-gray-800">
+              {formatCurrency(tax)}
+            </span>
           </div>
           <div className="flex justify-between pt-3 border-t border-gray-200 text-base">
             <span>Total:</span>
-            <span className="font-bold text-gray-900">{formatCurrency(total)}</span>
+            <span className="font-bold text-gray-900">
+              {formatCurrency(total)}
+            </span>
           </div>
           <div className="pt-4">
-            <Button 
-              className="w-full" 
-              size="lg" 
+            <Button
+              className="w-full"
+              size="lg"
               onClick={handleValidateAndProceed}
               loading={submitting}
               disabled={selectedItems.size === 0 || submitting}
@@ -514,26 +576,44 @@ export default function CartPage() {
         </div>
       </div>
 
-      <Modal isOpen={isStockIssueModalOpen} onClose={handleStockIssueOkay} title="Stock Availability Issue">
+      <Modal
+        isOpen={isStockIssueModalOpen}
+        onClose={handleStockIssueOkay}
+        title="Stock Availability Issue"
+      >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            The following items in your cart have stock issues. Your cart will be updated to reflect current availability:
+            The following items in your cart have stock issues. Your cart will
+            be updated to reflect current availability:
           </p>
           <ul className="space-y-3">
             {stockIssues.map((issue) => (
-              <li key={issue.cartItemId} className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+              <li
+                key={issue.cartItemId}
+                className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200"
+              >
                 <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
                   <p className="font-medium text-gray-800">
-                    {issue.title || "Product"}{issue.color ? ` — ${issue.color}` : ""}{issue.size ? ` / ${issue.size}` : ""}
+                    {issue.title || "Product"}
+                    {issue.color ? ` — ${issue.color}` : ""}
+                    {issue.size ? ` / ${issue.size}` : ""}
                   </p>
                   {issue.type === "deleted" ? (
-                    <p className="text-amber-700">This variant is no longer available and will be removed from your cart.</p>
+                    <p className="text-amber-700">
+                      This variant is no longer available and will be removed
+                      from your cart.
+                    </p>
                   ) : issue.available === 0 ? (
-                    <p className="text-amber-700">Out of stock. Will be removed from your cart.</p>
+                    <p className="text-amber-700">
+                      Out of stock. Will be removed from your cart.
+                    </p>
                   ) : (
                     <p className="text-amber-700">
-                      Only <span className="font-semibold">{issue.available}</span> available (you had {issue.requested}). Quantity will be updated.
+                      Only{" "}
+                      <span className="font-semibold">{issue.available}</span>{" "}
+                      available (you had {issue.requested}). Quantity will be
+                      updated.
                     </p>
                   )}
                 </div>
@@ -571,21 +651,32 @@ export default function CartPage() {
         variant="danger"
       />
 
-      <Modal isOpen={isAddressModalOpen} onClose={() => setIsAddressModalOpen(false)} title="Delivery Address">
+      <Modal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
+        title="Delivery Address"
+      >
         <div className="space-y-4">
-          <p className="text-sm text-gray-500">Please provide your delivery address to place the order.</p>
-          
+          <p className="text-sm text-gray-500">
+            Please provide your delivery address to place the order.
+          </p>
+
           {loadingAddresses ? (
-            <div className="flex justify-center p-4"><Spinner size="sm" /></div>
+            <div className="flex justify-center p-4">
+              <Spinner size="sm" />
+            </div>
           ) : (
             <div className="space-y-4">
               {!isAddingNew && addresses.length > 0 && (
                 <div className="space-y-2">
-                  {addresses.map(addr => (
-                    <label key={addr.id} className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50">
-                      <input 
-                        type="radio" 
-                        name="addressId" 
+                  {addresses.map((addr) => (
+                    <label
+                      key={addr.id}
+                      className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50"
+                    >
+                      <input
+                        type="radio"
+                        name="addressId"
                         value={addr.id}
                         checked={selectedAddressId === addr.id}
                         onChange={(e) => setSelectedAddressId(e.target.value)}
@@ -593,11 +684,20 @@ export default function CartPage() {
                       />
                       <div className="text-sm">
                         <p className="font-medium">{addr.street}</p>
-                        <p className="text-gray-500">{[addr.city, addr.zipCode, addr.country].filter(Boolean).join(", ")}</p>
+                        <p className="text-gray-500">
+                          {[addr.city, addr.zipCode, addr.country]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </p>
                       </div>
                     </label>
                   ))}
-                  <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => setIsAddingNew(true)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2"
+                    onClick={() => setIsAddingNew(true)}
+                  >
                     + Add New Address
                   </Button>
                 </div>
@@ -609,30 +709,46 @@ export default function CartPage() {
                     label="Street Address *"
                     placeholder="123 Main St"
                     value={newAddress.street}
-                    onChange={(e) => setNewAddress({...newAddress, street: e.target.value})}
+                    onChange={(e) =>
+                      setNewAddress({ ...newAddress, street: e.target.value })
+                    }
                   />
                   <div className="grid grid-cols-2 gap-3">
                     <Input
                       label="City"
                       placeholder="New York"
                       value={newAddress.city}
-                      onChange={(e) => setNewAddress({...newAddress, city: e.target.value})}
+                      onChange={(e) =>
+                        setNewAddress({ ...newAddress, city: e.target.value })
+                      }
                     />
                     <Input
                       label="Zip Code"
                       placeholder="10001"
                       value={newAddress.zipCode}
-                      onChange={(e) => setNewAddress({...newAddress, zipCode: e.target.value})}
+                      onChange={(e) =>
+                        setNewAddress({
+                          ...newAddress,
+                          zipCode: e.target.value,
+                        })
+                      }
                     />
                   </div>
                   <Input
                     label="Country"
                     placeholder="United States"
                     value={newAddress.country}
-                    onChange={(e) => setNewAddress({...newAddress, country: e.target.value})}
+                    onChange={(e) =>
+                      setNewAddress({ ...newAddress, country: e.target.value })
+                    }
                   />
                   {addresses.length > 0 && (
-                    <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => setIsAddingNew(false)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => setIsAddingNew(false)}
+                    >
                       Cancel Adding New Address
                     </Button>
                   )}
@@ -642,7 +758,10 @@ export default function CartPage() {
           )}
 
           <div className="flex gap-3 justify-end pt-4">
-            <Button variant="outline" onClick={() => setIsAddressModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddressModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handlePlaceOrder} loading={submitting}>
@@ -667,19 +786,40 @@ export default function CartPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 flex flex-col items-center gap-6 shadow-2xl">
             <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
-              <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-10 h-10 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
             <div className="text-center">
-              <h2 className="text-xl font-bold text-gray-900 mb-1">Order Placed!</h2>
-              <p className="text-sm text-gray-500">Your order has been successfully placed.</p>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">
+                Order Placed!
+              </h2>
+              <p className="text-sm text-gray-500">
+                Your order has been successfully placed.
+              </p>
             </div>
             <div className="flex flex-col gap-3 w-full">
-              <Button className="w-full" onClick={() => router.push(`/orders/${successOrderId}`)}>
+              <Button
+                className="w-full"
+                onClick={() => router.push(`/orders/${successOrderId}`)}
+              >
                 Check Order Details
               </Button>
-              <Button variant="outline" className="w-full" onClick={() => router.push("/")}>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => router.push("/")}
+              >
                 Return to Home
               </Button>
             </div>

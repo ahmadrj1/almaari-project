@@ -1,6 +1,6 @@
 import OrdersPage from "./orders-client";
 import { Metadata } from "next";
-import { APP_NAME } from '@/lib/constants'
+import { APP_NAME } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: `My Orders | ${APP_NAME}`,

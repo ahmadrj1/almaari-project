@@ -17,7 +17,7 @@ export class UploadController {
       const title = formData.get("title") as string | null;
 
       const imagePath = await UploadService.uploadProductImage(file, title);
-      
+
       return NextResponse.json({ success: true, imagePath });
     } catch (error) {
       return handleApiError(error, "UploadController.uploadProductImage");
