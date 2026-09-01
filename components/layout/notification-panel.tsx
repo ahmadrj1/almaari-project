@@ -1,6 +1,13 @@
 "use client";
 
-import { ShoppingBag, Package, Tag, Bell, Check } from "lucide-react";
+import {
+  ShoppingBag,
+  Package,
+  Tag,
+  Bell,
+  Check,
+  AlertCircle,
+} from "lucide-react";
 import type { Notification } from "@/types";
 import { timeAgo } from "@/lib/notifications";
 
@@ -38,11 +45,31 @@ export function NotificationPanel({
   loadMore: () => void;
   hasMore: boolean;
 }) {
-  const getStyle = (type: string) =>
-    TYPE_STYLES[type] ?? {
-      icon: <Bell className="h-4 w-4 text-gray-500" />,
-      bg: "bg-gray-100",
-    };
+  const getStyle = (n: Notification) => {
+    const titleLower = n.title.toLowerCase();
+    const msgLower = n.message.toLowerCase();
+    const isFailure =
+      titleLower.includes("fail") ||
+      titleLower.includes("cancel") ||
+      titleLower.includes("decline") ||
+      msgLower.includes("fail") ||
+      msgLower.includes("cancel") ||
+      msgLower.includes("decline");
+
+    if (isFailure) {
+      return {
+        icon: <AlertCircle className="h-4 w-4 text-red-600" />,
+        bg: "bg-red-100",
+      };
+    }
+
+    return (
+      TYPE_STYLES[n.type] ?? {
+        icon: <Bell className="h-4 w-4 text-gray-500" />,
+        bg: "bg-gray-100",
+      }
+    );
+  };
 
   return (
     <div className="fixed md:absolute right-4 left-4 md:right-0 md:left-auto mt-2 w-auto md:w-96 rounded-xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col overflow-hidden z-50">
@@ -102,7 +129,7 @@ export function NotificationPanel({
           </div>
         ) : (
           notifications.map((n) => {
-            const { icon, bg } = getStyle(n.type);
+            const { icon, bg } = getStyle(n);
             return (
               <button
                 key={n.id}

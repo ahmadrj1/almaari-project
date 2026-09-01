@@ -1,23 +1,23 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Trash2, ArrowLeft, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { QuantitySelector } from "@/components/ui/quantity-selector";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
-import type { CartItemWithProduct, SavedAddress } from "@/types";
+import type { CartItemWithProduct, OrderItem } from "@/types";
 import { useCartCount } from "@/hooks/use-cart-count";
 import { TAX_PERCENTAGE, CART_ITEM_EXPIRY_MS } from "@/lib/constants";
 import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary";
+import CheckoutFlow from "@/components/features/checkout/CheckoutFlow";
 
 const getTimestamp = () => Date.now();
 
@@ -38,21 +38,28 @@ export default function CartPage() {
   const [submitting, setSubmitting] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [isDeleteSelectedOpen, setIsDeleteSelectedOpen] = useState(false);
-  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
-  const [addresses, setAddresses] = useState<SavedAddress[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
-  const [isAddingNew, setIsAddingNew] = useState(false);
-  const [newAddress, setNewAddress] = useState({
-    street: "",
-    city: "",
-    country: "",
-    zipCode: "",
-  });
+
   const [stockIssues, setStockIssues] = useState<StockIssue[]>([]);
   const [isStockIssueModalOpen, setIsStockIssueModalOpen] = useState(false);
-  const [loadingAddresses, setLoadingAddresses] = useState(false);
+
+  const [isCheckoutMode, setIsCheckoutMode] = useState(false);
+
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const retryOrderId = searchParams.get("retryOrderId");
+
+  const [retryOrderItems, setRetryOrderItems] = useState<CartItemWithProduct[]>(
+    [],
+  );
+  const [retryOrderAddressId, setRetryOrderAddressId] = useState<string>("");
+  const [retryOrderTotals, setRetryOrderTotals] = useState({
+    subTotal: 0,
+    tax: 0,
+    total: 0,
+  });
+  const [fetchingRetryOrder, setFetchingRetryOrder] = useState(false);
+
   const { showToast } = useToast();
   const { decrement, refresh } = useCartCount();
   const [, setTick] = useState(0);
@@ -63,6 +70,67 @@ export default function CartPage() {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!retryOrderId) return;
+    const fetchRetryOrder = async () => {
+      setFetchingRetryOrder(true);
+      try {
+        const res = await fetch(`/api/orders/${retryOrderId}`);
+        const data = await res.json();
+        if (data.success && data.data) {
+          const order = data.data;
+          // Map OrderItem to mock CartItemWithProduct
+          const mapped: CartItemWithProduct[] = order.items.map(
+            (item: OrderItem) => ({
+              id: item.id,
+              userId: order.userId,
+              productId:
+                (item as unknown as { productId: string }).productId || "",
+              variantId: "",
+              quantity: item.quantity,
+              createdAt: new Date(order.createdAt),
+              updatedAt: new Date(order.createdAt),
+              product: {
+                id: (item as unknown as { productId: string }).productId || "",
+                title: item.product?.title || "",
+                price: item.price,
+                image: item.product?.image || "",
+              },
+              variant: {
+                id: "",
+                stock: 99,
+                color: {
+                  id: "",
+                  name: item.colorName,
+                  hexCode: "#CCCCCC",
+                },
+                size: {
+                  id: "",
+                  name: item.sizeName,
+                },
+              },
+            }),
+          );
+          setRetryOrderItems(mapped);
+          setRetryOrderAddressId(order.addressId);
+          setRetryOrderTotals({
+            subTotal: Number(order.subTotal),
+            tax: Number(order.tax),
+            total: Number(order.total),
+          });
+          setIsCheckoutMode(true);
+        } else {
+          showToast("error", "Failed to retrieve order details for retry");
+        }
+      } catch {
+        showToast("error", "Error loading retry order details");
+      } finally {
+        setFetchingRetryOrder(false);
+      }
+    };
+    fetchRetryOrder();
+  }, [retryOrderId, showToast]);
 
   const fetchCart = useCallback(async (): Promise<number> => {
     try {
@@ -187,28 +255,6 @@ export default function CartPage() {
     }
   };
 
-  const fetchAddresses = async () => {
-    setLoadingAddresses(true);
-    try {
-      const res = await fetch("/api/addresses");
-      const data = await res.json();
-      if (data.success) {
-        setAddresses(data.data);
-        if (data.data.length > 0) setSelectedAddressId(data.data[0].id);
-        else setIsAddingNew(true);
-      }
-    } catch {
-      showToast("error", "Failed to fetch addresses");
-    } finally {
-      setLoadingAddresses(false);
-    }
-  };
-
-  const openAddressModal = () => {
-    setIsAddressModalOpen(true);
-    fetchAddresses();
-  };
-
   const handleValidateAndProceed = async () => {
     if (selectedItems.size === 0) return;
     setSubmitting(true);
@@ -241,7 +287,7 @@ export default function CartPage() {
         setStockIssues(issues);
         setIsStockIssueModalOpen(true);
       } else {
-        openAddressModal();
+        setIsCheckoutMode(true);
       }
     } catch {
       showToast("error", "Failed to validate cart");
@@ -256,84 +302,13 @@ export default function CartPage() {
     await fetchCart();
   };
 
-  const handlePlaceOrder = async () => {
-    let finalAddressId = selectedAddressId;
+  const subTotal = items
+    .filter((item) => selectedItems.has(item.id))
+    .reduce((sum, item) => sum + Number(item.product.price) * item.quantity, 0);
+  const tax = subTotal * TAX_PERCENTAGE;
+  const total = subTotal + tax;
 
-    if (isAddingNew) {
-      if (!newAddress.street.trim()) {
-        showToast("error", "Please enter street address");
-        return;
-      }
-      setSubmitting(true);
-      try {
-        const res = await fetch("/api/addresses", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newAddress),
-        });
-        const data = await res.json();
-        if (data.success) {
-          finalAddressId = data.data.id;
-        } else {
-          showToast("error", data.error || "Failed to add address");
-          setSubmitting(false);
-          return;
-        }
-      } catch {
-        showToast("error", "Failed to add address");
-        setSubmitting(false);
-        return;
-      }
-    } else if (!finalAddressId) {
-      showToast("error", "Please select an address");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          addressId: finalAddressId,
-          selectedItemIds: Array.from(selectedItems),
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        refresh();
-        setIsAddressModalOpen(false);
-        setSubmitting(true);
-        await new Promise((resolve) =>
-          setTimeout(
-            resolve,
-            process.env.NEXT_PUBLIC_APP_ENV === "dev" ? 2000 : 1000,
-          ),
-        );
-        setSubmitting(false);
-        setSuccessOrderId(data.data.id);
-      } else {
-        // Close modal and re-sync cart to reflect stock changes
-        setIsAddressModalOpen(false);
-        setSubmitting(false);
-        const adjusted = await fetchCart();
-        if (adjusted === 0) {
-          // No quantity adjustments detected; show the raw error as info
-          showToast(
-            "info",
-            data.error ||
-              "Some items could not be ordered. Please review your cart.",
-          );
-        }
-      }
-    } catch {
-      showToast("error", "Failed to place order");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (loading) {
+  if (loading || fetchingRetryOrder) {
     return (
       <div className="flex justify-center items-center h-64">
         <Spinner size="lg" />
@@ -341,7 +316,7 @@ export default function CartPage() {
     );
   }
 
-  if (items.length === 0) {
+  if (items.length === 0 && !retryOrderId) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <h1 className="text-2xl font-semibold text-blue-600 flex items-center gap-2 mb-8">
@@ -362,11 +337,41 @@ export default function CartPage() {
     );
   }
 
-  const subTotal = items
-    .filter((item) => selectedItems.has(item.id))
-    .reduce((sum, item) => sum + Number(item.product.price) * item.quantity, 0);
-  const tax = subTotal * TAX_PERCENTAGE;
-  const total = subTotal + tax;
+  if (isCheckoutMode) {
+    const checkoutItems = retryOrderId ? retryOrderItems : items;
+    const checkoutItemIds = retryOrderId
+      ? new Set(retryOrderItems.map((i) => i.id))
+      : selectedItems;
+    const checkoutSubtotal = retryOrderId
+      ? retryOrderTotals.subTotal
+      : subTotal;
+    const checkoutTax = retryOrderId ? retryOrderTotals.tax : tax;
+    const checkoutTotal = retryOrderId ? retryOrderTotals.total : total;
+
+    return (
+      <CheckoutFlow
+        items={checkoutItems}
+        selectedItemIds={checkoutItemIds}
+        subTotal={checkoutSubtotal}
+        tax={checkoutTax}
+        total={checkoutTotal}
+        onBack={() => {
+          if (retryOrderId) {
+            router.push("/cart");
+          } else {
+            setIsCheckoutMode(false);
+          }
+        }}
+        onSuccess={(orderId) => {
+          setSuccessOrderId(orderId);
+          setIsCheckoutMode(false);
+        }}
+        onCartRefresh={refresh}
+        retryOrderId={retryOrderId || undefined}
+        initialAddressId={retryOrderId ? retryOrderAddressId : undefined}
+      />
+    );
+  }
 
   return (
     <div className="w-full">
@@ -650,126 +655,6 @@ export default function CartPage() {
         cancelText="No"
         variant="danger"
       />
-
-      <Modal
-        isOpen={isAddressModalOpen}
-        onClose={() => setIsAddressModalOpen(false)}
-        title="Delivery Address"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-500">
-            Please provide your delivery address to place the order.
-          </p>
-
-          {loadingAddresses ? (
-            <div className="flex justify-center p-4">
-              <Spinner size="sm" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {!isAddingNew && addresses.length > 0 && (
-                <div className="space-y-2">
-                  {addresses.map((addr) => (
-                    <label
-                      key={addr.id}
-                      className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50"
-                    >
-                      <input
-                        type="radio"
-                        name="addressId"
-                        value={addr.id}
-                        checked={selectedAddressId === addr.id}
-                        onChange={(e) => setSelectedAddressId(e.target.value)}
-                        className="mt-1"
-                      />
-                      <div className="text-sm">
-                        <p className="font-medium">{addr.street}</p>
-                        <p className="text-gray-500">
-                          {[addr.city, addr.zipCode, addr.country]
-                            .filter(Boolean)
-                            .join(", ")}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full mt-2"
-                    onClick={() => setIsAddingNew(true)}
-                  >
-                    + Add New Address
-                  </Button>
-                </div>
-              )}
-
-              {isAddingNew && (
-                <div className="space-y-3">
-                  <Input
-                    label="Street Address *"
-                    placeholder="123 Main St"
-                    value={newAddress.street}
-                    onChange={(e) =>
-                      setNewAddress({ ...newAddress, street: e.target.value })
-                    }
-                  />
-                  <div className="grid grid-cols-2 gap-3">
-                    <Input
-                      label="City"
-                      placeholder="New York"
-                      value={newAddress.city}
-                      onChange={(e) =>
-                        setNewAddress({ ...newAddress, city: e.target.value })
-                      }
-                    />
-                    <Input
-                      label="Zip Code"
-                      placeholder="10001"
-                      value={newAddress.zipCode}
-                      onChange={(e) =>
-                        setNewAddress({
-                          ...newAddress,
-                          zipCode: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <Input
-                    label="Country"
-                    placeholder="United States"
-                    value={newAddress.country}
-                    onChange={(e) =>
-                      setNewAddress({ ...newAddress, country: e.target.value })
-                    }
-                  />
-                  {addresses.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-2"
-                      onClick={() => setIsAddingNew(false)}
-                    >
-                      Cancel Adding New Address
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex gap-3 justify-end pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setIsAddressModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handlePlaceOrder} loading={submitting}>
-              Confirm Order
-            </Button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Processing overlay */}
       {submitting && (

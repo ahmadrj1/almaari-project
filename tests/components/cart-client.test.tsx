@@ -66,15 +66,27 @@ const mockAddress = {
   country: "US",
 };
 
-function mockFetch(responses: object[]) {
-  let callCount = 0;
-  jest.spyOn(window, "fetch").mockImplementation(() => {
-    const response = responses[Math.min(callCount++, responses.length - 1)];
-    return Promise.resolve({
-      ok: true,
-      json: async () => response,
-    } as Response);
-  });
+function mockFetch(responses: object[] | Record<string, object>) {
+  if (Array.isArray(responses)) {
+    let callCount = 0;
+    jest.spyOn(window, "fetch").mockImplementation(() => {
+      const response = responses[Math.min(callCount++, responses.length - 1)];
+      return Promise.resolve({
+        ok: true,
+        json: async () => response,
+      } as Response);
+    });
+  } else {
+    jest.spyOn(window, "fetch").mockImplementation((url) => {
+      const urlStr = String(url);
+      const key = Object.keys(responses).find((k) => urlStr.includes(k));
+      const response = key ? responses[key] : { success: true };
+      return Promise.resolve({
+        ok: true,
+        json: async () => response,
+      } as Response);
+    });
+  }
 }
 
 describe("CartPage Client Component Tests", () => {
@@ -178,14 +190,14 @@ describe("CartPage Client Component Tests", () => {
   });
 
   it("places order successfully and shows success dialog", async () => {
-    mockFetch([
-      { success: true, data: { items: [mockCartItem], adjustments: [] } },
-      { success: true, issues: [] },
-      { success: true, data: [mockAddress] },
-      { success: true, data: { id: "order-999" } },
-    ]);
+    mockFetch({
+      "/api/cart/validate": { success: true, issues: [] },
+      "/api/cart": { success: true, data: { items: [mockCartItem], adjustments: [] } },
+      "/api/addresses": { success: true, data: [mockAddress] },
+      "/api/stripe/payment-methods": { paymentMethods: [] },
+      "/api/orders": { success: true, data: { order: { id: "order-999" } } },
+    });
 
-    jest.useFakeTimers({ advanceTimers: false });
     await act(async () => {
       render(<CartPage />);
     });
@@ -201,19 +213,21 @@ describe("CartPage Client Component Tests", () => {
     );
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /confirm order/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /continue to payment/i }),
+      );
     });
 
-    // Advance the 1s delay inside handlePlaceOrder
+    await waitFor(() =>
+      screen.getByRole("heading", { name: /payment method/i }),
+    );
+
     await act(async () => {
-      await Promise.resolve();
-      jest.advanceTimersByTime(2000);
+      fireEvent.click(screen.getByRole("button", { name: /place order/i }));
     });
 
     await waitFor(() => {
       expect(screen.getByText(/order placed!/i)).toBeInTheDocument();
     });
-
-    jest.useRealTimers();
   });
 });

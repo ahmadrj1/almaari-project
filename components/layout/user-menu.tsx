@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { LogOut, Package } from "lucide-react";
+import { LogOut, Package, CreditCard, MapPin } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { ChevronDown } from "lucide-react";
 
@@ -49,6 +49,22 @@ export function UserMenu() {
           >
             <Package className="mr-3 h-4 w-4 text-gray-400" />
             Orders
+          </Link>
+          <Link
+            href="/payment-methods"
+            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            onClick={() => setIsOpen(false)}
+          >
+            <CreditCard className="mr-3 h-4 w-4 text-gray-400" />
+            Payment Methods
+          </Link>
+          <Link
+            href="/addresses"
+            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            onClick={() => setIsOpen(false)}
+          >
+            <MapPin className="mr-3 h-4 w-4 text-gray-400" />
+            Saved Addresses
           </Link>
           <button
             className="flex w-full items-center px-4 py-2 text-left text-sm text-[#E53935] hover:bg-red-50"

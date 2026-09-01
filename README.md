@@ -83,6 +83,17 @@ NEXT_PUBLIC_APP_ENV="dev"
 - `NODE_ENV` is set automatically by your runtime and is used internally for development vs production behavior.
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` power admin product image uploads and remote image delivery.
 - `NEXT_PUBLIC_APP_ENV` controls artificial loading delays for UX testing: set it to "dev" to enable delays (1–2 seconds on some flows), or "production" to run without delays.
+- `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are retrieved from the Stripe Dashboard.
+- `STRIPE_WEBHOOK_SECRET` is obtained after configuring a webhook endpoint pointing to `/api/stripe/webhook` in the Stripe Dashboard.
+- `NEXT_PUBLIC_APP_URL` defines the base URL (e.g. `http://localhost:3000`) for payment redirect return URLs.
+
+## Stripe Configuration
+
+To set up Stripe Payments:
+
+1. Enable **Smart Retries** in Stripe Dashboard Settings (Max attempts: 3, Retry window: 3 days).
+2. Add a Webhook endpoint pointing to `https://your-domain.com/api/stripe/webhook` and subscribe to `payment_intent.succeeded` and `payment_intent.payment_failed` events.
+3. Add the API keys and webhook signing secret to your environment variables.
 
 ## Getting Started
 

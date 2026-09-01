@@ -48,6 +48,8 @@ export type OrderDetail = {
     id: string;
     fullName: string;
   } | null;
+  paymentMethod?: string;
+  paymentStatus?: string;
 };
 
 export type NotificationType =
@@ -58,9 +60,10 @@ export type NotificationMetadata = Prisma.InputJsonObject;
 export type SavedAddress = {
   id: string;
   street: string;
-  city?: string;
-  country?: string;
-  zipCode?: string;
+  city?: string | null;
+  country?: string | null;
+  zipCode?: string | null;
+  isDefault?: boolean;
 };
 
 export type Order = {
@@ -73,6 +76,8 @@ export type Order = {
     fullName: string;
   } | null;
   items: { quantity: number }[];
+  paymentMethod?: string;
+  paymentStatus?: string;
 };
 
 export interface Notification {

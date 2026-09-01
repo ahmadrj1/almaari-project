@@ -119,24 +119,25 @@ export default function AdminOrdersPage() {
                 <th className="pb-3 font-medium">Unit(s)</th>
                 <th className="pb-3 font-medium">Amount</th>
                 <th className="pb-3 font-medium">Status</th>
+                <th className="pb-3 font-medium">Payment</th>
                 <th className="pb-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-500">
+                  <td colSpan={8} className="py-8 text-center text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-500">
+                  <td colSpan={8} className="py-8 text-center text-gray-500">
                     No orders found.
                   </td>
                 </tr>
               ) : (
-                orders.map((order) => (
+                orders.map((order: Order) => (
                   <tr
                     key={order.id}
                     className="border-b border-gray-100 hover:bg-gray-50"
@@ -171,6 +172,25 @@ export default function AdminOrdersPage() {
                       >
                         {order.status}
                       </span>
+                    </td>
+                    <td className="py-4">
+                      {order.paymentMethod === "CREDIT_DEBIT_CARD" ? (
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            order.paymentStatus === "PAID"
+                              ? "bg-green-100 text-green-800"
+                              : order.paymentStatus === "PROCESSING"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : order.paymentStatus === "FAILED"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-blue-100 text-blue-800"
+                          }`}
+                        >
+                          {order.paymentStatus}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="py-4">
                       <Link
