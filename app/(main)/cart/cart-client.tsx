@@ -43,8 +43,6 @@ export default function CartPage() {
   const [stockIssues, setStockIssues] = useState<StockIssue[]>([]);
   const [isStockIssueModalOpen, setIsStockIssueModalOpen] = useState(false);
 
-  const [isCheckoutMode, setIsCheckoutMode] = useState(false);
-
   const router = useRouter();
   const searchParams = useSearchParams();
   const retryOrderId = searchParams.get("retryOrderId");
@@ -119,7 +117,6 @@ export default function CartPage() {
             tax: Number(order.tax),
             total: Number(order.total),
           });
-          setIsCheckoutMode(true);
         } else {
           showToast("error", "Failed to retrieve order details for retry");
         }
@@ -287,7 +284,7 @@ export default function CartPage() {
         setStockIssues(issues);
         setIsStockIssueModalOpen(true);
       } else {
-        setIsCheckoutMode(true);
+        router.push("/cart?step=1");
       }
     } catch {
       showToast("error", "Failed to validate cart");
@@ -337,6 +334,13 @@ export default function CartPage() {
     );
   }
 
+  const stepParam = searchParams.get("step");
+  const isCheckoutMode = Boolean(
+    retryOrderId || stepParam === "1" || stepParam === "2",
+  );
+  const checkoutStep: 1 | 2 =
+    stepParam === "2" || (retryOrderId && !stepParam) ? 2 : 1;
+
   if (isCheckoutMode) {
     const checkoutItems = retryOrderId ? retryOrderItems : items;
     const checkoutItemIds = retryOrderId
@@ -355,10 +359,12 @@ export default function CartPage() {
         subTotal={checkoutSubtotal}
         tax={checkoutTax}
         total={checkoutTotal}
+        step={checkoutStep}
+        onStepChange={(s) => router.push(`/cart?step=${s}`)}
         onBack={() => router.push("/cart")}
         onSuccess={(orderId) => {
           setSuccessOrderId(orderId);
-          setIsCheckoutMode(false);
+          router.push("/cart");
         }}
         onCartRefresh={refresh}
         retryOrderId={retryOrderId || undefined}
