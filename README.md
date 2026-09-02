@@ -72,6 +72,11 @@ CLOUDINARY_API_SECRET="your-api-secret"
 
 # App Environment (set to "dev" to enable artificial loading delays)
 NEXT_PUBLIC_APP_ENV="dev"
+
+# Stripe Setup
+STRIPE_SECRET_KEY=""
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=""
+STRIPE_WEBHOOK_SECRET=""
 ```
 
 ### Variable Notes
