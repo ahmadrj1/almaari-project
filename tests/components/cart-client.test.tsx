@@ -8,6 +8,26 @@ import {
 } from "@testing-library/react";
 import CartPage from "@/app/(main)/cart/cart-client";
 
+// Mock next/navigation
+let mockStepParam: string | null = null;
+const mockPush = jest.fn((url: string) => {
+  const match = String(url).match(/step=(\d+)/);
+  mockStepParam = match ? match[1] : null;
+});
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: mockPush,
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+  }),
+  useSearchParams: () => ({
+    get: jest.fn((key: string) => (key === "step" ? mockStepParam : null)),
+  }),
+  usePathname: () => "/cart",
+}));
+
 // Mock next/image
 jest.mock("next/image", () => ({
   __esModule: true,
@@ -92,6 +112,7 @@ function mockFetch(responses: object[] | Record<string, object>) {
 describe("CartPage Client Component Tests", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockStepParam = null;
   });
 
   it("shows loading spinner initially", () => {
