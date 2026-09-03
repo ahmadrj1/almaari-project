@@ -120,6 +120,15 @@ export class AdminOrderService {
             400,
           );
         }
+        if (
+          order.paymentStatus === "PAID" &&
+          status === OrderStatus.CANCELLED
+        ) {
+          throw new AppError(
+            "Cannot cancel an order with a paid card payment.",
+            400,
+          );
+        }
       }
 
       if (status !== order.status) {

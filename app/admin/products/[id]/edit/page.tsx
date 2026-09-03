@@ -19,8 +19,14 @@ import { MAX_UPLOAD_SIZE } from "@/lib/constants";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 
 const formSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  price: z.number().min(0, "Price cannot be negative"),
+  title: z.string().trim().min(1, "Title is required"),
+  price: z
+    .string()
+    .trim()
+    .min(1, "Price is required")
+    .refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+      message: "Price must be greater than 0",
+    }),
   categoryId: z.string().min(1, "Category is required"),
 });
 
@@ -77,7 +83,9 @@ export default function EditProductPage({
       if (dataProduct.success) {
         const p = dataProduct.data;
         setTitle(p.title);
-        setPrice(p.price);
+        setPrice(
+          p.price !== undefined && p.price !== null ? String(p.price) : "",
+        );
         setCategoryId(p.categoryId || "");
 
         setVariants(
@@ -176,6 +184,7 @@ export default function EditProductPage({
         colorId: "",
       }));
       setProductImages((prev) => [...prev, ...newImages]);
+      setErrors((prev) => ({ ...prev, images: "" }));
     }
   };
 
@@ -190,7 +199,15 @@ export default function EditProductPage({
   };
 
   const addVariant = () => {
-    if (!selectedColor || !selectedSize || !variantQty) return;
+    if (
+      !selectedColor ||
+      !selectedSize ||
+      !variantQty ||
+      Number(variantQty) <= 0
+    ) {
+      showToast("error", "Please select color, size, and quantity (> 0)");
+      return;
+    }
 
     const colorObj = colors.find((c) => c.id === selectedColor);
     const sizeObj = sizes.find((s) => s.id === selectedSize);
@@ -243,41 +260,39 @@ export default function EditProductPage({
   );
 
   const handleUpdate = async () => {
-    try {
-      setErrors({});
-      formSchema.parse({
-        title,
-        price: Number(price),
-        categoryId: categoryId === "create_new" ? newCategoryName : categoryId,
-      });
+    const newErrors: Record<string, string> = {};
 
-      if (variants.length === 0) {
-        setErrors((prev) => ({
-          ...prev,
-          variants: "At least one variant is required",
-        }));
-        showToast("error", "At least one variant is required");
-        return;
-      }
-      if (productImages.length === 0) {
-        setErrors((prev) => ({
-          ...prev,
-          images: "At least one image is required",
-        }));
-        showToast("error", "At least one image is required");
-        return;
-      }
-    } catch (e) {
-      if (e instanceof z.ZodError) {
-        const fieldErrors: Record<string, string> = {};
-        e.issues.forEach((err) => {
-          if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
-        });
-        setErrors(fieldErrors);
-        showToast("error", "Please fix the highlighted errors");
-      }
+    const effectiveCategoryId =
+      categoryId === "create_new" ? newCategoryName : categoryId;
+
+    const result = formSchema.safeParse({
+      title,
+      price,
+      categoryId: effectiveCategoryId,
+    });
+
+    if (!result.success) {
+      result.error.issues.forEach((err) => {
+        if (err.path[0] && !newErrors[err.path[0] as string]) {
+          newErrors[err.path[0] as string] = err.message;
+        }
+      });
+    }
+
+    if (productImages.length === 0) {
+      newErrors.images = "At least one image is required";
+    }
+
+    if (variants.length === 0) {
+      newErrors.variants = "At least one variant is required";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+
+    setErrors({});
 
     setSaving(true);
     try {
@@ -368,7 +383,7 @@ export default function EditProductPage({
             Product Images <span className="text-red-500">*</span>
           </label>
           <div
-            className={`border-2 border-dashed ${errors.images ? "border-red-500" : "border-gray-200"} rounded-lg p-4 bg-gray-50 flex flex-col items-center justify-center min-h-[150px] cursor-pointer hover:bg-gray-100 transition-colors`}
+            className={`border-2 border-dashed ${errors.images ? "border-red-500 bg-red-50/50 ring-1 ring-red-500" : "border-gray-200 bg-gray-50"} rounded-lg p-4 flex flex-col items-center justify-center min-h-[150px] cursor-pointer hover:bg-gray-100 transition-colors`}
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload size={24} className="text-gray-400 mb-2" />
@@ -384,6 +399,9 @@ export default function EditProductPage({
               multiple
             />
           </div>
+          {errors.images && (
+            <span className="text-xs text-red-500 block">{errors.images}</span>
+          )}
 
           <div className="grid grid-cols-1 gap-4 max-h-[400px] overflow-y-auto pr-1">
             {productImages.map((img) => (
@@ -434,11 +452,16 @@ export default function EditProductPage({
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className={`w-full border ${errors.title ? "border-red-500" : "border-gray-200"} rounded p-2.5 text-sm focus:outline-none focus:border-blue-500`}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                if (errors.title) setErrors((prev) => ({ ...prev, title: "" }));
+              }}
+              className={`w-full border ${errors.title ? "border-red-500 ring-1 ring-red-500" : "border-gray-200"} rounded p-2.5 text-sm focus:outline-none focus:border-blue-500`}
             />
             {errors.title && (
-              <span className="text-xs text-red-500 mt-1">{errors.title}</span>
+              <span className="text-xs text-red-500 mt-1 block">
+                {errors.title}
+              </span>
             )}
           </div>
 
@@ -449,12 +472,21 @@ export default function EditProductPage({
               </label>
               <input
                 type="number"
+                min="0"
+                step="0.01"
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className={`w-full border ${errors.price ? "border-red-500" : "border-gray-200"} rounded p-2.5 text-sm focus:outline-none focus:border-blue-500`}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || Number(val) >= 0) {
+                    setPrice(val);
+                    if (errors.price)
+                      setErrors((prev) => ({ ...prev, price: "" }));
+                  }
+                }}
+                className={`w-full border ${errors.price ? "border-red-500 ring-1 ring-red-500" : "border-gray-200"} rounded p-2.5 text-sm focus:outline-none focus:border-blue-500`}
               />
               {errors.price && (
-                <span className="text-xs text-red-500 mt-1">
+                <span className="text-xs text-red-500 mt-1 block">
                   {errors.price}
                 </span>
               )}
@@ -501,6 +533,8 @@ export default function EditProductPage({
                 ]}
                 onValueChange={(value) => {
                   setCategoryId(value);
+                  if (errors.categoryId)
+                    setErrors((prev) => ({ ...prev, categoryId: "" }));
                   if (value !== "create_new") {
                     setNewCategoryName("");
                   }
@@ -528,17 +562,24 @@ export default function EditProductPage({
               </div>
             )}
             {errors.categoryId && (
-              <span className="text-xs text-red-500">{errors.categoryId}</span>
+              <span className="text-xs text-red-500 mt-1 block">
+                {errors.categoryId}
+              </span>
             )}
           </div>
 
           {/* Variants section */}
           <div
-            className={`space-y-3 border-t border-gray-100 pt-3 ${errors.variants ? "rounded-lg border-2 border-red-500 p-2" : ""}`}
+            className={`space-y-3 border-t border-gray-100 pt-3 ${errors.variants ? "rounded-lg border-2 border-red-500 p-2.5 bg-red-50/20 ring-1 ring-red-500" : ""}`}
           >
             <label className="block text-sm text-gray-700 mb-1 font-medium">
               Add Product Variants <span className="text-red-500">*</span>
             </label>
+            {errors.variants && (
+              <span className="text-xs text-red-500 block mb-2">
+                {errors.variants}
+              </span>
+            )}
             <div className="flex items-center gap-3">
               <SortDropdown
                 className="flex-1 min-w-0"
@@ -566,8 +607,14 @@ export default function EditProductPage({
               />
               <input
                 type="number"
+                min="0"
                 value={variantQty}
-                onChange={(e) => setVariantQty(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || Number(val) >= 0) {
+                    setVariantQty(val);
+                  }
+                }}
                 placeholder="Enter Qty"
                 className="flex-1 border border-gray-200 rounded p-2 text-sm focus:outline-none focus:border-blue-500"
               />
@@ -599,14 +646,16 @@ export default function EditProductPage({
                   <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
                     <input
                       type="number"
+                      min="0"
                       value={variant.stock}
                       onChange={(e) => {
-                        const updated = variants.map((v) =>
-                          v.id === variant.id
-                            ? { ...v, stock: e.target.value }
-                            : v,
-                        );
-                        setVariants(updated);
+                        const val = e.target.value;
+                        if (val === "" || Number(val) >= 0) {
+                          const updated = variants.map((v) =>
+                            v.id === variant.id ? { ...v, stock: val } : v,
+                          );
+                          setVariants(updated);
+                        }
                       }}
                       className="w-full focus:outline-none bg-transparent"
                     />
