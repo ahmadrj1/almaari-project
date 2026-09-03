@@ -89,7 +89,7 @@ export default function AdminProductsPage() {
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm min-h-[calc(100vh-8rem)]">
+    <div className="bg-white rounded-lg p-6 shadow-sm min-h-[calc(100vh-8rem)] flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl font-semibold text-blue-500">Products</h1>
         <div className="flex gap-4 w-full sm:w-auto">
@@ -121,7 +121,7 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto flex-1">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-200 text-sm text-gray-500">
@@ -228,7 +228,7 @@ export default function AdminProductsPage() {
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-center mt-6">
+      <div className="flex justify-center mt-auto pt-6">
         <Pagination
           currentPage={page}
           totalPages={totalPages}
