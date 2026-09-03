@@ -58,7 +58,7 @@ export default function AdminOrdersPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-8rem)]">
+    <div className="min-h-[calc(100vh-8rem)] flex flex-col">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {[
@@ -89,7 +89,7 @@ export default function AdminOrdersPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
+      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100 flex-1 flex flex-col">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <h1 className="text-2xl font-semibold text-blue-500">Orders</h1>
           <div className="relative w-full sm:w-96">
@@ -109,7 +109,7 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-200 text-sm text-gray-500">
@@ -207,7 +207,7 @@ export default function AdminOrdersPage() {
           </table>
         </div>
 
-        <div className="flex justify-center">
+        <div className="flex justify-center mt-auto pt-6">
           <Pagination
             currentPage={page}
             totalPages={totalPages}
