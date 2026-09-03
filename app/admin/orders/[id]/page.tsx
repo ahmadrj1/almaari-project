@@ -184,6 +184,13 @@ export default function OrderDetailPage({
                   // Terminal states: no changes allowed
                   disabled = true;
                 } else if (
+                  s === "CANCELLED" &&
+                  order.paymentMethod === "CREDIT_DEBIT_CARD" &&
+                  order.paymentStatus === "PAID"
+                ) {
+                  // Paid card payment orders cannot be cancelled
+                  disabled = true;
+                } else if (
                   order.paymentMethod === "CREDIT_DEBIT_CARD" &&
                   order.paymentStatus === "FAILED" &&
                   order.status === "PENDING"
