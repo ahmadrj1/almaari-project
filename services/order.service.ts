@@ -235,6 +235,9 @@ export class OrderService {
         { orderId: order.id },
       );
 
+      const { queueOrderStatusEmail } = await import("@/lib/job-scheduler");
+      await queueOrderStatusEmail(order.id);
+
       return { order };
     }
   }

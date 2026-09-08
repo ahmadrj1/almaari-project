@@ -59,7 +59,7 @@ export default function PaymentSuccessPage(props: PageProps) {
             View Order Status
           </Link>
           <Link
-            href="/cart"
+            href="/"
             className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 rounded-xl transition duration-150"
           >
             Continue Shopping

@@ -205,6 +205,9 @@ export class StripeService {
       `Payment confirmed for order #${order.id.slice(0, 8)}. Your order is now being processed.`,
       { orderId: order.id },
     );
+
+    const { queueOrderStatusEmail } = await import("@/lib/job-scheduler");
+    await queueOrderStatusEmail(order.id);
   }
 
   private static async handlePaymentFailed(pi: Stripe.PaymentIntent) {
@@ -272,5 +275,8 @@ export class StripeService {
         { orderId: order.id },
       );
     }
+
+    const { queueOrderStatusEmail } = await import("@/lib/job-scheduler");
+    await queueOrderStatusEmail(order.id);
   }
 }

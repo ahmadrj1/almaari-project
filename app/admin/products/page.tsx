@@ -7,6 +7,8 @@ import { Edit, Trash2, Eye, ShoppingBag } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import DeleteProductModal from "@/components/admin/DeleteProductModal";
 import ViewProductModal from "@/components/admin/ViewProductModal";
+import BulkUploadModal from "@/components/admin/BulkUploadModal";
+
 import { Category, ProductSummary } from "@/types";
 import { Pagination } from "@/components/ui/pagination";
 import { ADMIN_PRODUCTS_PER_PAGE_DEFAULT } from "@/lib/constants";
@@ -23,6 +25,7 @@ export default function AdminProductsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [viewProductId, setViewProductId] = useState<string | null>(null);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   const fetchProducts = useCallback(async (p: number, search: string) => {
     setLoading(true);
@@ -99,7 +102,10 @@ export default function AdminProductsPage() {
           >
             + Add a Single Product
           </Link>
-          <button className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+          <button
+            onClick={() => setIsBulkModalOpen(true)}
+            className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          >
             + Add Multiple Products
           </button>
         </div>
@@ -246,6 +252,11 @@ export default function AdminProductsPage() {
       <ViewProductModal
         productId={viewProductId}
         onClose={() => setViewProductId(null)}
+      />
+
+      <BulkUploadModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
       />
     </div>
   );

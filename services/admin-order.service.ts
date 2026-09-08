@@ -233,6 +233,9 @@ export class AdminOrderService {
       { orderId: id, status },
     );
 
+    const { queueOrderStatusEmail } = await import("@/lib/job-scheduler");
+    await queueOrderStatusEmail(id);
+
     return updated;
   }
 }
