@@ -37,7 +37,10 @@ describe("Orders API Routes", () => {
       (auth as jest.Mock).mockResolvedValue(null);
 
       const res = await createOrder(
-        makeReq("/api/orders", "POST", { addressId: "a1", selectedItemIds: ["i1"] }),
+        makeReq("/api/orders", "POST", {
+          addressId: "a1",
+          selectedItemIds: ["i1"],
+        }),
       );
       expect(res.status).toBe(401);
     });
@@ -69,7 +72,10 @@ describe("Orders API Routes", () => {
       );
 
       const res = await createOrder(
-        makeReq("/api/orders", "POST", { addressId: "a1", selectedItemIds: [] }),
+        makeReq("/api/orders", "POST", {
+          addressId: "a1",
+          selectedItemIds: [],
+        }),
       );
       const data = await res.json();
 

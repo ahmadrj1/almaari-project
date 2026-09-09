@@ -10,17 +10,12 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ShoppingBag } from "lucide-react";
-import dynamic from "next/dynamic";
 import { Suspense } from "react";
+import { ProductCard } from "@/components/ui/product-card";
 import { ProductCardSkeleton } from "@/components/ui/product-card-skeleton";
 
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
-
-const ProductCard = dynamic(
-  () => import("@/components/ui/product-card").then((mod) => mod.ProductCard),
-  { ssr: false, loading: () => <ProductCardSkeleton /> },
-);
 
 import { SearchBar } from "@/components/ui/search-bar";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
@@ -53,7 +48,7 @@ function HomeContent() {
   const { refresh } = useCartCount();
 
   const [products, setProducts] = useState<ProductWithVariants[]>([]);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
   const [hasPrevious, setHasPrevious] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -63,6 +58,7 @@ function HomeContent() {
   const prevCursorRef = useRef<string | null>(null);
   const productsRef = useRef<ProductWithVariants[]>([]);
   const isFetchingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const anchorRef = useRef<{ id: string; top: number } | null>(null);
 
   useIsomorphicLayoutEffect(() => {
@@ -88,25 +84,30 @@ function HomeContent() {
   const sort = searchParams.get("sort") || DEFAULT_SORT;
 
   const [localSearch, setLocalSearch] = useState(searchParam);
+  const [prevSearchParam, setPrevSearchParam] = useState(searchParam);
+
+  if (searchParam !== prevSearchParam) {
+    setPrevSearchParam(searchParam);
+    setLocalSearch(searchParam);
+  }
+
   const debouncedSearch = useDebounce(localSearch);
+  const isUserTypingRef = useRef(false);
+  const isInitialMountRef = useRef(true);
+
+  // Clear query params on page unload so refreshing starts clean
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (window.location.search) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   // Track current filter key to cancel stale fetches on param change
   const filterKey = useRef(`${searchParam}__${sort}`);
-
-  // Reset filters on page reload
-  useEffect(() => {
-    const nav = performance.getEntriesByType("navigation")[0] as
-      PerformanceNavigationTiming | undefined;
-    const isReload = nav?.type === "reload";
-    if (isReload) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLocalSearch("");
-      if (searchParams.get("search") || searchParams.get("sort")) {
-        router.replace("/");
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const dedup = (arr: ProductWithVariants[]) => {
     const seen = new Set<string>();
@@ -119,32 +120,43 @@ function HomeContent() {
 
   const fetchPage = useCallback(
     async (direction: "next" | "prev" | "initial") => {
-      if (isFetchingRef.current && direction !== "initial") return;
-      isFetchingRef.current = true;
-
       const isInitial = direction === "initial";
-      const cursor =
-        direction === "prev" ? prevCursorRef.current : nextCursorRef.current;
 
-      const currentKey = `${searchParam}__${sort}`;
       if (isInitial) {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = new AbortController();
+        nextCursorRef.current = null;
+        prevCursorRef.current = null;
+        setHasMore(false);
+        setHasPrevious(false);
+        setLoadingMore(false);
+        setLoadingPrevious(false);
         setLoading(true);
         productsRef.current = [];
         setProducts([]);
-        nextCursorRef.current = null;
-        prevCursorRef.current = null;
-        setHasMore(true);
-        setHasPrevious(false);
       } else {
+        if (isFetchingRef.current) return;
+        const cursor =
+          direction === "prev" ? prevCursorRef.current : nextCursorRef.current;
+        if (!cursor) return;
         setLoadingMore(true);
         if (direction === "prev") setLoadingPrevious(true);
       }
 
-      try {
-        if (!isInitial && process.env.NEXT_PUBLIC_APP_ENV === "dev") {
-          await new Promise((r) => setTimeout(r, 1000));
-        }
+      isFetchingRef.current = true;
 
+      const cursor = isInitial
+        ? undefined
+        : direction === "prev"
+          ? prevCursorRef.current
+          : nextCursorRef.current;
+
+      const currentKey = `${searchParam}__${sort}`;
+      const signal = abortControllerRef.current?.signal;
+
+      try {
         const params = new URLSearchParams({
           search: searchParam,
           sort,
@@ -154,7 +166,7 @@ function HomeContent() {
             : {}),
         });
 
-        const res = await fetch(`/api/products/cursor?${params}`);
+        const res = await fetch(`/api/products/cursor?${params}`, { signal });
         if (!res.ok) throw new Error("Failed to fetch products");
 
         const json = await res.json();
@@ -195,7 +207,6 @@ function HomeContent() {
           }
         }
 
-        // Sync ref immediately before releasing lock
         productsRef.current = nextList;
         setProducts(nextList);
 
@@ -225,14 +236,17 @@ function HomeContent() {
             nextCursorRef.current = nextList[nextList.length - 1]?.id ?? null;
           }
         }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
+        console.error("fetchPage error:", err);
       } finally {
         isFetchingRef.current = false;
-        if (filterKey.current === `${searchParam}__${sort}`) {
+        if (filterKey.current === currentKey) {
           if (isInitial) setLoading(false);
-          else {
-            setLoadingMore(false);
-            setLoadingPrevious(false);
-          }
+          setLoadingMore(false);
+          setLoadingPrevious(false);
         }
       }
     },
@@ -241,11 +255,24 @@ function HomeContent() {
 
   // Initial fetch & refetch on filter change
   useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      const nav = performance.getEntriesByType("navigation")[0] as
+        PerformanceNavigationTiming | undefined;
+      const perfNav = (
+        performance as unknown as { navigation?: { type?: number } }
+      ).navigation;
+      const isReload = nav?.type === "reload" || perfNav?.type === 1;
+
+      if (isReload && window.location.search) {
+        router.replace("/", { scroll: false });
+        return;
+      }
+    }
+
     filterKey.current = `${searchParam}__${sort}`;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPage("initial");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParam, sort]);
+  }, [searchParam, sort, router, fetchPage]);
 
   const loadMore = useCallback(() => {
     if (!loadingMore && hasMore) {
@@ -269,19 +296,22 @@ function HomeContent() {
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(window.location.search);
       Object.entries(updates).forEach(([k, v]) => {
         if (v) params.set(k, v);
         else params.delete(k);
       });
       params.delete("page");
-      router.push(`?${params.toString()}`);
+      const qs = params.toString();
+      router.replace(qs ? `?${qs}` : "/", { scroll: false });
     },
-    [searchParams, router],
+    [router],
   );
 
   useEffect(() => {
+    if (!isUserTypingRef.current) return;
     if (debouncedSearch !== searchParam) {
+      isUserTypingRef.current = false;
       updateParams({ search: debouncedSearch });
     }
   }, [debouncedSearch, searchParam, updateParams]);
@@ -345,7 +375,10 @@ function HomeContent() {
                 placeholder="Search products or categories..."
                 className="w-full"
                 value={localSearch}
-                onChange={(e) => setLocalSearch(e.target.value)}
+                onChange={(e) => {
+                  isUserTypingRef.current = true;
+                  setLocalSearch(e.target.value);
+                }}
               />
             </div>
             <div className="shrink-0">

@@ -84,40 +84,48 @@ export default function CheckoutFlow({
     "COD",
   );
   const [showAddNewCard, setShowAddNewCard] = useState(false);
+  const [isDuplicateCardError, setIsDuplicateCardError] = useState(false);
+  const [addCardError, setAddCardError] = useState<string | null>(null);
 
   const { showToast } = useToast();
   const router = useRouter();
 
   const selectedCartItems = items.filter((i) => selectedItemIds.has(i.id));
 
-  const fetchAddresses = useCallback(async () => {
-    setAddressesLoading(true);
-    try {
-      const res = await fetch("/api/addresses");
-      const data = await res.json();
-      if (data.success) {
-        const addrs: SavedAddress[] = data.data;
-        setAddresses(addrs);
-        if (addrs.length > 0) {
-          if (
-            initialAddressId &&
-            addrs.some((a) => a.id === initialAddressId)
-          ) {
-            setSelectedAddressId(initialAddressId);
+  const fetchAddresses = useCallback(
+    async (preferredId?: string) => {
+      setAddressesLoading(true);
+      try {
+        const res = await fetch("/api/addresses");
+        const data = await res.json();
+        if (data.success) {
+          const addrs: SavedAddress[] = data.data;
+          setAddresses(addrs);
+          if (addrs.length > 0) {
+            const targetId =
+              (preferredId && addrs.some((a) => a.id === preferredId)
+                ? preferredId
+                : null) ||
+              (selectedAddressId &&
+              addrs.some((a) => a.id === selectedAddressId)
+                ? selectedAddressId
+                : null) ||
+              (initialAddressId && addrs.some((a) => a.id === initialAddressId)
+                ? initialAddressId
+                : (addrs.find((a) => a.isDefault) ?? addrs[0]).id);
+            setSelectedAddressId(targetId);
           } else {
-            const def = addrs.find((a) => a.isDefault) ?? addrs[0];
-            setSelectedAddressId(def.id);
+            setIsAddingNew(true);
           }
-        } else {
-          setIsAddingNew(true);
         }
+      } catch {
+        showToast("error", "Failed to load addresses");
+      } finally {
+        setAddressesLoading(false);
       }
-    } catch {
-      showToast("error", "Failed to load addresses");
-    } finally {
-      setAddressesLoading(false);
-    }
-  }, [initialAddressId, showToast]);
+    },
+    [initialAddressId, selectedAddressId, showToast],
+  );
 
   const fetchPaymentMethods = useCallback(async () => {
     try {
@@ -212,9 +220,16 @@ export default function CheckoutFlow({
         });
         const data = await res.json();
         if (data.success) {
-          setSelectedAddressId(data.data.id);
+          const newId = data.data.id;
+          setSelectedAddressId(newId);
           setIsAddingNew(false);
-          await fetchAddresses();
+          setNewAddress({
+            street: "",
+            city: "",
+            zipCode: "",
+            country: "",
+          });
+          await fetchAddresses(newId);
           setStep(2);
         } else {
           showToast("error", data.error || "Failed to add address");
@@ -306,6 +321,8 @@ export default function CheckoutFlow({
 
   const handleAddCardSuccess = async (pmId: string) => {
     setLoading(true);
+    setIsDuplicateCardError(false);
+    setAddCardError(null);
     try {
       const res = await fetch("/api/stripe/payment-methods", {
         method: "POST",
@@ -321,10 +338,18 @@ export default function CheckoutFlow({
         setSelectedPaymentId(data.paymentMethod?.id || pmId);
         setShowAddNewCard(false);
       } else {
-        showToast("error", data.error || "Failed to save card");
+        if (data.error === "DUPLICATE_CARD") {
+          setIsDuplicateCardError(true);
+        } else {
+          setAddCardError(
+            data.error || "Failed to save card. Please try again.",
+          );
+        }
+        setShowAddNewCard(false);
       }
     } catch {
-      showToast("error", "Error saving card");
+      setAddCardError("An unexpected error occurred. Please try again.");
+      setShowAddNewCard(false);
     } finally {
       setLoading(false);
     }
@@ -656,6 +681,8 @@ export default function CheckoutFlow({
                     onClick={() => {
                       setSelectedPaymentId("COD");
                       setShowAddNewCard(false);
+                      setIsDuplicateCardError(false);
+                      setAddCardError(null);
                     }}
                     className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-4 ${selectedPaymentId === "COD" ? "border-blue-600 bg-blue-50/40" : "border-gray-200 hover:border-blue-300"}`}
                   >
@@ -686,6 +713,8 @@ export default function CheckoutFlow({
                       onClick={() => {
                         setSelectedPaymentId(pm.id);
                         setShowAddNewCard(false);
+                        setIsDuplicateCardError(false);
+                        setAddCardError(null);
                       }}
                       className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-4 ${selectedPaymentId === pm.id ? "border-blue-600 bg-blue-50/40" : "border-gray-200 hover:border-blue-300"}`}
                     >
@@ -717,11 +746,24 @@ export default function CheckoutFlow({
                   ))}
 
                   {/* Add new card */}
+                  {isDuplicateCardError && (
+                    <div className="text-sm font-medium text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                      This card is already saved to your account.
+                    </div>
+                  )}
+                  {addCardError && (
+                    <div className="text-sm font-medium text-red-700 bg-red-50 p-3 rounded-lg border border-red-200">
+                      {addCardError}
+                    </div>
+                  )}
+
                   {!showAddNewCard && (
                     <button
                       onClick={() => {
                         setShowAddNewCard(true);
                         setSelectedPaymentId("new");
+                        setIsDuplicateCardError(false);
+                        setAddCardError(null);
                       }}
                       className="w-full p-4 border-2 border-dashed border-gray-200 rounded-xl text-gray-500 text-sm font-semibold hover:text-blue-600 hover:border-blue-400 transition flex items-center gap-3"
                     >
@@ -739,6 +781,8 @@ export default function CheckoutFlow({
                           onSuccess={handleAddCardSuccess}
                           onCancel={() => {
                             setShowAddNewCard(false);
+                            setIsDuplicateCardError(false);
+                            setAddCardError(null);
                             setSelectedPaymentId(
                               paymentMethods.length > 0
                                 ? paymentMethods[0].id

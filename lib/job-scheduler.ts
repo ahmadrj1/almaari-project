@@ -1,6 +1,15 @@
 const JOB_SCHEDULER_URL =
   process.env.JOB_SCHEDULER_URL || "http://localhost:8000";
 
+const JOB_SCHEDULER_SECRET = process.env.JOB_SCHEDULER_SECRET || "";
+
+function schedulerHeaders(): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    "X-Scheduler-Secret": JOB_SCHEDULER_SECRET,
+  };
+}
+
 export async function queueForgotPasswordEmail(
   userEmail: string,
   resetToken: string,
@@ -10,7 +19,7 @@ export async function queueForgotPasswordEmail(
       `${JOB_SCHEDULER_URL}/api/v1/jobs/forgot-password`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: schedulerHeaders(),
         body: JSON.stringify({
           user_email: userEmail,
           reset_token: resetToken,
@@ -30,7 +39,7 @@ export async function queueOrderStatusEmail(orderId: string) {
       `${JOB_SCHEDULER_URL}/api/v1/jobs/order-status-email`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: schedulerHeaders(),
         body: JSON.stringify({ order_id: orderId }),
       },
     );
@@ -62,7 +71,7 @@ export async function queueBulkProductsUpload(
       `${JOB_SCHEDULER_URL}/api/v1/jobs/bulk-products-upload`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: schedulerHeaders(),
         body: JSON.stringify({ products }),
       },
     );

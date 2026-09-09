@@ -15,13 +15,42 @@ export class AdminProductService {
     limit?: number;
   }) {
     const skip = (page - 1) * limit;
+
+    const trimmed = search ? search.trim() : "";
     const where: Prisma.ProductWhereInput = { deletedAt: null };
 
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { category: { name: { contains: search, mode: "insensitive" } } },
-      ];
+    if (trimmed) {
+      const words = trimmed.split(/\s+/).filter(Boolean);
+      const getWordCondition = (w: string): Prisma.ProductWhereInput => ({
+        OR: [
+          { title: { contains: w, mode: "insensitive" } },
+          { description: { contains: w, mode: "insensitive" } },
+          { category: { name: { contains: w, mode: "insensitive" } } },
+          {
+            variants: {
+              some: {
+                OR: [
+                  { color: { name: { contains: w, mode: "insensitive" } } },
+                  { size: { name: { contains: w, mode: "insensitive" } } },
+                ],
+              },
+            },
+          },
+        ],
+      });
+
+      if (words.length === 1) {
+        where.OR = getWordCondition(words[0]).OR;
+      } else {
+        where.OR = [
+          { title: { contains: trimmed, mode: "insensitive" } },
+          { description: { contains: trimmed, mode: "insensitive" } },
+          { category: { name: { contains: trimmed, mode: "insensitive" } } },
+          {
+            AND: words.map((w) => getWordCondition(w)),
+          },
+        ];
+      }
     }
 
     const [products, total] = await Promise.all([

@@ -76,7 +76,18 @@ export class AuthController {
         maxAge: 3600, // 1 hour
       });
 
-      return NextResponse.redirect(new URL("/reset-password", req.url));
+      const response = NextResponse.redirect(
+        new URL("/reset-password", req.url),
+      );
+      response.cookies.set("reset_session", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 3600, // 1 hour
+      });
+
+      return response;
     } catch (error) {
       logger.error({ err: error }, "Verify reset token error");
       return NextResponse.redirect(new URL("/reset-link-expired", req.url));

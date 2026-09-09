@@ -135,7 +135,6 @@ export class OrderService {
           metadata: {
             orderId: order.id,
             userId,
-            selectedItemIds: JSON.stringify(selectedItemIds),
           },
         });
 
@@ -146,6 +145,17 @@ export class OrderService {
             stripePaymentMethodId: body.paymentMethodId || null,
           },
         });
+
+        createNotification(
+          userId,
+          "ORDER_PLACED",
+          "Order Placed Successfully",
+          `Your order #${order.id.slice(0, 8)} has been placed.`,
+          { orderId: order.id },
+        );
+
+        const { queueOrderStatusEmail } = await import("@/lib/job-scheduler");
+        await queueOrderStatusEmail(order.id);
 
         return {
           order: updatedOrder,
