@@ -2,8 +2,18 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, FileText, X, AlertCircle } from "lucide-react";
+import {
+  Upload,
+  FileText,
+  X,
+  AlertCircle,
+  Download,
+  FolderOpen,
+  CheckCircle2,
+} from "lucide-react";
 import { parseCSVToProducts, ParsedCSVProduct } from "@/lib/csv-parser";
+import { resolvedImageStore, ResolvedImage } from "@/lib/resolved-image-store";
+export { resolvedImageStore };
 
 interface BulkUploadModalProps {
   isOpen: boolean;
@@ -16,12 +26,21 @@ export default function BulkUploadModal({
 }: BulkUploadModalProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parsedProducts, setParsedProducts] = useState<ParsedCSVProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Image resolution state
+  const [matchedCount, setMatchedCount] = useState(0);
+  const [unmatchedNames, setUnmatchedNames] = useState<string[]>([]);
+  const [imagesResolved, setImagesResolved] = useState(false);
+
   if (!isOpen) return null;
+
+  // All unique imagePath filenames across all products
+  const detectedImagePaths = parsedProducts.flatMap((p) => p.csvImages ?? []);
 
   const handleFile = (file: File) => {
     if (!file.name.toLowerCase().endsWith(".csv")) {
@@ -33,6 +52,10 @@ export default function BulkUploadModal({
 
     setError(null);
     setSelectedFile(file);
+    setMatchedCount(0);
+    setUnmatchedNames([]);
+    setImagesResolved(false);
+    resolvedImageStore.clear();
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -60,12 +83,58 @@ export default function BulkUploadModal({
     }
   };
 
+  const handleImageFiles = (files: FileList) => {
+    const fileArray = Array.from(files);
+    const fileMap = new Map<string, File>();
+    fileArray.forEach((f) => fileMap.set(f.name.toLowerCase(), f));
+
+    let matched = 0;
+    const unmatched: string[] = [];
+
+    const updated = parsedProducts.map((product) => {
+      if (!product.csvImages || product.csvImages.length === 0) return product;
+
+      const resolved: ResolvedImage[] = [];
+      for (const csvImg of product.csvImages) {
+        const baseName =
+          csvImg.imagePath.split(/[\\/]/).pop()?.trim() ||
+          csvImg.imagePath.trim();
+        const found = fileMap.get(baseName.toLowerCase());
+        if (found) {
+          matched++;
+          resolved.push({
+            fileName: baseName,
+            file: found,
+            colorName: csvImg.colorName,
+          });
+        } else {
+          if (!unmatched.includes(baseName)) unmatched.push(baseName);
+        }
+      }
+
+      if (resolved.length > 0) {
+        resolvedImageStore.set(product.id, resolved);
+        return { ...product, resolvedImages: resolved };
+      }
+      return product;
+    });
+
+    setParsedProducts(updated);
+    setMatchedCount(matched);
+    setUnmatchedNames(unmatched);
+    setImagesResolved(true);
+  };
+
   const handleContinue = () => {
     if (parsedProducts.length === 0) return;
     try {
+      // File objects can't be JSON-serialized; strip them before sessionStorage
+      const serializeable = parsedProducts.map(
+        ({ resolvedImages: _, ...rest }) => rest,
+      );
       sessionStorage.setItem(
         "bulk_products_draft",
-        JSON.stringify(parsedProducts),
+        JSON.stringify(serializeable),
       );
       onClose();
       router.push("/admin/products/bulk-add");
@@ -90,9 +159,29 @@ export default function BulkUploadModal({
         </div>
 
         <div className="p-6 space-y-4">
+          {/* Download template */}
+          <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-slate-700">
+                Need a template?
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                XLSX with dropdown options for color, size &amp; category
+              </p>
+            </div>
+            <a
+              href="/templates/products_template.xlsx"
+              download
+              className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <Download size={14} />
+              Download
+            </a>
+          </div>
+
           <p className="text-sm text-gray-500">
-            Upload a CSV file containing your product information. You can edit
-            and attach images for each product on the next step.
+            Fill the template, save as CSV, then upload below. You can edit and
+            attach images for each product on the next step.
           </p>
 
           {!selectedFile && (
@@ -104,7 +193,7 @@ export default function BulkUploadModal({
             >
               <Upload size={36} className="text-blue-500 mb-3" />
               <span className="text-sm font-medium text-slate-700">
-                Drag & Drop your CSV file here
+                Drag &amp; Drop your CSV file here
               </span>
               <span className="text-xs text-gray-400 mt-1">
                 or click to browse files
@@ -149,12 +238,85 @@ export default function BulkUploadModal({
                   setSelectedFile(null);
                   setParsedProducts([]);
                   setError(null);
+                  setMatchedCount(0);
+                  setUnmatchedNames([]);
+                  setImagesResolved(false);
+                  resolvedImageStore.clear();
                 }}
                 className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
                 title="Remove file"
               >
                 <X size={18} />
               </button>
+            </div>
+          )}
+
+          {/* Image resolution — only shown when imagePath detected */}
+          {selectedFile && !error && detectedImagePaths.length > 0 && (
+            <div className="border border-amber-200 bg-amber-50/50 rounded-xl p-4 space-y-3">
+              <div>
+                <p className="text-sm font-medium text-amber-800">
+                  {detectedImagePaths.length} image
+                  {detectedImagePaths.length > 1 ? "s" : ""} detected across{" "}
+                  {
+                    parsedProducts.filter(
+                      (p) => p.csvImages && p.csvImages.length > 0,
+                    ).length
+                  }{" "}
+                  product
+                  {parsedProducts.filter(
+                    (p) => p.csvImages && p.csvImages.length > 0,
+                  ).length > 1
+                    ? "s"
+                    : ""}
+                </p>
+                <p className="text-xs text-amber-600 mt-0.5">
+                  Select the folder containing your images to auto-match by
+                  filename.
+                </p>
+              </div>
+
+              <button
+                onClick={() => folderInputRef.current?.click()}
+                className="flex items-center gap-2 text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-2 rounded-lg transition-colors w-full justify-center"
+              >
+                <FolderOpen size={16} />
+                {imagesResolved
+                  ? "Re-select Folder / Files"
+                  : "Select Images Folder"}
+              </button>
+
+              {/* Hidden folder input */}
+              <input
+                ref={folderInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                // @ts-expect-error webkitdirectory is non-standard
+                webkitdirectory=""
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    handleImageFiles(e.target.files);
+                  }
+                }}
+              />
+
+              {imagesResolved && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs text-green-700">
+                    <CheckCircle2 size={13} />
+                    {matchedCount} of {detectedImagePaths.length} image
+                    {detectedImagePaths.length > 1 ? "s" : ""} matched
+                  </div>
+                  {unmatchedNames.length > 0 && (
+                    <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2">
+                      <span className="font-medium">Not found:</span>{" "}
+                      {unmatchedNames.join(", ")}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

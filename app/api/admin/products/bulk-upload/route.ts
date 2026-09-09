@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { queueBulkProductsUpload } from "@/lib/job-scheduler";
 import { cloudinary } from "@/lib/cloudinary.server";
+import { prisma } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   try {
@@ -67,6 +68,14 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Build colorName → hexCode map from DB for CSV rows that omit hexCode
+      const dbColors = await prisma.color.findMany({
+        select: { name: true, hexCode: true },
+      });
+      const colorHexMap = new Map(
+        dbColors.map((c) => [c.name.toLowerCase(), c.hexCode]),
+      );
+
       let rawProducts: Array<{
         title: string;
         description: string;
@@ -114,7 +123,10 @@ export async function POST(req: NextRequest) {
               imageFileName: rowObj.imageFileName || "",
               categoryName: rowObj.categoryName || undefined,
               colorName: rowObj.colorName || "Default",
-              hexCode: rowObj.hexCode || "#000000",
+              hexCode:
+                rowObj.hexCode ||
+                colorHexMap.get((rowObj.colorName || "").toLowerCase()) ||
+                "#000000",
               sizeName: rowObj.sizeName || "Standard",
               stock: parseInt(rowObj.stock || "0", 10),
             });

@@ -3,6 +3,7 @@
 import {
   useState,
   useEffect,
+  useCallback,
   useRef,
   forwardRef,
   useImperativeHandle,
@@ -94,10 +95,14 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
       if (!initialData.variants || initialData.variants.length === 0) return [];
       return initialData.variants.map((v, i) => {
         const foundColor = colors.find(
-          (c) => c.name.toLowerCase() === (v.colorName || "").toLowerCase(),
+          (c) =>
+            c.name.trim().toLowerCase() ===
+            (v.colorName || "").trim().toLowerCase(),
         );
         const foundSize = sizes.find(
-          (s) => s.name.toLowerCase() === (v.sizeName || "").toLowerCase(),
+          (s) =>
+            s.name.trim().toLowerCase() ===
+            (v.sizeName || "").trim().toLowerCase(),
         );
         return {
           id: `var-${i}-${Date.now()}`,
@@ -118,9 +123,78 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
     const [selectedSize, setSelectedSize] = useState("");
     const [variantQty, setVariantQty] = useState("");
 
-    const [productImages, setProductImages] = useState<ProductImageUpload[]>(
-      [],
+    const resolveColorId = useCallback(
+      (colorName?: string): string => {
+        if (!colorName) return "";
+        const clean = colorName.trim().toLowerCase();
+        const byName = colors.find(
+          (c) => c.name.trim().toLowerCase() === clean,
+        );
+        if (byName) return byName.id;
+        const byId = colors.find((c) => c.id === colorName.trim());
+        if (byId) return byId.id;
+        const fromVariant = initialData.variants?.find(
+          (v) => (v.colorName || "").trim().toLowerCase() === clean,
+        );
+        if (fromVariant) {
+          const found = colors.find(
+            (c) =>
+              c.name.trim().toLowerCase() ===
+              (fromVariant.colorName || "").trim().toLowerCase(),
+          );
+          if (found) return found.id;
+        }
+        return "";
+      },
+      [colors, initialData.variants],
     );
+
+    const [productImages, setProductImages] = useState<ProductImageUpload[]>(
+      () => {
+        if (
+          initialData.resolvedImages &&
+          initialData.resolvedImages.length > 0
+        ) {
+          return initialData.resolvedImages.map((r, i) => ({
+            id: `resolved-${i}-${Date.now()}`,
+            file: r.file,
+            previewUrl: URL.createObjectURL(r.file),
+            colorId: resolveColorId(r.colorName),
+          }));
+        }
+        return [];
+      },
+    );
+
+    useEffect(() => {
+      if (
+        colors.length > 0 &&
+        initialData.resolvedImages &&
+        initialData.resolvedImages.length > 0
+      ) {
+        setProductImages((prev) => {
+          if (prev.length === 0) {
+            return initialData.resolvedImages!.map((r, i) => ({
+              id: `resolved-${i}-${Date.now()}`,
+              file: r.file,
+              previewUrl: URL.createObjectURL(r.file),
+              colorId: resolveColorId(r.colorName),
+            }));
+          }
+
+          const hasUnlinked = prev.some((img) => !img.colorId);
+          if (!hasUnlinked) return prev;
+
+          return prev.map((img, idx) => {
+            if (img.colorId) return img;
+            const r = initialData.resolvedImages?.[idx];
+            if (!r) return img;
+            const matchedId = resolveColorId(r.colorName);
+            return matchedId ? { ...img, colorId: matchedId } : img;
+          });
+        });
+      }
+    }, [colors, initialData.resolvedImages, resolveColorId]);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const clearError = (key: string) => {

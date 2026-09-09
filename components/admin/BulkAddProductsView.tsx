@@ -3,13 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, Plus } from "lucide-react";
+import { ArrowLeft, Send, Plus, Upload, Loader2 } from "lucide-react";
 import { Color, Size, Category } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { ParsedCSVProduct } from "@/lib/csv-parser";
 import BulkProductCard, {
   BulkProductCardRef,
 } from "@/components/admin/BulkProductCard";
+import { resolvedImageStore } from "@/lib/resolved-image-store";
 
 export default function BulkAddProductsView() {
   const router = useRouter();
@@ -21,7 +22,13 @@ export default function BulkAddProductsView() {
         typeof window !== "undefined"
           ? sessionStorage.getItem("bulk_products_draft")
           : null;
-      return draftStr ? JSON.parse(draftStr) : [];
+      if (!draftStr) return [];
+      const parsed: ParsedCSVProduct[] = JSON.parse(draftStr);
+      // Re-attach resolved images from module-level store (not JSON-serializable)
+      return parsed.map((p) => ({
+        ...p,
+        resolvedImages: resolvedImageStore.get(p.id),
+      }));
     } catch {
       return [];
     }
@@ -31,6 +38,11 @@ export default function BulkAddProductsView() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    total: number;
+    current: number;
+    status: string;
+  } | null>(null);
 
   const cardRefs = useRef<Map<string, BulkProductCardRef>>(new Map());
 
@@ -106,8 +118,30 @@ export default function BulkAddProductsView() {
     }
 
     setSubmitting(true);
+
+    // Calculate total files to upload for progress tracking
+    let totalFiles = 0;
+    for (const prod of products) {
+      const ref = cardRefs.current.get(prod.id);
+      if (!ref) continue;
+      const data = ref.getData();
+      totalFiles += data.productImages.filter((img) =>
+        Boolean(img.file),
+      ).length;
+    }
+
+    setUploadProgress({
+      total: totalFiles,
+      current: 0,
+      status:
+        totalFiles > 0
+          ? `Starting upload of ${totalFiles} image${totalFiles > 1 ? "s" : ""}...`
+          : "Preparing products...",
+    });
+
     try {
       const formattedProducts = [];
+      let uploadedFilesCount = 0;
 
       for (const prod of products) {
         const ref = cardRefs.current.get(prod.id);
@@ -129,6 +163,12 @@ export default function BulkAddProductsView() {
             if (uploadData.success) {
               uploadedImageUrls.push(uploadData.imagePath);
             }
+            uploadedFilesCount++;
+            setUploadProgress({
+              total: totalFiles,
+              current: uploadedFilesCount,
+              status: `Uploading images (${uploadedFilesCount}/${totalFiles})...`,
+            });
           } else if (img.previewUrl) {
             uploadedImageUrls.push(img.previewUrl);
           }
@@ -160,6 +200,12 @@ export default function BulkAddProductsView() {
         });
       }
 
+      setUploadProgress({
+        total: totalFiles,
+        current: totalFiles,
+        status: "Dispatching to FastAPI Celery queue...",
+      });
+
       const res = await fetch("/api/admin/products/bulk-upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -185,6 +231,7 @@ export default function BulkAddProductsView() {
         error instanceof Error ? error.message : "Error submitting products",
       );
     } finally {
+      setUploadProgress(null);
       setSubmitting(false);
     }
   };
@@ -269,6 +316,56 @@ export default function BulkAddProductsView() {
               }}
             />
           ))}
+        </div>
+      )}
+
+      {uploadProgress && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-100 text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+              {uploadProgress.current < uploadProgress.total ||
+              uploadProgress.total === 0 ? (
+                <Loader2 size={24} className="animate-spin" />
+              ) : (
+                <Upload size={24} className="animate-bounce" />
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-base font-semibold text-slate-800">
+                Processing Bulk Upload
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                {uploadProgress.status}
+              </p>
+            </div>
+
+            {uploadProgress.total > 0 && (
+              <div className="space-y-2 pt-1">
+                <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                  <div
+                    className="bg-blue-600 h-full transition-all duration-300 rounded-full"
+                    style={{
+                      width: `${Math.round(
+                        (uploadProgress.current / uploadProgress.total) * 100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-slate-400 font-medium">
+                  <span>
+                    {uploadProgress.current} of {uploadProgress.total} images
+                  </span>
+                  <span>
+                    {Math.round(
+                      (uploadProgress.current / uploadProgress.total) * 100,
+                    )}
+                    %
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
