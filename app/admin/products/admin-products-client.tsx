@@ -26,6 +26,10 @@ export default function AdminProductsClient() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [viewProductId, setViewProductId] = useState<string | null>(null);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    addedLast24Hours: 0,
+  });
 
   const fetchProducts = useCallback(async (p: number, search: string) => {
     setLoading(true);
@@ -37,6 +41,9 @@ export default function AdminProductsClient() {
       if (data.success) {
         setProducts(data.data.products);
         setTotalPages(data.data.pagination.totalPages);
+        if (data.data.stats) {
+          setStats(data.data.stats);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch products:", error);
@@ -94,7 +101,20 @@ export default function AdminProductsClient() {
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm min-h-[calc(100vh-8rem)] flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h1 className="text-2xl font-semibold text-blue-500">Products</h1>
+        <div>
+          <h1 className="text-2xl font-semibold text-blue-500">Products</h1>
+          <p className="text-xs text-gray-500 mt-1">
+            Total Products:{" "}
+            <span className="text-gray-600 font-medium">
+              {stats.totalProducts}
+            </span>
+            <span className="mx-2 text-gray-300">•</span>
+            Added in last 24H:{" "}
+            <span className="text-gray-600 font-medium">
+              {stats.addedLast24Hours}
+            </span>
+          </p>
+        </div>
         <div className="flex gap-4 w-full sm:w-auto">
           <Link
             href="/admin/products/new"

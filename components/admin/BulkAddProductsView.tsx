@@ -245,9 +245,9 @@ export default function BulkAddProductsView() {
   }
 
   return (
-    <div className="bg-slate-50 min-h-[calc(100vh-8rem)] p-6 rounded-xl space-y-6">
+    <div className="bg-slate-50 min-h-[calc(100vh-8rem)] px-6 rounded-xl space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm gap-4">
+      <div className="sticky top-0 z-40 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm gap-4">
         <div className="flex items-center gap-4">
           <Link
             href="/admin/products"

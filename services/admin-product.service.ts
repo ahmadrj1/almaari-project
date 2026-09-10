@@ -53,20 +53,30 @@ export class AdminProductService {
       }
     }
 
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-        include: {
-          variants: {
-            include: { color: true },
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const [products, total, totalProducts, addedLast24Hours] =
+      await Promise.all([
+        prisma.product.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+          include: {
+            variants: {
+              include: { color: true },
+            },
           },
-        },
-      }),
-      prisma.product.count({ where }),
-    ]);
+        }),
+        prisma.product.count({ where }),
+        prisma.product.count({ where: { deletedAt: null } }),
+        prisma.product.count({
+          where: {
+            deletedAt: null,
+            createdAt: { gte: twentyFourHoursAgo },
+          },
+        }),
+      ]);
 
     const productsWithStock = products.map((product) => {
       const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
@@ -76,6 +86,10 @@ export class AdminProductService {
     return {
       products: productsWithStock,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      stats: {
+        totalProducts,
+        addedLast24Hours,
+      },
     };
   }
 
