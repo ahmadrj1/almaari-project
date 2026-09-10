@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { registerSchema, RegisterInput } from "@/lib/validations/auth";
@@ -12,6 +12,8 @@ import { useEffect } from "react";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrlParam = searchParams.get("callbackUrl");
   const { showToast } = useToast();
   const { data: session, status } = useSession();
 
@@ -31,9 +33,20 @@ export default function RegisterPage() {
   useEffect(() => {
     if (status === "authenticated") {
       const role = (session?.user as { role?: string })?.role;
-      router.replace(role === "ADMIN" ? "/admin/products" : "/");
+      const defaultPath = role === "ADMIN" ? "/admin/products" : "/";
+      let destination = defaultPath;
+      if (
+        callbackUrlParam &&
+        callbackUrlParam.startsWith("/") &&
+        !callbackUrlParam.startsWith("//")
+      ) {
+        if (role === "ADMIN" || !callbackUrlParam.startsWith("/admin")) {
+          destination = callbackUrlParam;
+        }
+      }
+      router.replace(destination);
     }
-  }, [status, session, router]);
+  }, [status, session, router, callbackUrlParam]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -158,7 +171,11 @@ export default function RegisterPage() {
         <span className="text-gray-600">
           Already have an account!
           <Link
-            href="/login"
+            href={
+              callbackUrlParam
+                ? `/login?callbackUrl=${encodeURIComponent(callbackUrlParam)}`
+                : "/login"
+            }
             className="font-medium whitespace-pre text-[#2979FF] hover:text-[#2979FF]"
           >
             {" "}

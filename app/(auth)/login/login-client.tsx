@@ -16,6 +16,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const errorParam = searchParams.get("error");
+  const callbackUrlParam = searchParams.get("callbackUrl");
   const [formData, setFormData] = useState<LoginInput>({
     email: "",
     password: "",
@@ -29,13 +30,24 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [skipAuthRedirect, setSkipAuthRedirect] = useState(false);
 
+  const getSafeRedirectUrl = (target: string | null, role?: string): string => {
+    const defaultPath = role === "ADMIN" ? "/admin/products" : "/";
+    if (!target || !target.startsWith("/") || target.startsWith("//")) {
+      return defaultPath;
+    }
+    if (role !== "ADMIN" && target.startsWith("/admin")) {
+      return defaultPath;
+    }
+    return target;
+  };
+
   useEffect(() => {
     if (skipAuthRedirect) return;
     if (status === "authenticated") {
       const role = (session?.user as { role?: string })?.role;
-      router.replace(role === "ADMIN" ? "/admin/products" : "/");
+      router.replace(getSafeRedirectUrl(callbackUrlParam, role));
     }
-  }, [skipAuthRedirect, status, session, router]);
+  }, [skipAuthRedirect, status, session, router, callbackUrlParam]);
 
   useEffect(() => {
     if (errorParam) {
@@ -67,10 +79,11 @@ export default function LoginPage() {
     }
 
     try {
-      const callbackUrl = new URL(
-        "/login/redirect",
-        window.location.origin,
-      ).toString();
+      const redirectPath = new URL("/login/redirect", window.location.origin);
+      if (callbackUrlParam) {
+        redirectPath.searchParams.set("callbackUrl", callbackUrlParam);
+      }
+      const callbackUrl = redirectPath.toString();
       const csrfToken = await getCsrfToken();
       const response = await fetch("/api/auth/callback/credentials", {
         method: "POST",
@@ -116,10 +129,14 @@ export default function LoginPage() {
       const left = window.screenX + (window.outerWidth - width) / 2;
       const top = window.screenY + (window.outerHeight - height) / 2;
 
-      const callbackUrl = new URL(
+      const redirectUrl = new URL(
         "/login/redirect?popup=true",
         window.location.origin,
-      ).toString();
+      );
+      if (callbackUrlParam) {
+        redirectUrl.searchParams.set("callbackUrl", callbackUrlParam);
+      }
+      const callbackUrl = redirectUrl.toString();
       const res = await signIn(
         "google",
         {
@@ -165,9 +182,13 @@ export default function LoginPage() {
           }
         }, 500);
       } else {
+        const fallbackUrl = new URL("/login/redirect", window.location.origin);
+        if (callbackUrlParam) {
+          fallbackUrl.searchParams.set("callbackUrl", callbackUrlParam);
+        }
         void signIn(
           "google",
-          { callbackUrl: "/login/redirect" },
+          { callbackUrl: fallbackUrl.pathname + fallbackUrl.search },
           { prompt: "consent select_account" },
         );
       }
@@ -292,7 +313,11 @@ export default function LoginPage() {
         <span className="text-gray-600">
           I don&apos;t have an account!
           <Link
-            href="/register"
+            href={
+              callbackUrlParam
+                ? `/register?callbackUrl=${encodeURIComponent(callbackUrlParam)}`
+                : "/register"
+            }
             className="font-medium whitespace-pre text-[#2979FF] hover:text-[#2979FF]"
           >
             {" "}
