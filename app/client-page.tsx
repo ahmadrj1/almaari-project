@@ -83,12 +83,43 @@ function HomeContent() {
   const searchParam = searchParams.get("search") || "";
   const sort = searchParams.get("sort") || DEFAULT_SORT;
 
-  const [localSearch, setLocalSearch] = useState(searchParam);
-  const [prevSearchParam, setPrevSearchParam] = useState(searchParam);
+  const wasReloadRef = useRef(() => {
+    if (typeof window === "undefined") return false;
+    const navEntry = performance.getEntriesByType("navigation")[0] as
+      PerformanceNavigationTiming | undefined;
+    const legacyNav = (
+      performance as unknown as { navigation?: { type?: number } }
+    ).navigation;
+    return (
+      Boolean(window.location.search) &&
+      (navEntry?.type === "reload" || legacyNav?.type === 1)
+    );
+  });
+  // eslint-disable-next-line react-hooks/refs
+  const [wasReload] = useState(() => wasReloadRef.current());
+
+  const initialSearch = wasReload ? "" : searchParam;
+  const initialSort = wasReload ? DEFAULT_SORT : sort;
+
+  useIsomorphicLayoutEffect(() => {
+    if (wasReload && window.location.search) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
+
+  const [localSearch, setLocalSearch] = useState(initialSearch);
+  const [prevSearchParam, setPrevSearchParam] = useState(initialSearch);
+  const [localSort, setLocalSort] = useState(initialSort);
+  const [prevSortParam, setPrevSortParam] = useState(initialSort);
 
   if (searchParam !== prevSearchParam) {
     setPrevSearchParam(searchParam);
     setLocalSearch(searchParam);
+  }
+
+  if (sort !== prevSortParam) {
+    setPrevSortParam(sort);
+    setLocalSort(sort);
   }
 
   const debouncedSearch = useDebounce(localSearch);
@@ -119,7 +150,11 @@ function HomeContent() {
   };
 
   const fetchPage = useCallback(
-    async (direction: "next" | "prev" | "initial") => {
+    async (
+      direction: "next" | "prev" | "initial",
+      overrideSearch?: string,
+      overrideSort?: string,
+    ) => {
       const isInitial = direction === "initial";
 
       if (isInitial) {
@@ -153,13 +188,16 @@ function HomeContent() {
           ? prevCursorRef.current
           : nextCursorRef.current;
 
-      const currentKey = `${searchParam}__${sort}`;
+      const currentSearch =
+        overrideSearch !== undefined ? overrideSearch : searchParam;
+      const currentSort = overrideSort !== undefined ? overrideSort : sort;
+      const currentKey = `${currentSearch}__${currentSort}`;
       const signal = abortControllerRef.current?.signal;
 
       try {
         const params = new URLSearchParams({
-          search: searchParam,
-          sort,
+          search: currentSearch,
+          sort: currentSort,
           limit: String(PRODUCTS_PER_PAGE_DEFAULT),
           ...(cursor
             ? { cursor, direction: direction === "prev" ? "prev" : "next" }
@@ -255,6 +293,9 @@ function HomeContent() {
 
   // Initial fetch & refetch on filter change
   useEffect(() => {
+    let s = searchParam;
+    let so = sort;
+
     if (isInitialMountRef.current) {
       isInitialMountRef.current = false;
       const nav = performance.getEntriesByType("navigation")[0] as
@@ -262,17 +303,17 @@ function HomeContent() {
       const perfNav = (
         performance as unknown as { navigation?: { type?: number } }
       ).navigation;
-      const isReload = nav?.type === "reload" || perfNav?.type === 1;
+      const reloaded = nav?.type === "reload" || perfNav?.type === 1;
 
-      if (isReload && window.location.search) {
-        router.replace("/", { scroll: false });
-        return;
+      if (reloaded && window.location.search) {
+        s = "";
+        so = DEFAULT_SORT;
       }
     }
 
-    filterKey.current = `${searchParam}__${sort}`;
-    fetchPage("initial");
-  }, [searchParam, sort, router, fetchPage]);
+    filterKey.current = `${s}__${so}`;
+    fetchPage("initial", s, so);
+  }, [searchParam, sort, fetchPage]);
 
   const loadMore = useCallback(() => {
     if (!loadingMore && hasMore) {
@@ -385,9 +426,12 @@ function HomeContent() {
               <SortDropdown
                 className="w-40 sm:w-48 shrink-0"
                 options={SORT_OPTIONS}
-                value={sort}
+                value={localSort}
                 placeholder="Sort by"
-                onValueChange={(value) => updateParams({ sort: value })}
+                onValueChange={(value) => {
+                  setLocalSort(value);
+                  updateParams({ sort: value });
+                }}
               />
             </div>
           </div>
@@ -404,8 +448,8 @@ function HomeContent() {
             icon={<ShoppingBag className="w-12 h-12 text-gray-400" />}
             title="No products found"
             description={
-              searchParam
-                ? `No results for "${searchParam}". Try clearing the search.`
+              localSearch
+                ? `No results for "${localSearch}". Try clearing the search.`
                 : "No products available."
             }
           />

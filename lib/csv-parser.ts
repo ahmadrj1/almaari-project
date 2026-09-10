@@ -72,7 +72,7 @@ export function parseCSVToProducts(csvText: string): ParsedCSVProduct[] {
       rowObj["title"] || rowObj["producttitle"] || rowObj["name"] || "";
     if (!title) continue;
 
-    const key = title.trim().toLowerCase();
+    const key = title.trim();
     const description = rowObj["description"] || rowObj["desc"] || "";
     const price = rowObj["price"] || rowObj["cost"] || "";
     const categoryName = rowObj["categoryname"] || rowObj["category"] || "";

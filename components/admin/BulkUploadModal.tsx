@@ -10,6 +10,7 @@ import {
   Download,
   FolderOpen,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { parseCSVToProducts, ParsedCSVProduct } from "@/lib/csv-parser";
 import { resolvedImageStore, ResolvedImage } from "@/lib/resolved-image-store";
@@ -36,6 +37,7 @@ export default function BulkUploadModal({
   const [matchedCount, setMatchedCount] = useState(0);
   const [unmatchedNames, setUnmatchedNames] = useState<string[]>([]);
   const [imagesResolved, setImagesResolved] = useState(false);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
 
   if (!isOpen) return null;
 
@@ -166,17 +168,38 @@ export default function BulkUploadModal({
                 Need a template?
               </p>
               <p className="text-xs text-slate-400 mt-0.5">
-                XLSX with dropdown options for color, size &amp; category
+                XLSX file with dropdown options for color, size &amp; category
               </p>
             </div>
-            <a
-              href="/templates/products_template.xlsx"
-              download
-              className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+            <button
+              type="button"
+              disabled={isDownloadingTemplate}
+              onClick={async () => {
+                setIsDownloadingTemplate(true);
+                try {
+                  const res = await fetch("/api/admin/products/template");
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "products_template.xlsx";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch {
+                  console.error("Failed to download template");
+                } finally {
+                  setIsDownloadingTemplate(false);
+                }
+              }}
+              className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download size={14} />
-              Download
-            </a>
+              {isDownloadingTemplate ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Download size={14} />
+              )}
+              {isDownloadingTemplate ? "Generating..." : "Download"}
+            </button>
           </div>
 
           <p className="text-sm text-gray-500">

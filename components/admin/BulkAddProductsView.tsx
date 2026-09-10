@@ -203,7 +203,7 @@ export default function BulkAddProductsView() {
       setUploadProgress({
         total: totalFiles,
         current: totalFiles,
-        status: "Dispatching to FastAPI Celery queue...",
+        status: "Dispatching to Background Server queue...",
       });
 
       const res = await fetch("/api/admin/products/bulk-upload", {
