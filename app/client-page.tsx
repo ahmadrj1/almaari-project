@@ -101,16 +101,19 @@ function HomeContent() {
   const initialSearch = wasReload ? "" : searchParam;
   const initialSort = wasReload ? DEFAULT_SORT : sort;
 
+  const [localSearch, setLocalSearch] = useState(initialSearch);
+  const [prevSearchParam, setPrevSearchParam] = useState(searchParam);
+  const [localSort, setLocalSort] = useState(initialSort);
+  const [prevSortParam, setPrevSortParam] = useState(sort);
+
   useIsomorphicLayoutEffect(() => {
     if (wasReload && window.location.search) {
+      setLocalSearch("");
+      setLocalSort(DEFAULT_SORT);
       window.history.replaceState(null, "", window.location.pathname);
+      window.location.replace(window.location.pathname);
     }
-  }, []);
-
-  const [localSearch, setLocalSearch] = useState(initialSearch);
-  const [prevSearchParam, setPrevSearchParam] = useState(initialSearch);
-  const [localSort, setLocalSort] = useState(initialSort);
-  const [prevSortParam, setPrevSortParam] = useState(initialSort);
+  }, [wasReload]);
 
   if (searchParam !== prevSearchParam) {
     setPrevSearchParam(searchParam);
@@ -126,16 +129,41 @@ function HomeContent() {
   const isUserTypingRef = useRef(false);
   const isInitialMountRef = useRef(true);
 
-  // Clear query params on page unload so refreshing starts clean
+  // Clear query params and reset state on reload attempt
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isReloadKey =
+        (e.key === "r" && (e.metaKey || e.ctrlKey)) || e.key === "F5";
+      if (isReloadKey) {
+        if (
+          window.location.search ||
+          localSearch ||
+          localSort !== DEFAULT_SORT
+        ) {
+          e.preventDefault();
+          setLocalSearch("");
+          setLocalSort(DEFAULT_SORT);
+          window.history.replaceState(null, "", window.location.pathname);
+          window.location.replace(window.location.pathname);
+        }
+      }
+    };
+
     const handleBeforeUnload = () => {
+      setLocalSearch("");
+      setLocalSort(DEFAULT_SORT);
       if (window.location.search) {
         window.history.replaceState(null, "", window.location.pathname);
       }
     };
+
+    window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, []);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [localSearch, localSort]);
 
   // Track current filter key to cancel stale fetches on param change
   const filterKey = useRef(`${searchParam}__${sort}`);
@@ -293,27 +321,19 @@ function HomeContent() {
 
   // Initial fetch & refetch on filter change
   useEffect(() => {
-    let s = searchParam;
-    let so = sort;
+    const s = searchParam;
+    const so = sort;
 
     if (isInitialMountRef.current) {
       isInitialMountRef.current = false;
-      const nav = performance.getEntriesByType("navigation")[0] as
-        PerformanceNavigationTiming | undefined;
-      const perfNav = (
-        performance as unknown as { navigation?: { type?: number } }
-      ).navigation;
-      const reloaded = nav?.type === "reload" || perfNav?.type === 1;
-
-      if (reloaded && window.location.search) {
-        s = "";
-        so = DEFAULT_SORT;
+      if (wasReload && window.location.search) {
+        return;
       }
     }
 
     filterKey.current = `${s}__${so}`;
     fetchPage("initial", s, so);
-  }, [searchParam, sort, fetchPage]);
+  }, [searchParam, sort, wasReload, fetchPage]);
 
   const loadMore = useCallback(() => {
     if (!loadingMore && hasMore) {
