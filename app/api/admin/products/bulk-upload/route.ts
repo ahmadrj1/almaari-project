@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { queueBulkProductsUpload } from "@/lib/job-scheduler";
 import { cloudinary } from "@/lib/cloudinary.server";
+import { prisma } from "@/lib/db";
+import { parseCSVToProducts } from "@/lib/csv-parser";
+import { createBroadcastNotification } from "@/lib/notifications";
 
 export async function POST(req: NextRequest) {
   try {
@@ -67,6 +70,14 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Build colorName → hexCode map from DB for CSV rows that omit hexCode
+      const dbColors = await prisma.color.findMany({
+        select: { name: true, hexCode: true },
+      });
+      const colorHexMap = new Map(
+        dbColors.map((c) => [c.name.toLowerCase(), c.hexCode]),
+      );
+
       let rawProducts: Array<{
         title: string;
         description: string;
@@ -90,36 +101,29 @@ export async function POST(req: NextRequest) {
       if (fileName.endsWith(".json")) {
         rawProducts = JSON.parse(fileText);
       } else if (fileName.endsWith(".csv")) {
-        const lines = fileText
-          .split("\n")
-          .map((l) => l.trim())
-          .filter(Boolean);
-        if (lines.length > 1) {
-          const headers = lines[0]
-            .split(",")
-            .map((h) => h.trim().replace(/^"|"$/g, ""));
-          for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i]
-              .split(",")
-              .map((c) => c.trim().replace(/^"|"$/g, ""));
-            const rowObj: Record<string, string> = {};
-            headers.forEach((h, idx) => {
-              rowObj[h] = cols[idx] || "";
-            });
-            rawProducts.push({
-              title: rowObj.title || `Product ${i}`,
-              description: rowObj.description || "",
-              price: parseFloat(rowObj.price || "0"),
-              image: rowObj.image || "",
-              imageFileName: rowObj.imageFileName || "",
-              categoryName: rowObj.categoryName || undefined,
-              colorName: rowObj.colorName || "Default",
-              hexCode: rowObj.hexCode || "#000000",
-              sizeName: rowObj.sizeName || "Standard",
-              stock: parseInt(rowObj.stock || "0", 10),
-            });
-          }
-        }
+        const parsed = parseCSVToProducts(fileText);
+        rawProducts = parsed.map((p) => ({
+          title: p.title,
+          description: p.description,
+          price: parseFloat(p.price || "0"),
+          categoryName: p.categoryName || undefined,
+          variants: p.variants.map((v) => ({
+            colorName: v.colorName,
+            hexCode:
+              v.hexCode ||
+              colorHexMap.get(v.colorName.toLowerCase()) ||
+              "#000000",
+            sizeName: v.sizeName,
+            stock: v.stock,
+          })),
+          images:
+            p.csvImages?.map((img, idx) => ({
+              url: uploadedImageMap[img.imagePath] || img.imagePath,
+              colorName: img.colorName,
+              sortOrder: idx,
+            })) || [],
+          imageFileName: p.csvImages?.[0]?.imagePath,
+        }));
       } else {
         return NextResponse.json(
           { error: "File format must be CSV or JSON" },
@@ -156,6 +160,14 @@ export async function POST(req: NextRequest) {
     }
 
     const jobRes = await queueBulkProductsUpload(formattedProducts);
+
+    if (formattedProducts.length > 0) {
+      await createBroadcastNotification(
+        "NEW_PRODUCT",
+        "New Products Added!",
+        "New products have been added to the catalogue!",
+      );
+    }
 
     return NextResponse.json({
       success: true,

@@ -38,7 +38,10 @@ describe("OrderController", () => {
       (auth as jest.Mock).mockResolvedValue(null);
 
       const res = await OrderController.createOrder(
-        makeReq("/api/orders", "POST", { addressId: "a1", selectedItemIds: ["i1"] }),
+        makeReq("/api/orders", "POST", {
+          addressId: "a1",
+          selectedItemIds: ["i1"],
+        }),
       );
       const data = await res.json();
 
@@ -78,7 +81,10 @@ describe("OrderController", () => {
       );
 
       const res = await OrderController.createOrder(
-        makeReq("/api/orders", "POST", { addressId: "a1", selectedItemIds: [] }),
+        makeReq("/api/orders", "POST", {
+          addressId: "a1",
+          selectedItemIds: [],
+        }),
       );
       const data = await res.json();
 
@@ -89,10 +95,15 @@ describe("OrderController", () => {
 
     it("returns 500 on unexpected error", async () => {
       (auth as jest.Mock).mockResolvedValue({ user: { id: "user-1" } });
-      (OrderService.createOrder as jest.Mock).mockRejectedValue(new Error("DB error"));
+      (OrderService.createOrder as jest.Mock).mockRejectedValue(
+        new Error("DB error"),
+      );
 
       const res = await OrderController.createOrder(
-        makeReq("/api/orders", "POST", { addressId: "a1", selectedItemIds: ["i1"] }),
+        makeReq("/api/orders", "POST", {
+          addressId: "a1",
+          selectedItemIds: ["i1"],
+        }),
       );
       const data = await res.json();
 
@@ -105,7 +116,9 @@ describe("OrderController", () => {
     it("returns 401 when not authenticated", async () => {
       (auth as jest.Mock).mockResolvedValue(null);
 
-      const res = await OrderController.getOrders(makeReq("/api/orders?page=1"));
+      const res = await OrderController.getOrders(
+        makeReq("/api/orders?page=1"),
+      );
       const data = await res.json();
 
       expect(res.status).toBe(401);
@@ -119,7 +132,9 @@ describe("OrderController", () => {
         pagination: { page: 1, totalPages: 1, total: 1, limit: 10 },
       });
 
-      const res = await OrderController.getOrders(makeReq("/api/orders?page=1"));
+      const res = await OrderController.getOrders(
+        makeReq("/api/orders?page=1"),
+      );
       const data = await res.json();
 
       expect(res.status).toBe(200);
@@ -145,7 +160,10 @@ describe("OrderController", () => {
     it("returns 401 when not authenticated", async () => {
       (auth as jest.Mock).mockResolvedValue(null);
 
-      const res = await OrderController.getOrderById(makeReq("/api/orders/order-1"), "order-1");
+      const res = await OrderController.getOrderById(
+        makeReq("/api/orders/order-1"),
+        "order-1",
+      );
       const data = await res.json();
 
       expect(res.status).toBe(401);
@@ -169,13 +187,19 @@ describe("OrderController", () => {
       expect(res.status).toBe(200);
       expect(data.success).toBe(true);
       expect(data.data.id).toBe("order-1");
-      expect(OrderService.getOrderById).toHaveBeenCalledWith("user-1", "order-1");
+      expect(OrderService.getOrderById).toHaveBeenCalledWith(
+        "user-1",
+        "order-1",
+      );
     });
 
     it("returns 400 when orderId is missing", async () => {
       (auth as jest.Mock).mockResolvedValue({ user: { id: "user-1" } });
 
-      const res = await OrderController.getOrderById(makeReq("/api/orders/"), "");
+      const res = await OrderController.getOrderById(
+        makeReq("/api/orders/"),
+        "",
+      );
       const data = await res.json();
 
       expect(res.status).toBe(400);
@@ -234,11 +258,15 @@ describe("OrderController", () => {
 
       expect(res.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(OrderService.retryPayment).toHaveBeenCalledWith("user-1", "order-1", {
-        addressId: "addr-1",
-        paymentMethod: "CASH_ON_DELIVERY",
-        paymentMethodId: undefined,
-      });
+      expect(OrderService.retryPayment).toHaveBeenCalledWith(
+        "user-1",
+        "order-1",
+        {
+          addressId: "addr-1",
+          paymentMethod: "CASH_ON_DELIVERY",
+          paymentMethodId: undefined,
+        },
+      );
     });
 
     it("returns 400 when orderId is missing", async () => {

@@ -179,7 +179,10 @@ describe("Auth API / Controller Tests", () => {
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
       expect(prisma.user.update).toHaveBeenCalled();
-      expect(queueForgotPasswordEmail).toHaveBeenCalledWith("john@example.com", expect.any(String));
+      expect(queueForgotPasswordEmail).toHaveBeenCalledWith(
+        "john@example.com",
+        expect.any(String),
+      );
     });
 
     it("should return success even if user does not exist (security precaution)", async () => {

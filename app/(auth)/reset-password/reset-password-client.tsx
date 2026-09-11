@@ -52,6 +52,13 @@ function ResetPasswordForm() {
       } else {
         if (data.details) {
           setErrors(data.details);
+        } else if (
+          res.status === 401 ||
+          data.error?.toLowerCase().includes("expired") ||
+          data.error?.toLowerCase().includes("session")
+        ) {
+          showToast("error", data.error || "Reset link expired");
+          router.push("/reset-link-expired");
         } else {
           showToast("error", data.error || "An error occurred");
         }

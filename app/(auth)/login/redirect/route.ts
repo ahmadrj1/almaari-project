@@ -5,9 +5,24 @@ import { JUST_AUTHENTICATED_KEY } from "@/lib/constants";
 
 export async function GET(request: Request) {
   const session = await getServerSessionSnapshot();
-  const targetPath =
-    session?.user?.role === Role.ADMIN ? "/admin/products" : "/";
   const url = new URL(request.url);
+  const rawCallback = url.searchParams.get("callbackUrl");
+
+  const isAdmin = session?.user?.role === Role.ADMIN;
+  const defaultPath = isAdmin ? "/admin/products" : "/";
+
+  let targetPath = defaultPath;
+  if (
+    rawCallback &&
+    rawCallback.startsWith("/") &&
+    !rawCallback.startsWith("//")
+  ) {
+    if (isAdmin) {
+      targetPath = rawCallback;
+    } else if (!rawCallback.startsWith("/admin")) {
+      targetPath = rawCallback;
+    }
+  }
 
   if (url.searchParams.get("popup") === "true") {
     const html = `<!DOCTYPE html>

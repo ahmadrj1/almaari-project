@@ -3,6 +3,7 @@ import {
   ORDERS_PER_PAGE_DEFAULT,
   TAX_PERCENTAGE,
   CART_ITEM_EXPIRY_MS,
+  STRIPE_MIN_AMOUNT_PKR,
 } from "@/lib/constants";
 import { AppError } from "@/lib/api-error";
 import { createNotification } from "@/lib/notifications";
@@ -67,6 +68,13 @@ export class OrderService {
     const total = subTotal + tax;
 
     if (paymentMethod === "CREDIT_DEBIT_CARD") {
+      if (total < STRIPE_MIN_AMOUNT_PKR) {
+        throw new AppError(
+          `Card payments require a minimum order amount of Rs ${STRIPE_MIN_AMOUNT_PKR}. Please choose Cash on Delivery.`,
+          400,
+        );
+      }
+
       // 1. Transaction to reserve stock (pessimistic check) and create order.
       // Do NOT decrement stock or delete cart items yet.
       const order = await prisma.$transaction(async (tx) => {
@@ -135,7 +143,6 @@ export class OrderService {
           metadata: {
             orderId: order.id,
             userId,
-            selectedItemIds: JSON.stringify(selectedItemIds),
           },
         });
 
@@ -146,6 +153,14 @@ export class OrderService {
             stripePaymentMethodId: body.paymentMethodId || null,
           },
         });
+
+        createNotification(
+          userId,
+          "ORDER_PLACED",
+          "Order Placed Successfully",
+          `Your order #${order.id.slice(0, 8)} has been placed.`,
+          { orderId: order.id },
+        );
 
         return {
           order: updatedOrder,
@@ -399,6 +414,13 @@ export class OrderService {
     }
 
     if (paymentMethod === "CREDIT_DEBIT_CARD") {
+      if (Number(order.total) < STRIPE_MIN_AMOUNT_PKR) {
+        throw new AppError(
+          `Card payments require a minimum order amount of Rs ${STRIPE_MIN_AMOUNT_PKR}. Please choose Cash on Delivery.`,
+          400,
+        );
+      }
+
       try {
         const { stripe, getOrCreateStripeCustomer } =
           await import("@/lib/stripe");

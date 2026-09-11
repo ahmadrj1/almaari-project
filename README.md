@@ -1,53 +1,52 @@
 # Almaari
 
-Almaari is a full-stack e-commerce platform built with Next.js 16, PostgreSQL, Prisma, and NextAuth v5. It supports customer shopping flows, cart and checkout, order history, password reset, notifications, and an admin dashboard for product and order management.
+Almaari is a full-stack e-commerce platform built with Next.js 16 (App Router with SSR Server Components & SEO metadata), PostgreSQL, Prisma, NextAuth v5, and a background FastAPI + Celery Job Scheduler. It supports customer shopping flows, cart and checkout, payment methods, order history, password reset, notifications, and an admin dashboard for product and order management.
 
 ## Features
 
 - Public product browsing with search, sorting, pagination, and category filtering
+- SEO-optimized Server Components (SSR) with dynamic page metadata
 - Variant-based products with color, size, and stock tracking
 - Persistent cart with quantity updates, item removal, and cart count badge
-- Checkout with saved addresses or new address creation
-- Order history and order detail pages for customers
-- Admin product listing, creation, editing, preview, and soft delete
+- Checkout with saved addresses, credit/debit card payment via Stripe Elements, or Cash on Delivery (COD)
+- Order history and order detail pages for customers with automated retry payment support
+- Saved customer payment methods and shipping addresses
+- Admin product listing, creation, editing, preview, bulk upload, and soft delete
 - Admin order management with status updates and stock restoration on cancellation
-- Notification system with broadcast and user-specific notifications
+- FastAPI + Celery + Redis background job scheduler for async email dispatch and bulk processing
 - Email-based forgot-password and reset-password flow
 - Google OAuth and credentials-based authentication with fixed remember-me expiry
 
 ## Tech Stack
 
-- Next.js 16 App Router
-- React 19
-- TypeScript 5
-- PostgreSQL
-- Prisma ORM
-- NextAuth v5
-- Tailwind CSS v4
-- Zod
-- Zustand
-- Lucide React
-- Nodemailer
-- bcryptjs
-- Pino
+- **Frontend / Framework**: Next.js 16 (App Router, SSR Server Components), React 19, TypeScript 5
+- **Database & ORM**: PostgreSQL, Prisma ORM
+- **Authentication**: NextAuth v5, Google OAuth, Credentials with custom session proxy
+- **Background Jobs**: FastAPI, Celery, Redis (Python)
+- **Styling**: Tailwind CSS v4, Lucide React
+- **Payments**: Stripe (Stripe Elements & Webhooks)
+- **State Management & Validation**: Zustand, Zod
+- **Media Storage**: Cloudinary
+- **Logging & Utilities**: Pino, Nodemailer, bcryptjs
 
 ## Project Structure
 
-- `app/` - App Router pages, layouts, and API routes
-- `components/` - Shared UI, layout, and admin components
+- `app/` - App Router SSR pages, layouts, and Next.js API routes
+- `components/` - Shared UI, client components, layout, and admin interfaces
 - `controllers/` - Thin HTTP controllers for API routes
-- `services/` - Business logic and Prisma operations
+- `services/` - Business logic and Prisma database operations
+- `job-schedular/` - FastAPI + Celery + Redis background job scheduler service
 - `hooks/` - Client hooks and contexts
-- `lib/` - Shared helpers, constants, validation schemas, and logging
+- `lib/` - Shared helpers, constants, validation schemas, Stripe/Cloudinary integrations, and logging
 - `prisma/` - Database schema and migrations
-- `public/` - Static assets and uploaded product images
-- `store/` - Zustand stores
+- `public/` - Static assets
+- `store/` - Zustand client stores
 - `types/` - Shared TypeScript types
-- `scripts/` - Utility scripts such as PR body generation
+- `tests/` - Jest test suites for API controllers, services, and components
 
 ## Environment Variables
 
-Create a `.env.local` file in the project root with the following values:
+Create a `.env.local` or `.env` file in the project root with the following values:
 
 ```env
 DATABASE_URL="postgresql://user:password@localhost:5432/cart_attack"
@@ -65,7 +64,7 @@ APP_URL="reset password redirect url for emails"
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
 
-# Cloudinary image uploads
+# Cloudinary Setup for Image Uploads
 CLOUDINARY_CLOUD_NAME="your-cloud-name"
 CLOUDINARY_API_KEY="your-api-key"
 CLOUDINARY_API_SECRET="your-api-secret"
@@ -74,23 +73,26 @@ CLOUDINARY_API_SECRET="your-api-secret"
 NEXT_PUBLIC_APP_ENV="dev"
 
 # Stripe Setup
-STRIPE_SECRET_KEY=""
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=""
-STRIPE_WEBHOOK_SECRET=""
+STRIPE_SECRET_KEY="sk_test_xxx"
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_xxx"
+STRIPE_WEBHOOK_SECRET="whsec_xxx"
+
+# FastAPI Job Scheduler Service
+JOB_SCHEDULER_URL="Scheduler server url"
 ```
 
 ### Variable Notes
 
 - `DATABASE_URL` is required by Prisma and must point to your PostgreSQL database.
-- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are required for Google sign-in.
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASS` are used for password reset emails.
-- `APP_URL` is used to build password-reset links. If omitted, the app falls back to `http://localhost:3000`.
-- `NODE_ENV` is set automatically by your runtime and is used internally for development vs production behavior.
-- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` power admin product image uploads and remote image delivery.
-- `NEXT_PUBLIC_APP_ENV` controls artificial loading delays for UX testing: set it to "dev" to enable delays (1–2 seconds on some flows), or "production" to run without delays.
+- `AUTH_SECRET` is used for signing authentication JWT tokens.
+- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are required for Google OAuth sign-in.
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASS` are used for password reset and notification emails.
+- `APP_URL` defines the base URL (e.g. `http://localhost:3000`) for password reset links and payment return URLs.
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` power product image uploads and image optimization.
+- `NEXT_PUBLIC_APP_ENV` controls artificial loading delays for UX testing: set to `"dev"` to enable delays or `"production"` to run without delays.
 - `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are retrieved from the Stripe Dashboard.
 - `STRIPE_WEBHOOK_SECRET` is obtained after configuring a webhook endpoint pointing to `/api/stripe/webhook` in the Stripe Dashboard.
-- `APP_URL` defines the base URL (e.g. `http://localhost:3000`) for payment redirect return URLs.
+- `JOB_SCHEDULER_URL` points to the FastAPI job scheduler background service (e.g. `http://localhost:8000` or an ngrok tunnel).
 
 ## Stripe Configuration
 
@@ -110,7 +112,7 @@ npm install
 
 ### 2. Set up environment variables
 
-Create `.env.local` using the template above and make sure PostgreSQL, Google OAuth, and SMTP credentials are configured.
+Copy `.env.example` to `.env` and fill in your PostgreSQL, Google OAuth, Stripe, Cloudinary, and SMTP credentials.
 
 ### 3. Apply Prisma migrations
 
@@ -126,60 +128,33 @@ npm run dev
 
 Open `http://localhost:3000` in your browser.
 
+### 5. Start the FastAPI Job Scheduler (Optional for Background Tasks)
+
+Navigate to `job-schedular` and run:
+
+```bash
+cd job-schedular
+source venv/bin/activate
+uvicorn main:app --reload --port 8000
+```
+
 ## Available Scripts
 
-- `npm run dev` - Start the development server
-- `npm run build` - Build the production bundle
-- `npm run start` - Start the production server
-- `npm run lint` - Run ESLint
+- `npm run dev` - Start the Next.js development server
+- `npm run build` - Build the production application bundle
+- `npm run start` - Start the Next.js production server
+- `npm run lint` - Run ESLint code quality checks
+- `npm test` - Run Jest test suites for API services, controllers, and components
 
-## Main Flows
+## Main Architecture & Flows
 
-- Home and products pages fetch product data through `/api/products`
-- Cart operations go through `/api/cart`
-- Orders are created through `/api/orders`
-- Customer addresses are handled by `/api/addresses`
-- Authentication is handled by `/api/auth/[...nextauth]` for sign-in, sign-out, and callbacks, while `proxy.ts` owns session reads and cookie expiry
-- Admin product and order management lives under `/api/admin/*`
-- Notifications are loaded from `/api/notifications`
-
-## Database Overview
-
-The Prisma schema includes:
-
-- Users with roles and password reset tokens
-- Products with categories, variants, and images
-- Colors and sizes for variant selection
-- Cart items with quantity and reserved stock
-- Orders and order items
-- Saved addresses
-- Notifications and notification read tracking
-
-## Notes
-
-- Product images uploaded by admins are stored in Cloudinary and served from Cloudinary URLs.
-- Product deletions are soft deletes so order history can still reference past purchases.
-- Cart items expire after a fixed duration and are purged automatically when the cart is fetched.
-- Notification read state is tracked differently for broadcast and user-specific notifications.
-- Remember me is fixed at login time: unchecked sessions expire 24 hours after login, checked sessions expire 7 days after login, and refreshes do not slide the expiry window forward.
-
-## Authentication And Sessions
-
-NextAuth still handles the provider flows, but session handling is custom.
-
-1. Login creates a JWT with a fixed `exp` based on the remember-me checkbox.
-2. The JWT stores the identity data the app needs, including `id`, `role`, `provider`, and `rememberMe`.
-3. `proxy.ts` intercepts `/api/auth/session` and returns a custom session payload directly from the decoded JWT.
-4. The proxy rewrites `Set-Cookie` so the browser cookie expiry matches the JWT expiry exactly.
-5. Because the session route never reaches NextAuth, the token is not re-signed on refresh.
-
-That means:
-
-- Remember me unchecked: login time + 24 hours
-- Remember me checked: login time + 7 days
-- Page refresh: no sliding expiry
-- Cookie value: stays stable unless the user signs in again
+- **SSR & SEO Pages**: Route files in `app/**/page.tsx` are SSR Server Components exporting `Metadata` / `generateMetadata` for SEO, rendering client-side UI components (`*-client.tsx`).
+- **Product Browsing**: Home and products pages fetch product data through `/api/products`.
+- **Cart & Checkout**: Cart operations go through `/api/cart`; checkout supports saved addresses (`/api/addresses`) and saved payment methods (`/api/stripe/payment-methods`).
+- **Order Processing**: Orders are created via `/api/orders`; status changes and inventory restorations are managed by `/api/admin/orders/[id]`.
+- **Authentication & Sessions**: Handled by NextAuth v5 (`/api/auth/[...nextauth]`) with session handling proxied via `proxy.ts` to enforce fixed cookie ex-piries based on remember-me state.
+- **Background Jobs**: FastAPI service in `job-schedular/` processes email queues and bulk product uploads asynchronously via Celery and Redis.
 
 ## Deployment
 
-This project can be deployed on Vercel or any platform that supports Next.js and PostgreSQL. Make sure your production environment includes the same variables listed above, plus any platform-specific database and SMTP settings.
+This project can be deployed on Vercel or any platform that supports Next.js 16 and PostgreSQL. Make sure your production environment includes all environment variables listed above.

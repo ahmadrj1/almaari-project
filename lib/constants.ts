@@ -46,3 +46,4 @@ export const STATUS_LEVELS: Record<string, number> = {
 };
 export const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB in bytes
 export const JUST_AUTHENTICATED_KEY = "just_authenticated";
+export const STRIPE_MIN_AMOUNT_PKR = 150;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ShoppingBag } from "lucide-react";
 import { ProductCard } from "@/components/ui/product-card";
@@ -50,7 +50,27 @@ function ProductsContent() {
   const page = parseInt(searchParams.get("page") || "1");
 
   const [localSearch, setLocalSearch] = useState(searchParam);
+  const [prevSearchParam, setPrevSearchParam] = useState(searchParam);
+
+  if (searchParam !== prevSearchParam) {
+    setPrevSearchParam(searchParam);
+    setLocalSearch(searchParam);
+  }
+
   const debouncedSearch = useDebounce(localSearch);
+  const isUserTypingRef = useRef(false);
+  const isInitialMountRef = useRef(true);
+
+  // Clear query params on page unload so refreshing starts clean
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (window.location.search) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -82,25 +102,44 @@ function ProductsContent() {
   }, [searchParam, sort, page, categoryId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      const nav = performance.getEntriesByType("navigation")[0] as
+        PerformanceNavigationTiming | undefined;
+      const perfNav = (
+        performance as unknown as { navigation?: { type?: number } }
+      ).navigation;
+      const isReload = nav?.type === "reload" || perfNav?.type === 1;
+
+      if (isReload && window.location.search) {
+        router.replace(window.location.pathname, { scroll: false });
+        return;
+      }
+    }
+
     fetchProducts();
-  }, [fetchProducts]);
+  }, [fetchProducts, router]);
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(window.location.search);
       Object.entries(updates).forEach(([k, v]) => {
         if (v) params.set(k, v);
         else params.delete(k);
       });
       if (!updates.page) params.set("page", "1");
-      router.push(`?${params.toString()}`);
+      const qs = params.toString();
+      router.replace(qs ? `?${qs}` : window.location.pathname, {
+        scroll: false,
+      });
     },
-    [searchParams, router],
+    [router],
   );
 
   useEffect(() => {
+    if (!isUserTypingRef.current) return;
     if (debouncedSearch !== searchParam) {
+      isUserTypingRef.current = false;
       updateParams({ search: debouncedSearch, page: "1" });
     }
   }, [debouncedSearch, searchParam, updateParams]);
@@ -163,7 +202,10 @@ function ProductsContent() {
               placeholder="Search products..."
               className="w-full"
               value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
+              onChange={(e) => {
+                isUserTypingRef.current = true;
+                setLocalSearch(e.target.value);
+              }}
             />
           </div>
           <div className="shrink-0">
