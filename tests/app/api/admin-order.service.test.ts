@@ -128,4 +128,61 @@ describe("AdminOrderService", () => {
       expect(result.status).toBe("CANCELLED");
     });
   });
+
+  describe("getOrders / getOrderById - User Data Sanitization", () => {
+    it("requests only sanitized user fields in getOrders", async () => {
+      (prisma.order.findMany as jest.Mock).mockResolvedValue([]);
+      (prisma.order.count as jest.Mock).mockResolvedValue(0);
+      (prisma.order.aggregate as jest.Mock).mockResolvedValue({
+        _sum: { total: 0 },
+      });
+      (prisma.orderItem.aggregate as jest.Mock).mockResolvedValue({
+        _sum: { quantity: 0 },
+      });
+
+      await AdminOrderService.getOrders({ search: "", page: 1, limit: 10 });
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                phone: true,
+                role: true,
+              },
+            },
+          }),
+        }),
+      );
+    });
+
+    it("requests only sanitized user fields in getOrderById", async () => {
+      (prisma.order.findUnique as jest.Mock).mockResolvedValue({
+        id: "order-1",
+        user: { id: "user-1", fullName: "Test User", email: "test@example.com" },
+      });
+
+      await AdminOrderService.getOrderById("order-1");
+
+      expect(prisma.order.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "order-1" },
+          include: expect.objectContaining({
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                phone: true,
+                role: true,
+              },
+            },
+          }),
+        }),
+      );
+    });
+  });
 });

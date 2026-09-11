@@ -40,7 +40,18 @@ export class AdminOrderService {
           orderBy: { createdAt: "desc" },
           skip,
           take: limit,
-          include: { user: true, items: true },
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                phone: true,
+                role: true,
+              },
+            },
+            items: true,
+          },
         }),
         prisma.order.count({ where }),
         prisma.order.count({ where: { status: { not: "CANCELLED" } } }),
@@ -71,7 +82,15 @@ export class AdminOrderService {
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
-        user: true,
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+            role: true,
+          },
+        },
         address: true,
         items: {
           include: {
