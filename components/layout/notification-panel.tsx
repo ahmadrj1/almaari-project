@@ -7,6 +7,7 @@ import {
   Bell,
   Check,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import type { Notification } from "@/types";
 import { timeAgo } from "@/lib/notifications";
@@ -84,7 +85,11 @@ export function NotificationPanel({
           disabled={loading || notifications.every((n) => n.isRead)}
           className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors cursor-pointer"
         >
-          <Check className="h-3 w-3" />
+          {loading ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Check className="h-3 w-3" />
+          )}
           Mark all read
         </button>
       </div>

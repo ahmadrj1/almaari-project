@@ -19,14 +19,44 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       fullWidth,
       disabled,
       children,
+      onClick,
       ...props
     },
     ref,
   ) => {
+    const [isAsyncLoading, setIsAsyncLoading] = React.useState(false);
+    const isMounted = React.useRef(true);
+
+    React.useEffect(() => {
+      return () => {
+        isMounted.current = false;
+      };
+    }, []);
+
+    const isLoading = Boolean(loading || isAsyncLoading);
+
+    const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (!onClick) return;
+      try {
+        const result = (
+          onClick as (e: React.MouseEvent<HTMLButtonElement>) => unknown
+        )(e);
+        if (result && typeof (result as Promise<unknown>).then === "function") {
+          setIsAsyncLoading(true);
+          await result;
+        }
+      } finally {
+        if (isMounted.current) {
+          setIsAsyncLoading(false);
+        }
+      }
+    };
+
     return (
       <button
         ref={ref}
-        disabled={loading || disabled}
+        disabled={isLoading || disabled}
+        onClick={handleClick}
         className={cn(
           "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50",
           {
@@ -44,7 +74,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         {...props}
       >
-        {loading && <Spinner className="mr-2" size="sm" />}
+        {isLoading && <Spinner className="mr-2" size="sm" />}
         {children}
       </button>
     );

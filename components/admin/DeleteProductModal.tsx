@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 interface DeleteProductModalProps {
   isOpen: boolean;
@@ -44,9 +45,10 @@ export default function DeleteProductModal({
           <button
             onClick={onConfirm}
             disabled={isDeleting}
-            className="flex-1 py-2.5 px-4 rounded bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center justify-center"
+            className="flex-1 py-2.5 px-4 rounded bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {isDeleting ? "..." : "Yes"}
+            {isDeleting && <Spinner size="sm" />}
+            Yes
           </button>
         </div>
       </div>
