@@ -490,6 +490,17 @@ export class OrderService {
         },
       });
 
+      createNotification(
+        userId,
+        "ORDER_PLACED",
+        "Order Placed Successfully",
+        `Your order #${updatedOrder.id.slice(0, 8)} has been placed.`,
+        { orderId: updatedOrder.id },
+      );
+
+      const { queueOrderStatusEmail } = await import("@/lib/job-scheduler");
+      await queueOrderStatusEmail(updatedOrder.id);
+
       return { order: updatedOrder };
     }
   }

@@ -353,23 +353,68 @@ export default function CartPage() {
     const checkoutTotal = retryOrderId ? retryOrderTotals.total : total;
 
     return (
-      <CheckoutFlow
-        items={checkoutItems}
-        selectedItemIds={checkoutItemIds}
-        subTotal={checkoutSubtotal}
-        tax={checkoutTax}
-        total={checkoutTotal}
-        step={checkoutStep}
-        onStepChange={(s) => router.push(`/cart?step=${s}`)}
-        onBack={() => router.push("/cart")}
-        onSuccess={(orderId) => {
-          setSuccessOrderId(orderId);
-          router.push("/cart");
-        }}
-        onCartRefresh={refresh}
-        retryOrderId={retryOrderId || undefined}
-        initialAddressId={retryOrderId ? retryOrderAddressId : undefined}
-      />
+      <>
+        <CheckoutFlow
+          items={checkoutItems}
+          selectedItemIds={checkoutItemIds}
+          subTotal={checkoutSubtotal}
+          tax={checkoutTax}
+          total={checkoutTotal}
+          step={checkoutStep}
+          onStepChange={(s) => router.push(`/cart?step=${s}`)}
+          onBack={() => router.push("/cart")}
+          onSuccess={(orderId) => {
+            setSuccessOrderId(orderId);
+          }}
+          onCartRefresh={refresh}
+          retryOrderId={retryOrderId || undefined}
+          initialAddressId={retryOrderId ? retryOrderAddressId : undefined}
+        />
+        {successOrderId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 flex flex-col items-center gap-6 shadow-2xl">
+              <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
+                <svg
+                  className="w-10 h-10 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <div className="text-center">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">
+                  Order Placed!
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Your order has been successfully placed.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 w-full">
+                <Button
+                  className="w-full"
+                  onClick={() => router.push(`/orders/${successOrderId}`)}
+                >
+                  Check Order Details
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => router.push("/")}
+                >
+                  Return to Home
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
