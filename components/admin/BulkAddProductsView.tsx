@@ -278,7 +278,11 @@ export default function BulkAddProductsView() {
             disabled={submitting || products.length === 0}
             className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
           >
-            <Send size={16} />
+            {submitting ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Send size={16} />
+            )}
             {submitting ? "Submitting to Queue..." : "Submit All Products"}
           </button>
         </div>

@@ -265,6 +265,7 @@ export default function LoginPage() {
         type="button"
         variant="outline"
         fullWidth
+        loading={isLoading}
         disabled={isLoading}
         onClick={handleGoogleSignIn}
       >

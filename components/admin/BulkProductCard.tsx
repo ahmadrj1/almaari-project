@@ -9,7 +9,7 @@ import {
   useImperativeHandle,
 } from "react";
 import Image from "next/image";
-import { Upload, Plus, Trash2 } from "lucide-react";
+import { Upload, Plus, Trash2, Loader2 } from "lucide-react";
 import {
   Color,
   Size,
@@ -615,8 +615,11 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
                   <button
                     onClick={handleCreateCategory}
                     disabled={isCreatingCategory || !newCategoryName.trim()}
-                    className="animate-slide-in w-full xl:w-auto bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 whitespace-nowrap"
+                    className="animate-slide-in w-full xl:w-auto bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 whitespace-nowrap flex items-center justify-center gap-2"
                   >
+                    {isCreatingCategory && (
+                      <Loader2 size={14} className="animate-spin" />
+                    )}
                     Create
                   </button>
                 </div>

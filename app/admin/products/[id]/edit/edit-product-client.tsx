@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { MAX_UPLOAD_SIZE } from "@/lib/constants";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
+import { Spinner } from "@/components/ui/spinner";
 
 const formSchema = z.object({
   title: z.string().trim().min(1, "Title is required"),
@@ -550,8 +551,9 @@ export default function EditProductClient({
                 <button
                   onClick={handleCreateCategory}
                   disabled={isCreatingCategory || !newCategoryName.trim()}
-                  className="animate-slide-in w-full xl:w-auto bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 whitespace-nowrap"
+                  className="animate-slide-in w-full xl:w-auto bg-blue-500 text-white px-4 py-2.5 rounded-lg text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 whitespace-nowrap flex items-center justify-center gap-2"
                 >
+                  {isCreatingCategory && <Spinner size="sm" />}
                   Create
                 </button>
               </div>
@@ -668,8 +670,9 @@ export default function EditProductClient({
             <button
               onClick={handleUpdate}
               disabled={saving}
-              className="bg-blue-500 text-white font-medium py-2 px-8 rounded hover:bg-blue-600 transition-colors disabled:opacity-50"
+              className="bg-blue-500 text-white font-medium py-2 px-8 rounded hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
+              {saving && <Spinner size="sm" />}
               {saving ? "Updating..." : "Update"}
             </button>
           </div>

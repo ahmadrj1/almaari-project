@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal } from "@/components/ui/modal";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Address {
   id: string;
@@ -26,6 +27,7 @@ export default function AddressesClient() {
   const [zipCode, setZipCode] = useState("");
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 
   const [addressToDelete, setAddressToDelete] = useState<string | null>(null);
   const { showToast } = useToast();
@@ -148,6 +150,7 @@ export default function AddressesClient() {
   };
 
   const handleSetDefault = async (address: Address) => {
+    setSettingDefaultId(address.id);
     try {
       const res = await fetch(`/api/addresses/${address.id}`, {
         method: "PUT",
@@ -162,6 +165,8 @@ export default function AddressesClient() {
       }
     } catch {
       showToast("error", "An error occurred setting default address");
+    } finally {
+      setSettingDefaultId(null);
     }
   };
 
@@ -244,8 +249,10 @@ export default function AddressesClient() {
                 {!address.isDefault && (
                   <button
                     onClick={() => handleSetDefault(address)}
-                    className="text-xs text-gray-500 hover:text-gray-900 font-medium transition"
+                    disabled={settingDefaultId !== null}
+                    className="text-xs text-gray-500 hover:text-gray-900 font-medium transition flex items-center gap-1.5 disabled:opacity-50"
                   >
+                    {settingDefaultId === address.id && <Spinner size="sm" />}
                     Set as default
                   </button>
                 )}
@@ -340,8 +347,9 @@ export default function AddressesClient() {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 transition disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
+              {saving && <Spinner size="sm" />}
               {saving ? "Saving..." : "Save Address"}
             </button>
           </div>

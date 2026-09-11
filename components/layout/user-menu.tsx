@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { LogOut, Package, CreditCard, MapPin } from "lucide-react";
+import { LogOut, Package, CreditCard, MapPin, Loader2 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { ChevronDown } from "lucide-react";
 
 export function UserMenu() {
   const [isOpen, setIsOpen] = React.useState(false);
   const [imgError, setImgError] = React.useState(false);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const { data: session } = useSession();
   const user = session?.user;
 
@@ -95,13 +96,18 @@ export function UserMenu() {
             Saved Addresses
           </Link>
           <button
-            className="flex w-full items-center px-4 py-2 text-left text-sm text-[#E53935] hover:bg-red-50"
-            onClick={() => {
-              setIsOpen(false);
-              signOut({ callbackUrl: "/login" });
+            disabled={isLoggingOut}
+            className="flex w-full items-center px-4 py-2 text-left text-sm text-[#E53935] hover:bg-red-50 disabled:opacity-50"
+            onClick={async () => {
+              setIsLoggingOut(true);
+              await signOut({ callbackUrl: "/login" });
             }}
           >
-            <LogOut className="mr-3 h-4 w-4 text-[#E53935]" />
+            {isLoggingOut ? (
+              <Loader2 className="mr-3 h-4 w-4 animate-spin text-[#E53935]" />
+            ) : (
+              <LogOut className="mr-3 h-4 w-4 text-[#E53935]" />
+            )}
             Logout
           </button>
         </div>
