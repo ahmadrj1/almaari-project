@@ -79,6 +79,7 @@ STRIPE_WEBHOOK_SECRET="whsec_xxx"
 
 # FastAPI Job Scheduler Service
 JOB_SCHEDULER_URL="Scheduler server url"
+JOB_SCHEDULER_SECRET="job-scheduler-secret"
 ```
 
 ### Variable Notes
@@ -93,6 +94,7 @@ JOB_SCHEDULER_URL="Scheduler server url"
 - `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are retrieved from the Stripe Dashboard.
 - `STRIPE_WEBHOOK_SECRET` is obtained after configuring a webhook endpoint pointing to `/api/stripe/webhook` in the Stripe Dashboard.
 - `JOB_SCHEDULER_URL` points to the FastAPI job scheduler background service (e.g. `http://localhost:8000` or an ngrok tunnel).
+- `JOB_SCHEDULER_SECRET` is the shared authentication secret passed in the `X-Scheduler-Secret` header to the FastAPI background service.
 
 ## Stripe Configuration
 
