@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ProductService } from "@/services/product.service";
-import { handleApiError } from "@/lib/api-error";
+import { handleApiError, AppError } from "@/lib/api-error";
 import { DEFAULT_SORT } from "@/lib/constants";
 
 export class ProductController {
@@ -9,14 +9,20 @@ export class ProductController {
       const url = new URL(req.url);
       const search = url.searchParams.get("search") || "";
       const sort = url.searchParams.get("sort") || DEFAULT_SORT;
-      const page = parseInt(url.searchParams.get("page") || "1");
+      const rawPage = url.searchParams.get("page") || "1";
+      const page = parseInt(rawPage);
+      if (isNaN(page) || page < 1) {
+        throw new AppError("Page must be greater than or equal to 1", 400);
+      }
       const inStock = url.searchParams.get("inStock") === "true";
+      const categoryId = url.searchParams.get("categoryId") || undefined;
 
       const data = await ProductService.getProducts({
         search,
         sort,
         page,
         inStock,
+        categoryId,
       });
 
       return NextResponse.json({ success: true, data });
@@ -37,6 +43,7 @@ export class ProductController {
         50,
       );
       const inStock = url.searchParams.get("inStock") === "true";
+      const categoryId = url.searchParams.get("categoryId") || undefined;
 
       const data = await ProductService.getProductsCursor({
         search,
@@ -45,6 +52,7 @@ export class ProductController {
         direction,
         limit,
         inStock,
+        categoryId,
       });
       return NextResponse.json({ success: true, data });
     } catch (error) {

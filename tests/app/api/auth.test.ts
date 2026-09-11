@@ -4,7 +4,6 @@
 
 import { AuthController } from "@/controllers/auth.controller";
 import { prisma } from "@/lib/db";
-import nodemailer from "nodemailer";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 
@@ -20,11 +19,15 @@ jest.mock("@/lib/db", () => ({
   },
 }));
 
-// Mock Nodemailer
+// Mock Nodemailer (still needed by some transitive imports)
 jest.mock("nodemailer", () => ({
   createTransport: jest.fn().mockReturnValue({
     sendMail: jest.fn().mockResolvedValue(true),
   }),
+}));
+
+jest.mock("@/lib/job-scheduler", () => ({
+  queueForgotPasswordEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("bcryptjs", () => ({
@@ -171,10 +174,15 @@ describe("Auth API / Controller Tests", () => {
       const response = await AuthController.forgotPassword(req);
       const data = await response.json();
 
+      const { queueForgotPasswordEmail } = await import("@/lib/job-scheduler");
+
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
       expect(prisma.user.update).toHaveBeenCalled();
-      expect(nodemailer.createTransport).toHaveBeenCalled();
+      expect(queueForgotPasswordEmail).toHaveBeenCalledWith(
+        "john@example.com",
+        expect.any(String),
+      );
     });
 
     it("should return success even if user does not exist (security precaution)", async () => {

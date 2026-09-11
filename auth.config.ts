@@ -40,17 +40,32 @@ export default {
       const isAdminRoute = nextUrl.pathname.startsWith("/admin");
 
       if (isAuthPage && isLoggedIn) {
-        if (userRole === "ADMIN") {
-          return Response.redirect(new URL("/admin/products", nextUrl));
+        const rawCallback = nextUrl.searchParams.get("callbackUrl");
+        const defaultAdmin = "/admin/products";
+        const defaultUser = "/";
+        let target = userRole === "ADMIN" ? defaultAdmin : defaultUser;
+
+        if (
+          rawCallback &&
+          rawCallback.startsWith("/") &&
+          !rawCallback.startsWith("//")
+        ) {
+          if (userRole === "ADMIN") {
+            target = rawCallback;
+          } else if (!rawCallback.startsWith("/admin")) {
+            target = rawCallback;
+          }
         }
-        return Response.redirect(new URL("/", nextUrl));
+
+        return Response.redirect(new URL(target, nextUrl));
       }
 
       if (isAdminRoute) {
         if (!isLoggedIn) {
+          const callbackDest = nextUrl.pathname + nextUrl.search;
           return Response.redirect(
             new URL(
-              `/login?callbackUrl=${encodeURIComponent(nextUrl.pathname)}`,
+              `/login?callbackUrl=${encodeURIComponent(callbackDest)}`,
               nextUrl,
             ),
           );

@@ -10,8 +10,9 @@ import {
 } from "@stripe/react-stripe-js";
 
 interface StripeCardFormProps {
-  onSuccess: (paymentMethodId: string) => void;
+  onSuccess: (paymentMethodId: string, setAsDefault?: boolean) => void;
   onCancel: () => void;
+  showSetDefault?: boolean;
 }
 
 const STRIPE_ELEMENT_STYLE = {
@@ -30,12 +31,14 @@ const FIELD_CLASS =
 export default function StripeCardForm({
   onSuccess,
   onCancel,
+  showSetDefault = false,
 }: StripeCardFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cardholderName, setCardholderName] = useState("");
+  const [setAsDefault, setSetDefault] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +68,7 @@ export default function StripeCardForm({
     }
 
     if (paymentMethod?.id) {
-      onSuccess(paymentMethod.id);
+      onSuccess(paymentMethod.id, setAsDefault);
     } else {
       setError("Failed to save card. Please try again.");
       setLoading(false);
@@ -119,6 +122,18 @@ export default function StripeCardForm({
           </div>
         </div>
       </div>
+
+      {showSetDefault && (
+        <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 pt-1">
+          <input
+            type="checkbox"
+            checked={setAsDefault}
+            onChange={(e) => setSetDefault(e.target.checked)}
+            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+          />
+          Set as default payment method
+        </label>
+      )}
 
       {error && (
         <div className="text-sm font-medium text-red-600 bg-red-50 p-3 rounded-xl border border-red-100">

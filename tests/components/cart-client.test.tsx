@@ -213,7 +213,10 @@ describe("CartPage Client Component Tests", () => {
   it("places order successfully and shows success dialog", async () => {
     mockFetch({
       "/api/cart/validate": { success: true, issues: [] },
-      "/api/cart": { success: true, data: { items: [mockCartItem], adjustments: [] } },
+      "/api/cart": {
+        success: true,
+        data: { items: [mockCartItem], adjustments: [] },
+      },
       "/api/addresses": { success: true, data: [mockAddress] },
       "/api/stripe/payment-methods": { paymentMethods: [] },
       "/api/orders": { success: true, data: { order: { id: "order-999" } } },

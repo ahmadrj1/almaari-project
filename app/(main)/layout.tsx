@@ -9,7 +9,7 @@ export default function MainLayout({
   return (
     <div className="min-h-screen flex flex-col bg-[#F5F7FA]">
       <Navbar />
-      <main className="container mx-auto flex-1 px-3 sm:px-4 py-6 sm:py-8 w-full">
+      <main className="container mx-auto flex-1 px-3 sm:px-4 py-6 sm:py-8 w-full flex flex-col">
         {children}
       </main>
       <Footer />

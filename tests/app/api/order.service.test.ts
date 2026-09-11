@@ -35,6 +35,10 @@ jest.mock("@/lib/notifications", () => ({
   createNotification: jest.fn(),
 }));
 
+jest.mock("@/lib/job-scheduler", () => ({
+  queueOrderStatusEmail: jest.fn().mockResolvedValue(undefined),
+}));
+
 const USER_ID = "user-1";
 const ADDRESS_ID = "addr-1";
 
@@ -127,6 +131,68 @@ describe("OrderService", () => {
 
       expect(result).toHaveProperty("order");
       expect(result.order.paymentMethod).toBe("CASH_ON_DELIVERY");
+    });
+
+    it("throws 400 for CREDIT_DEBIT_CARD if total is less than STRIPE_MIN_AMOUNT_PKR", async () => {
+      (prisma.address.findFirst as jest.Mock).mockResolvedValue(mockAddress);
+      // mockCartItem total: subTotal = 100, tax = 10, total = 110 (< 150)
+      (prisma.cartItem.findMany as jest.Mock).mockResolvedValue([mockCartItem]);
+
+      await expect(
+        OrderService.createOrder(USER_ID, {
+          ...body,
+          paymentMethod: "CREDIT_DEBIT_CARD",
+        }),
+      ).rejects.toThrow(AppError);
+    });
+
+    it("creates card order and does NOT call queueOrderStatusEmail directly", async () => {
+      const { queueOrderStatusEmail } = await import("@/lib/job-scheduler");
+      (queueOrderStatusEmail as jest.Mock).mockClear();
+      (prisma.address.findFirst as jest.Mock).mockResolvedValue(mockAddress);
+      // Cart item with price 100 => subTotal = 200, tax = 20, total = 220 (>= 150)
+      const highValueItem = {
+        ...mockCartItem,
+        product: { id: "prod-1", title: "High Value", price: "100.00" },
+      };
+      (prisma.cartItem.findMany as jest.Mock).mockResolvedValue([highValueItem]);
+
+      const mockOrder = {
+        id: "order-card-1",
+        userId: USER_ID,
+        subTotal: 200,
+        tax: 20,
+        total: 220,
+        paymentMethod: "CREDIT_DEBIT_CARD",
+        paymentStatus: "PROCESSING",
+      };
+
+      (prisma.$transaction as jest.Mock).mockImplementation(async (fn) => {
+        const tx = {
+          $queryRaw: jest.fn().mockResolvedValue([{ stock: 10 }]),
+          order: { create: jest.fn().mockResolvedValue(mockOrder) },
+          productVariant: { update: jest.fn() },
+          cartItem: { deleteMany: jest.fn() },
+        };
+        return fn(tx);
+      });
+
+      const { stripe } = await import("@/lib/stripe");
+      (stripe.paymentIntents.create as jest.Mock).mockResolvedValue({
+        id: "pi_123",
+        client_secret: "secret_123",
+        status: "succeeded",
+      });
+      (prisma.order.update as jest.Mock).mockResolvedValue(mockOrder);
+
+      const result = await OrderService.createOrder(USER_ID, {
+        ...body,
+        paymentMethod: "CREDIT_DEBIT_CARD",
+        paymentMethodId: "pm_card_123",
+      });
+
+      expect(result).toHaveProperty("order");
+      expect(queueOrderStatusEmail).not.toHaveBeenCalled();
     });
   });
 
@@ -286,6 +352,18 @@ describe("OrderService", () => {
           paymentMethod: "CASH_ON_DELIVERY",
         }),
       ).rejects.toThrow(new AppError("Invalid address", 400));
+    });
+
+    it("throws 400 on retry with CREDIT_DEBIT_CARD if order total is under STRIPE_MIN_AMOUNT_PKR", async () => {
+      const lowTotalOrder = { ...baseOrder, total: "50.00" };
+      (prisma.order.findUnique as jest.Mock).mockResolvedValue(lowTotalOrder);
+
+      await expect(
+        OrderService.retryPayment(USER_ID, "order-1", {
+          addressId: ADDRESS_ID,
+          paymentMethod: "CREDIT_DEBIT_CARD",
+        }),
+      ).rejects.toThrow(AppError);
     });
   });
 

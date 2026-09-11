@@ -15,29 +15,68 @@ export class AdminProductService {
     limit?: number;
   }) {
     const skip = (page - 1) * limit;
+
+    const trimmed = search ? search.trim() : "";
     const where: Prisma.ProductWhereInput = { deletedAt: null };
 
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { category: { name: { contains: search, mode: "insensitive" } } },
-      ];
+    if (trimmed) {
+      const words = trimmed.split(/\s+/).filter(Boolean);
+      const getWordCondition = (w: string): Prisma.ProductWhereInput => ({
+        OR: [
+          { title: { contains: w, mode: "insensitive" } },
+          { description: { contains: w, mode: "insensitive" } },
+          { category: { name: { contains: w, mode: "insensitive" } } },
+          {
+            variants: {
+              some: {
+                OR: [
+                  { color: { name: { contains: w, mode: "insensitive" } } },
+                  { size: { name: { contains: w, mode: "insensitive" } } },
+                ],
+              },
+            },
+          },
+        ],
+      });
+
+      if (words.length === 1) {
+        where.OR = getWordCondition(words[0]).OR;
+      } else {
+        where.OR = [
+          { title: { contains: trimmed, mode: "insensitive" } },
+          { description: { contains: trimmed, mode: "insensitive" } },
+          { category: { name: { contains: trimmed, mode: "insensitive" } } },
+          {
+            AND: words.map((w) => getWordCondition(w)),
+          },
+        ];
+      }
     }
 
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-        include: {
-          variants: {
-            include: { color: true },
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const [products, total, totalProducts, addedLast24Hours] =
+      await Promise.all([
+        prisma.product.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+          include: {
+            variants: {
+              include: { color: true },
+            },
           },
-        },
-      }),
-      prisma.product.count({ where }),
-    ]);
+        }),
+        prisma.product.count({ where }),
+        prisma.product.count({ where: { deletedAt: null } }),
+        prisma.product.count({
+          where: {
+            deletedAt: null,
+            createdAt: { gte: twentyFourHoursAgo },
+          },
+        }),
+      ]);
 
     const productsWithStock = products.map((product) => {
       const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
@@ -47,6 +86,10 @@ export class AdminProductService {
     return {
       products: productsWithStock,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      stats: {
+        totalProducts,
+        addedLast24Hours,
+      },
     };
   }
 

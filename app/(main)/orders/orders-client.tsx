@@ -62,7 +62,7 @@ export default function OrdersPage() {
 
   if (orders.length === 0) {
     return (
-      <div className="w-full">
+      <div className="w-full flex-1 flex flex-col">
         <h1 className="text-2xl font-semibold text-[#2979FF] mb-8">
           My Orders
         </h1>
@@ -76,7 +76,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full flex-1 flex flex-col">
       <h1 className="text-2xl font-semibold text-[#2979FF] mb-8">My Orders</h1>
 
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm mb-6">

@@ -13,6 +13,7 @@ export default tseslint.config(
       "dist",
       ".next",
       "node_modules",
+      "scripts/**/*",
       "tests/**/*",
       "jest.setup.ts",
       "jest.config.ts",

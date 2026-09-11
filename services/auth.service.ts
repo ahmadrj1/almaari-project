@@ -1,9 +1,8 @@
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
 import { AppError } from "@/lib/api-error";
-import { RESET_TOKEN_EXPIRY_MS, APP_NAME } from "@/lib/constants";
+import { RESET_TOKEN_EXPIRY_MS } from "@/lib/constants";
 
 import { RegisterInput } from "@/lib/validations/auth";
 
@@ -73,36 +72,8 @@ export class AuthService {
       },
     });
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || "587", 10),
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    const appUrl = process.env.APP_URL || "http://localhost:3000";
-    const resetLink = `${appUrl}/api/auth/verify-reset?token=${resetToken}`;
-
-    const htmlTemplate = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 8px;">
-        <h2 style="color: #2979FF; text-align: center;">Reset Your Password</h2>
-        <p style="color: #333; font-size: 16px;">Hello ${user.fullName},</p>
-        <p style="color: #333; font-size: 16px;">You requested a password reset for your ${APP_NAME} account. Click the button below to reset your password. This link is valid for 15 minutes from the time this email was sent.</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${resetLink}" style="background-color: #2979FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">Reset Password</a>
-        </div>
-        <p style="color: #666; font-size: 14px; text-align: center;">If you didn't request this, you can safely ignore this email.</p>
-      </div>
-    `;
-
-    await transporter.sendMail({
-      from: process.env.SMTP_USER,
-      to: email,
-      subject: `Password Reset - ${APP_NAME}`,
-      html: htmlTemplate,
-    });
+    const { queueForgotPasswordEmail } = await import("@/lib/job-scheduler");
+    await queueForgotPasswordEmail(email, resetToken);
 
     return successMessage;
   }

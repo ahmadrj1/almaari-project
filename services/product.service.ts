@@ -2,17 +2,61 @@ import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { PRODUCTS_PER_PAGE_DEFAULT } from "@/lib/constants";
 
+function buildProductSearchWhere(
+  search: string,
+): Prisma.ProductWhereInput | undefined {
+  const trimmed = search ? search.trim().replace(/\s+/g, " ") : "";
+  if (!trimmed) return undefined;
+
+  const words = trimmed.split(" ").filter(Boolean);
+
+  const getWordCondition = (w: string): Prisma.ProductWhereInput => ({
+    OR: [
+      { title: { contains: w, mode: "insensitive" } },
+      { description: { contains: w, mode: "insensitive" } },
+      { category: { name: { contains: w, mode: "insensitive" } } },
+      {
+        variants: {
+          some: {
+            OR: [
+              { color: { name: { contains: w, mode: "insensitive" } } },
+              { size: { name: { contains: w, mode: "insensitive" } } },
+            ],
+          },
+        },
+      },
+    ],
+  });
+
+  if (words.length === 1) {
+    return getWordCondition(words[0]);
+  }
+
+  return {
+    OR: [
+      { title: { contains: trimmed, mode: "insensitive" } },
+      { description: { contains: trimmed, mode: "insensitive" } },
+      { category: { name: { contains: trimmed, mode: "insensitive" } } },
+      {
+        AND: words.map((w) => getWordCondition(w)),
+      },
+    ],
+  };
+}
+
 export class ProductService {
   static async getProducts({
     search,
     sort,
     page,
     inStock,
+    categoryId,
   }: {
     search: string;
     sort: string;
     page: number;
     inStock: boolean;
+    categoryId?: string;
   }) {
     const limit = PRODUCTS_PER_PAGE_DEFAULT;
     const skip = (page - 1) * limit;
@@ -28,17 +72,26 @@ export class ProductService {
               ? [{ title: "desc" }, { id: "asc" }]
               : [{ createdAt: "desc" }, { id: "asc" }];
 
-    const where: Prisma.ProductWhereInput = { deletedAt: null };
-
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { category: { name: { contains: search, mode: "insensitive" } } },
-      ];
-    }
+    const searchWhere = buildProductSearchWhere(search);
+    const where: Prisma.ProductWhereInput = {
+      deletedAt: null,
+      ...(categoryId ? { categoryId } : {}),
+      ...(searchWhere ? searchWhere : {}),
+    };
 
     if (inStock) {
-      where.variants = { some: { stock: { gt: 0 } } };
+      if (where.variants) {
+        where.AND = [
+          ...(Array.isArray(where.AND)
+            ? where.AND
+            : where.AND
+              ? [where.AND]
+              : []),
+          { variants: { some: { stock: { gt: 0 } } } },
+        ];
+      } else {
+        where.variants = { some: { stock: { gt: 0 } } };
+      }
     }
 
     const [products, total] = await Promise.all([
@@ -92,6 +145,7 @@ export class ProductService {
     direction = "next",
     limit,
     inStock,
+    categoryId,
   }: {
     search: string;
     sort: string;
@@ -99,6 +153,7 @@ export class ProductService {
     direction?: string;
     limit: number;
     inStock: boolean;
+    categoryId?: string;
   }) {
     const orderBy: Prisma.ProductOrderByWithRelationInput[] =
       sort === "price_asc"
@@ -111,17 +166,26 @@ export class ProductService {
               ? [{ title: "desc" }, { id: "asc" }]
               : [{ createdAt: "desc" }, { id: "asc" }];
 
-    const where: Prisma.ProductWhereInput = { deletedAt: null };
-
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { category: { name: { contains: search, mode: "insensitive" } } },
-      ];
-    }
+    const searchWhere = buildProductSearchWhere(search);
+    const where: Prisma.ProductWhereInput = {
+      deletedAt: null,
+      ...(categoryId ? { categoryId } : {}),
+      ...(searchWhere ? searchWhere : {}),
+    };
 
     if (inStock) {
-      where.variants = { some: { stock: { gt: 0 } } };
+      if (where.variants) {
+        where.AND = [
+          ...(Array.isArray(where.AND)
+            ? where.AND
+            : where.AND
+              ? [where.AND]
+              : []),
+          { variants: { some: { stock: { gt: 0 } } } },
+        ];
+      } else {
+        where.variants = { some: { stock: { gt: 0 } } };
+      }
     }
 
     const takeAmount = direction === "prev" ? -(limit + 1) : limit + 1;

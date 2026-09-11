@@ -1,5 +1,11 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import OrdersPage from "@/app/(main)/orders/orders-client";
 
 // Mock next/link
@@ -76,7 +82,10 @@ describe("OrdersPage Client Component", () => {
   it("shows loading spinner initially", () => {
     jest.spyOn(window, "fetch").mockImplementation(() => new Promise(() => {}));
     render(<OrdersPage />);
-    expect(document.querySelector("svg") ?? document.querySelector('[class*="animate"]')).toBeTruthy();
+    expect(
+      document.querySelector("svg") ??
+        document.querySelector('[class*="animate"]'),
+    ).toBeTruthy();
   });
 
   it("shows empty state when no orders", async () => {
@@ -195,7 +204,10 @@ describe("OrdersPage Client Component", () => {
     });
 
     await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith("error", "Failed to load orders");
+      expect(mockShowToast).toHaveBeenCalledWith(
+        "error",
+        "Failed to load orders",
+      );
     });
   });
 
@@ -207,7 +219,10 @@ describe("OrdersPage Client Component", () => {
     });
 
     await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith("error", "Failed to load orders");
+      expect(mockShowToast).toHaveBeenCalledWith(
+        "error",
+        "Failed to load orders",
+      );
     });
   });
 
@@ -234,7 +249,9 @@ describe("OrdersPage Client Component", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /order again/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /order again/i }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -273,16 +290,17 @@ describe("OrdersPage Client Component", () => {
       render(<OrdersPage />);
     });
 
-    await waitFor(() =>
-      screen.getByRole("button", { name: /order again/i }),
-    );
+    await waitFor(() => screen.getByRole("button", { name: /order again/i }));
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /order again/i }));
     });
 
     await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith("success", "Items added to cart.");
+      expect(mockShowToast).toHaveBeenCalledWith(
+        "success",
+        "Items added to cart.",
+      );
       expect(mockRefresh).toHaveBeenCalled();
       expect(mockRouter.push).toHaveBeenCalledWith("/cart");
     });
@@ -321,9 +339,7 @@ describe("OrdersPage Client Component", () => {
       render(<OrdersPage />);
     });
 
-    await waitFor(() =>
-      screen.getByRole("button", { name: /order again/i }),
-    );
+    await waitFor(() => screen.getByRole("button", { name: /order again/i }));
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /order again/i }));

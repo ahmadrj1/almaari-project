@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { formatCurrency } from "@/lib/utils";
+import { STRIPE_MIN_AMOUNT_PKR } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary";
@@ -84,40 +85,58 @@ export default function CheckoutFlow({
     "COD",
   );
   const [showAddNewCard, setShowAddNewCard] = useState(false);
+  const [isDuplicateCardError, setIsDuplicateCardError] = useState(false);
+  const [addCardError, setAddCardError] = useState<string | null>(null);
 
   const { showToast } = useToast();
   const router = useRouter();
 
+  const isCardPaymentDisabled = total < STRIPE_MIN_AMOUNT_PKR;
+
+  useEffect(() => {
+    if (isCardPaymentDisabled && selectedPaymentId !== "COD") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedPaymentId("COD");
+      setShowAddNewCard(false);
+    }
+  }, [isCardPaymentDisabled, selectedPaymentId]);
+
   const selectedCartItems = items.filter((i) => selectedItemIds.has(i.id));
 
-  const fetchAddresses = useCallback(async () => {
-    setAddressesLoading(true);
-    try {
-      const res = await fetch("/api/addresses");
-      const data = await res.json();
-      if (data.success) {
-        const addrs: SavedAddress[] = data.data;
-        setAddresses(addrs);
-        if (addrs.length > 0) {
-          if (
-            initialAddressId &&
-            addrs.some((a) => a.id === initialAddressId)
-          ) {
-            setSelectedAddressId(initialAddressId);
+  const fetchAddresses = useCallback(
+    async (preferredId?: string) => {
+      setAddressesLoading(true);
+      try {
+        const res = await fetch("/api/addresses");
+        const data = await res.json();
+        if (data.success) {
+          const addrs: SavedAddress[] = data.data;
+          setAddresses(addrs);
+          if (addrs.length > 0) {
+            const targetId =
+              (preferredId && addrs.some((a) => a.id === preferredId)
+                ? preferredId
+                : null) ||
+              (selectedAddressId &&
+              addrs.some((a) => a.id === selectedAddressId)
+                ? selectedAddressId
+                : null) ||
+              (initialAddressId && addrs.some((a) => a.id === initialAddressId)
+                ? initialAddressId
+                : (addrs.find((a) => a.isDefault) ?? addrs[0]).id);
+            setSelectedAddressId(targetId);
           } else {
-            const def = addrs.find((a) => a.isDefault) ?? addrs[0];
-            setSelectedAddressId(def.id);
+            setIsAddingNew(true);
           }
-        } else {
-          setIsAddingNew(true);
         }
+      } catch {
+        showToast("error", "Failed to load addresses");
+      } finally {
+        setAddressesLoading(false);
       }
-    } catch {
-      showToast("error", "Failed to load addresses");
-    } finally {
-      setAddressesLoading(false);
-    }
-  }, [initialAddressId, showToast]);
+    },
+    [initialAddressId, selectedAddressId, showToast],
+  );
 
   const fetchPaymentMethods = useCallback(async () => {
     try {
@@ -133,12 +152,12 @@ export default function CheckoutFlow({
         });
         setPaymentMethods(pms);
         setDefaultPaymentMethodId(defId);
-        if (defId) setSelectedPaymentId(defId);
+        if (defId && !isCardPaymentDisabled) setSelectedPaymentId(defId);
       }
     } catch {
       // silent
     }
-  }, []);
+  }, [isCardPaymentDisabled]);
 
   useEffect(() => {
     let ignore = false;
@@ -180,7 +199,7 @@ export default function CheckoutFlow({
           });
           setPaymentMethods(pms);
           setDefaultPaymentMethodId(defId);
-          if (defId) setSelectedPaymentId(defId);
+          if (defId && !isCardPaymentDisabled) setSelectedPaymentId(defId);
         }
       } catch {
         if (!ignore) showToast("error", "Failed to load delivery information");
@@ -192,6 +211,7 @@ export default function CheckoutFlow({
     return () => {
       ignore = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialAddressId, showToast]);
 
   const handleContinueToPayment = async () => {
@@ -212,9 +232,16 @@ export default function CheckoutFlow({
         });
         const data = await res.json();
         if (data.success) {
-          setSelectedAddressId(data.data.id);
+          const newId = data.data.id;
+          setSelectedAddressId(newId);
           setIsAddingNew(false);
-          await fetchAddresses();
+          setNewAddress({
+            street: "",
+            city: "",
+            zipCode: "",
+            country: "",
+          });
+          await fetchAddresses(newId);
           setStep(2);
         } else {
           showToast("error", data.error || "Failed to add address");
@@ -234,10 +261,22 @@ export default function CheckoutFlow({
   };
 
   const handlePlaceOrder = async () => {
+    const paymentMethod =
+      selectedPaymentId === "COD" ? "CASH_ON_DELIVERY" : "CREDIT_DEBIT_CARD";
+
+    if (
+      paymentMethod === "CREDIT_DEBIT_CARD" &&
+      total < STRIPE_MIN_AMOUNT_PKR
+    ) {
+      showToast(
+        "error",
+        `Card payments require a minimum order amount of ${formatCurrency(STRIPE_MIN_AMOUNT_PKR)}. Please choose Cash on Delivery.`,
+      );
+      return;
+    }
+
     setLoading(true);
     try {
-      const paymentMethod =
-        selectedPaymentId === "COD" ? "CASH_ON_DELIVERY" : "CREDIT_DEBIT_CARD";
       const paymentMethodId =
         selectedPaymentId !== "COD" ? selectedPaymentId : undefined;
 
@@ -306,6 +345,8 @@ export default function CheckoutFlow({
 
   const handleAddCardSuccess = async (pmId: string) => {
     setLoading(true);
+    setIsDuplicateCardError(false);
+    setAddCardError(null);
     try {
       const res = await fetch("/api/stripe/payment-methods", {
         method: "POST",
@@ -321,10 +362,18 @@ export default function CheckoutFlow({
         setSelectedPaymentId(data.paymentMethod?.id || pmId);
         setShowAddNewCard(false);
       } else {
-        showToast("error", data.error || "Failed to save card");
+        if (data.error === "DUPLICATE_CARD") {
+          setIsDuplicateCardError(true);
+        } else {
+          setAddCardError(
+            data.error || "Failed to save card. Please try again.",
+          );
+        }
+        setShowAddNewCard(false);
       }
     } catch {
-      showToast("error", "Error saving card");
+      setAddCardError("An unexpected error occurred. Please try again.");
+      setShowAddNewCard(false);
     } finally {
       setLoading(false);
     }
@@ -651,11 +700,21 @@ export default function CheckoutFlow({
                 </p>
 
                 <div className="space-y-3 mb-6">
+                  {isCardPaymentDisabled && (
+                    <div className="text-xs font-medium text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200">
+                      Card payments require a minimum order of{" "}
+                      {formatCurrency(STRIPE_MIN_AMOUNT_PKR)}. Orders below this
+                      amount must use Cash on Delivery.
+                    </div>
+                  )}
+
                   {/* COD */}
                   <div
                     onClick={() => {
                       setSelectedPaymentId("COD");
                       setShowAddNewCard(false);
+                      setIsDuplicateCardError(false);
+                      setAddCardError(null);
                     }}
                     className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-4 ${selectedPaymentId === "COD" ? "border-blue-600 bg-blue-50/40" : "border-gray-200 hover:border-blue-300"}`}
                   >
@@ -684,17 +743,37 @@ export default function CheckoutFlow({
                     <div
                       key={pm.id}
                       onClick={() => {
+                        if (isCardPaymentDisabled) {
+                          showToast(
+                            "error",
+                            `Card payments require a minimum order of ${formatCurrency(STRIPE_MIN_AMOUNT_PKR)}.`,
+                          );
+                          return;
+                        }
                         setSelectedPaymentId(pm.id);
                         setShowAddNewCard(false);
+                        setIsDuplicateCardError(false);
+                        setAddCardError(null);
                       }}
-                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-4 ${selectedPaymentId === pm.id ? "border-blue-600 bg-blue-50/40" : "border-gray-200 hover:border-blue-300"}`}
+                      className={`p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
+                        isCardPaymentDisabled
+                          ? "opacity-50 cursor-not-allowed border-gray-200 bg-gray-50"
+                          : selectedPaymentId === pm.id
+                            ? "border-blue-600 bg-blue-50/40 cursor-pointer"
+                            : "border-gray-200 hover:border-blue-300 cursor-pointer"
+                      }`}
                     >
                       <div
-                        className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${selectedPaymentId === pm.id ? "border-blue-600 bg-blue-600" : "border-gray-300"}`}
+                        className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                          selectedPaymentId === pm.id && !isCardPaymentDisabled
+                            ? "border-blue-600 bg-blue-600"
+                            : "border-gray-300"
+                        }`}
                       >
-                        {selectedPaymentId === pm.id && (
-                          <div className="w-2 h-2 rounded-full bg-white" />
-                        )}
+                        {selectedPaymentId === pm.id &&
+                          !isCardPaymentDisabled && (
+                            <div className="w-2 h-2 rounded-full bg-white" />
+                          )}
                       </div>
                       <div className="w-9 h-9 bg-indigo-900 rounded-lg flex items-center justify-center flex-shrink-0">
                         <CreditCard className="w-4 h-4 text-white" />
@@ -717,13 +796,33 @@ export default function CheckoutFlow({
                   ))}
 
                   {/* Add new card */}
+                  {isDuplicateCardError && (
+                    <div className="text-sm font-medium text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                      This card is already saved to your account.
+                    </div>
+                  )}
+                  {addCardError && (
+                    <div className="text-sm font-medium text-red-700 bg-red-50 p-3 rounded-lg border border-red-200">
+                      {addCardError}
+                    </div>
+                  )}
+
                   {!showAddNewCard && (
                     <button
+                      type="button"
+                      disabled={isCardPaymentDisabled}
                       onClick={() => {
+                        if (isCardPaymentDisabled) return;
                         setShowAddNewCard(true);
                         setSelectedPaymentId("new");
+                        setIsDuplicateCardError(false);
+                        setAddCardError(null);
                       }}
-                      className="w-full p-4 border-2 border-dashed border-gray-200 rounded-xl text-gray-500 text-sm font-semibold hover:text-blue-600 hover:border-blue-400 transition flex items-center gap-3"
+                      className={`w-full p-4 border-2 border-dashed rounded-xl text-sm font-semibold transition flex items-center gap-3 ${
+                        isCardPaymentDisabled
+                          ? "border-gray-200 text-gray-400 opacity-50 cursor-not-allowed"
+                          : "border-gray-200 text-gray-500 hover:text-blue-600 hover:border-blue-400"
+                      }`}
                     >
                       <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-base">
                         +
@@ -739,6 +838,8 @@ export default function CheckoutFlow({
                           onSuccess={handleAddCardSuccess}
                           onCancel={() => {
                             setShowAddNewCard(false);
+                            setIsDuplicateCardError(false);
+                            setAddCardError(null);
                             setSelectedPaymentId(
                               paymentMethods.length > 0
                                 ? paymentMethods[0].id
@@ -757,7 +858,11 @@ export default function CheckoutFlow({
                     className="w-full"
                     onClick={handlePlaceOrder}
                     loading={loading}
-                    disabled={showAddNewCard || selectedPaymentId === "new"}
+                    disabled={
+                      showAddNewCard ||
+                      selectedPaymentId === "new" ||
+                      (selectedPaymentId !== "COD" && isCardPaymentDisabled)
+                    }
                   >
                     {selectedPaymentId === "COD"
                       ? "Place Order (Cash on Delivery)"

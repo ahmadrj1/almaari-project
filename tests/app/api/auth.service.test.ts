@@ -24,15 +24,15 @@ jest.mock("bcryptjs", () => ({
   compare: jest.fn(),
 }));
 
-jest.mock("nodemailer", () => ({
-  createTransport: jest.fn().mockReturnValue({
-    sendMail: jest.fn().mockResolvedValue(true),
-  }),
+jest.mock("@/lib/job-scheduler", () => ({
+  queueForgotPasswordEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Prevent Stripe from being imported in tests
 jest.mock("@/lib/stripe", () => ({
-  stripe: { customers: { create: jest.fn().mockResolvedValue({ id: "cus_123" }) } },
+  stripe: {
+    customers: { create: jest.fn().mockResolvedValue({ id: "cus_123" }) },
+  },
   getOrCreateStripeCustomer: jest.fn(),
 }));
 
@@ -66,7 +66,9 @@ describe("AuthService", () => {
 
       const result = await AuthService.register(body);
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: body.email } });
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { email: body.email },
+      });
       expect(prisma.user.create).toHaveBeenCalled();
       expect(result).toBe("User registered successfully");
     });
@@ -111,7 +113,7 @@ describe("AuthService", () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (prisma.user.update as jest.Mock).mockResolvedValue({});
 
-      const nodemailer = await import("nodemailer");
+      const { queueForgotPasswordEmail } = await import("@/lib/job-scheduler");
 
       const result = await AuthService.forgotPassword("john@example.com");
 
@@ -124,7 +126,10 @@ describe("AuthService", () => {
           }),
         }),
       );
-      expect(nodemailer.createTransport).toHaveBeenCalled();
+      expect(queueForgotPasswordEmail).toHaveBeenCalledWith(
+        "john@example.com",
+        expect.any(String),
+      );
       expect(result).toMatch(/if user exists/i);
     });
   });
@@ -158,7 +163,10 @@ describe("AuthService", () => {
       (prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser);
       (prisma.user.update as jest.Mock).mockResolvedValue({});
 
-      const result = await AuthService.resetPassword("valid-token", "NewPass123!");
+      const result = await AuthService.resetPassword(
+        "valid-token",
+        "NewPass123!",
+      );
 
       expect(bcrypt.hash).toHaveBeenCalledWith("NewPass123!", 12);
       expect(prisma.user.update).toHaveBeenCalledWith({
@@ -175,9 +183,9 @@ describe("AuthService", () => {
     it("throws 400 AppError for invalid/expired token", async () => {
       (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
 
-      await expect(AuthService.resetPassword("bad-token", "Pass123!")).rejects.toThrow(
-        new AppError("Invalid or expired reset token.", 400),
-      );
+      await expect(
+        AuthService.resetPassword("bad-token", "Pass123!"),
+      ).rejects.toThrow(new AppError("Invalid or expired reset token.", 400));
       expect(prisma.user.update).not.toHaveBeenCalled();
     });
   });
