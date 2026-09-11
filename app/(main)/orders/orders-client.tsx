@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Pagination } from "@/components/ui/pagination";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PackageSearch, ArrowUpRight } from "lucide-react";
+import { PackageSearch, ArrowUpRight, Loader2 } from "lucide-react";
 import { ORDERS_PER_PAGE_DEFAULT } from "@/lib/constants";
 import type { Order } from "@/types";
 import { useCartCount } from "@/hooks/use-cart-count";
@@ -18,6 +18,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
+  const [reorderingId, setReorderingId] = useState<string | null>(null);
   const { showToast } = useToast();
   const { refresh } = useCartCount();
 
@@ -150,7 +151,9 @@ export default function OrdersPage() {
                   <td className="px-6 py-5 text-center flex items-center justify-center gap-2">
                     {order.status === "CANCELLED" && (
                       <button
+                        disabled={reorderingId === order.id}
                         onClick={async () => {
+                          setReorderingId(order.id);
                           try {
                             const res = await fetch(
                               `/api/orders/${order.id}/reorder`,
@@ -192,11 +195,20 @@ export default function OrdersPage() {
                             }
                           } catch {
                             showToast("error", "Failed to reorder items");
+                          } finally {
+                            setReorderingId(null);
                           }
                         }}
-                        className="text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/70 px-3 py-1.5 rounded-xl transition duration-150"
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/70 px-3 py-1.5 rounded-xl transition duration-150 inline-flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                       >
-                        Order Again
+                        {reorderingId === order.id ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Adding...</span>
+                          </>
+                        ) : (
+                          "Order Again"
+                        )}
                       </button>
                     )}
                     <Link

@@ -7,7 +7,7 @@ import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Spinner } from "@/components/ui/spinner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { STATUS_COLORS } from "@/lib/constants";
 import type { OrderDetail } from "@/types";
 import { getOptimizedCloudinaryUrl } from "@/lib/cloudinary";
@@ -139,9 +139,16 @@ export default function OrderDetailsPage() {
           <button
             onClick={handleReorder}
             disabled={reordering}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition duration-150 shadow-sm text-sm disabled:opacity-50"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition duration-150 shadow-sm text-sm disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed"
           >
-            {reordering ? "Adding to Cart..." : "Order Again"}
+            {reordering ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Adding to Cart...</span>
+              </>
+            ) : (
+              "Order Again"
+            )}
           </button>
         )}
         {order.status === "PENDING" && order.paymentStatus === "FAILED" && (
