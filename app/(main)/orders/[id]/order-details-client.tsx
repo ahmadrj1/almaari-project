@@ -20,6 +20,7 @@ export default function OrderDetailsPage() {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [reordering, setReordering] = useState(false);
+  const [retryingPayment, setRetryingPayment] = useState(false);
   const { showToast } = useToast();
   const { refresh } = useCartCount();
 
@@ -152,12 +153,23 @@ export default function OrderDetailsPage() {
           </button>
         )}
         {order.status === "PENDING" && order.paymentStatus === "FAILED" && (
-          <Link
-            href={`/cart?retryOrderId=${order.id}`}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition duration-150 shadow-sm text-sm"
+          <button
+            disabled={retryingPayment}
+            onClick={() => {
+              setRetryingPayment(true);
+              router.push(`/cart?retryOrderId=${order.id}`);
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition duration-150 shadow-sm text-sm disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed"
           >
-            Retry Payment
-          </Link>
+            {retryingPayment ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Redirecting...</span>
+              </>
+            ) : (
+              "Retry Payment"
+            )}
+          </button>
         )}
       </div>
 

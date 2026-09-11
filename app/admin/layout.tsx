@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { signOut } from "@/auth";
 import { Role } from "@prisma/client";
-import { LogOut, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { getServerSessionSnapshot } from "@/lib/auth-session";
+import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
 
 export default async function AdminLayout({
   children,
@@ -84,13 +85,7 @@ export default async function AdminLayout({
                   await signOut({ redirectTo: "/login" });
                 }}
               >
-                <button
-                  type="submit"
-                  className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-xl transition-colors"
-                >
-                  <LogOut size={16} />
-                  Logout
-                </button>
+                <AdminLogoutButton />
               </form>
             </div>
           </div>
