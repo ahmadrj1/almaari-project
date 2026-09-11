@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Bulk upload task successfully queued in FastAPI scheduler",
+      message: "Bulk upload task successfully queued in Background Job Server",
       totalProducts: formattedProducts.length,
       jobResponse: jobRes,
     });

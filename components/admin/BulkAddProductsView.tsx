@@ -218,7 +218,7 @@ export default function BulkAddProductsView() {
         sessionStorage.removeItem("bulk_products_draft");
         showToast(
           "success",
-          `Successfully queued ${formattedProducts.length} products to FastAPI Celery scheduler!`,
+          `Successfully queued ${formattedProducts.length} products to Background Job Server!`,
         );
         router.push("/admin/products");
       } else {
