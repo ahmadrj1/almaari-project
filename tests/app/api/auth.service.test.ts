@@ -24,10 +24,8 @@ jest.mock("bcryptjs", () => ({
   compare: jest.fn(),
 }));
 
-jest.mock("nodemailer", () => ({
-  createTransport: jest.fn().mockReturnValue({
-    sendMail: jest.fn().mockResolvedValue(true),
-  }),
+jest.mock("@/lib/job-scheduler", () => ({
+  queueForgotPasswordEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Prevent Stripe from being imported in tests
@@ -111,7 +109,7 @@ describe("AuthService", () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (prisma.user.update as jest.Mock).mockResolvedValue({});
 
-      const nodemailer = await import("nodemailer");
+      const { queueForgotPasswordEmail } = await import("@/lib/job-scheduler");
 
       const result = await AuthService.forgotPassword("john@example.com");
 
@@ -124,7 +122,7 @@ describe("AuthService", () => {
           }),
         }),
       );
-      expect(nodemailer.createTransport).toHaveBeenCalled();
+      expect(queueForgotPasswordEmail).toHaveBeenCalledWith("john@example.com", expect.any(String));
       expect(result).toMatch(/if user exists/i);
     });
   });

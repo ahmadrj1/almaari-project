@@ -77,10 +77,10 @@ export default function PaymentFailedPage(props: PageProps) {
             View Order Status and Retry Payment
           </Link>
           <Link
-            href="/cart"
+            href="/"
             className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 rounded-xl transition duration-150"
           >
-            Go to Cart Page
+            Go to Home Page
           </Link>
         </div>
       </div>

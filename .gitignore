@@ -50,3 +50,6 @@ details.md
 
 # Images
 /public/images/products/*
+
+# FASTAPI Server
+/job-schedular
