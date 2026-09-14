@@ -27,7 +27,7 @@ Almaari is a full-stack e-commerce platform built with Next.js 16 (App Router wi
 - **Payments**: Stripe (Stripe Elements & Webhooks)
 - **State Management & Validation**: Zustand, Zod
 - **Media Storage**: Cloudinary
-- **Logging & Utilities**: Pino, Nodemailer, bcryptjs
+- **Logging & Utilities**: Pino, bcryptjs, Socket.IO
 
 ## Project Structure
 
@@ -35,7 +35,7 @@ Almaari is a full-stack e-commerce platform built with Next.js 16 (App Router wi
 - `components/` - Shared UI, client components, layout, and admin interfaces
 - `controllers/` - Thin HTTP controllers for API routes
 - `services/` - Business logic and Prisma database operations
-- `job-schedular/` - FastAPI + Celery + Redis background job scheduler service
+- `job-schedular/` - FastAPI + Celery + Redis background job scheduler service (handles emails & async tasks)
 - `hooks/` - Client hooks and contexts
 - `lib/` - Shared helpers, constants, validation schemas, Stripe/Cloudinary integrations, and logging
 - `prisma/` - Database schema and migrations
@@ -52,13 +52,8 @@ Create a `.env.local` or `.env` file in the project root with the following valu
 DATABASE_URL="postgresql://user:password@localhost:5432/cart_attack"
 AUTH_SECRET="<your-auth-secret-here>"
 
-# Nodemailer Setup for Forgot Password flow
-SMTP_HOST="your-host"
-SMTP_PORT= # SMTP PORT
-SMTP_USER="email@example.com"
-SMTP_PASS="16 digit Google App Password"
-RESET_TOKEN_EXP="Reset Password link expiry time in milliseconds"
-APP_URL="reset password redirect url for emails"
+# Base Application URL
+APP_URL="http://localhost:3000"
 
 # Sign in with Google
 GOOGLE_CLIENT_ID="your-google-client-id"
@@ -80,15 +75,17 @@ STRIPE_WEBHOOK_SECRET="whsec_xxx"
 # FastAPI Job Scheduler Service
 JOB_SCHEDULER_URL="Scheduler server url"
 JOB_SCHEDULER_SECRET="job-scheduler-secret"
+
+# Real-time WebSockets via Socket.IO ("true" to enable sockets, otherwise falls back to polling)
+NEXT_PUBLIC_SOCKET_ENABLED="true"
 ```
 
 ### Variable Notes
 
 - `DATABASE_URL` is required by Prisma and must point to your PostgreSQL database.
 - `AUTH_SECRET` is used for signing authentication JWT tokens.
-- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are required for Google OAuth sign-in.
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASS` are used for password reset and notification emails.
 - `APP_URL` defines the base URL (e.g. `http://localhost:3000`) for password reset links and payment return URLs.
+- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are required for Google OAuth sign-in.
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` power product image uploads and image optimization.
 - `NEXT_PUBLIC_APP_ENV` controls artificial loading delays for UX testing: set to `"dev"` to enable delays or `"production"` to run without delays.
 - `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are retrieved from the Stripe Dashboard.

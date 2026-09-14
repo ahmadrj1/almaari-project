@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { emitUnreadCountToUser } from "@/lib/socket/server";
 
 export class NotificationService {
   static async getNotifications(
@@ -78,7 +79,20 @@ export class NotificationService {
       return { ...rest, isRead };
     });
 
-    const unreadCount = await prisma.notification.count({
+    const unreadCount = await NotificationService.getUnreadCount(userId);
+
+    return { notifications: mapped, hasMore, unreadCount };
+  }
+
+  static async getUnreadCount(userId: string): Promise<number> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { createdAt: true },
+    });
+
+    if (!user) return 0;
+
+    return prisma.notification.count({
       where: {
         OR: [{ userId }, { userId: null }],
         createdAt: {
@@ -104,8 +118,6 @@ export class NotificationService {
         ],
       },
     });
-
-    return { notifications: mapped, hasMore, unreadCount };
   }
 
   static async toggleNotificationRead(userId: string, notificationId: string) {
@@ -131,6 +143,9 @@ export class NotificationService {
         });
       }
     }
+
+    const newCount = await this.getUnreadCount(userId);
+    emitUnreadCountToUser(userId, newCount);
   }
 
   static async markAllAsRead(userId: string) {
@@ -172,5 +187,7 @@ export class NotificationService {
         });
       }
     });
+
+    emitUnreadCountToUser(userId, 0);
   }
 }
