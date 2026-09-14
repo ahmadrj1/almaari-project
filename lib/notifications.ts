@@ -1,6 +1,10 @@
 import { prisma } from "./db";
 import { logger } from "./logger";
 import { NotificationMetadata } from "../types";
+import {
+  emitNotificationToUser,
+  emitBroadcastNotification,
+} from "./socket/server";
 
 export async function createNotification(
   userId: string,
@@ -10,7 +14,7 @@ export async function createNotification(
   metadata?: NotificationMetadata,
 ) {
   try {
-    await prisma.notification.create({
+    const created = await prisma.notification.create({
       data: {
         userId,
         type,
@@ -19,6 +23,7 @@ export async function createNotification(
         metadata,
       },
     });
+    emitNotificationToUser(userId, created);
   } catch (error) {
     logger.error({ err: error }, "Failed to create notification");
   }
@@ -31,7 +36,7 @@ export async function createBroadcastNotification(
   metadata?: NotificationMetadata,
 ) {
   try {
-    await prisma.notification.create({
+    const created = await prisma.notification.create({
       data: {
         userId: null,
         type,
@@ -40,6 +45,7 @@ export async function createBroadcastNotification(
         metadata,
       },
     });
+    emitBroadcastNotification(created);
   } catch (error) {
     logger.error({ err: error }, "Failed to create broadcast notification");
   }
