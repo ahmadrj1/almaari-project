@@ -7,6 +7,8 @@ import { useSession } from "next-auth/react";
 import { useCartCount } from "@/hooks/use-cart-count";
 import { APP_NAME } from "@/lib/constants";
 import { NotificationBell } from "./notification-bell";
+import Image from "next/image";
+import APP_LOGO from "@/public/logo.png";
 
 export function Navbar() {
   const { status } = useSession();
@@ -19,8 +21,9 @@ export function Navbar() {
         <div className="flex items-center gap-6">
           <Link
             href="/"
-            className="text-xl font-bold tracking-tight text-[#2979FF]"
+            className="flex items-center gap-2 text-xl font-bold tracking-tight text-[#2979FF]"
           >
+            <Image src={APP_LOGO} alt={APP_NAME} width={70} height={70} />
             {APP_NAME}
           </Link>
         </div>
