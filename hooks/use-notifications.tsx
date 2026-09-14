@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { io, Socket } from "socket.io-client";
 import { POLLING_TIME, MAX_NOTIFICATIONS_MEMORY } from "@/lib/constants";
 import { Notification } from "@/types";
 
+const isSocketEnabled = process.env.NEXT_PUBLIC_SOCKET_ENABLED === "true";
+
 export function useNotifications() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState<"unread" | "all">("unread");
   const [loading, setLoading] = useState(false);
@@ -61,12 +64,61 @@ export function useNotifications() {
   }, [status, activeTab]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // Socket.IO when NEXT_PUBLIC_SOCKET_ENABLED === "true", otherwise polling fallback
   useEffect(() => {
-    if (status === "authenticated") {
+    if (status !== "authenticated") return;
+
+    if (!isSocketEnabled) {
       const intervalId = setInterval(fetchNotifications, POLLING_TIME);
       return () => clearInterval(intervalId);
     }
-  }, [status, fetchNotifications]);
+
+    const socket: Socket = io({
+      path: "/api/socket/io",
+    });
+
+    let fallbackInterval: NodeJS.Timeout | null = null;
+
+    socket.on("connect_error", () => {
+      if (!fallbackInterval) {
+        fallbackInterval = setInterval(fetchNotifications, POLLING_TIME);
+      }
+    });
+
+    socket.on("connect", () => {
+      if (fallbackInterval) {
+        clearInterval(fallbackInterval);
+        fallbackInterval = null;
+      }
+      if (session?.user?.id) {
+        socket.emit("join-user-room", { userId: session.user.id });
+      }
+    });
+
+    socket.on("notification:new", (newNotif: Notification) => {
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === newNotif.id)) return prev;
+        return [newNotif, ...prev];
+      });
+      setUnreadCount((prev) => prev + 1);
+    });
+
+    socket.on("notification:unread-count", (data: { unreadCount: number }) => {
+      if (typeof data?.unreadCount === "number") {
+        setUnreadCount(data.unreadCount);
+      }
+    });
+
+    return () => {
+      if (fallbackInterval) {
+        clearInterval(fallbackInterval);
+      }
+      if (session?.user?.id) {
+        socket.emit("leave-user-room", { userId: session.user.id });
+      }
+      socket.disconnect();
+    };
+  }, [status, session?.user?.id, fetchNotifications]);
 
   const markAllAsRead = async () => {
     if (status !== "authenticated") return;

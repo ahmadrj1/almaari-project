@@ -19,13 +19,6 @@ jest.mock("@/lib/db", () => ({
   },
 }));
 
-// Mock Nodemailer (still needed by some transitive imports)
-jest.mock("nodemailer", () => ({
-  createTransport: jest.fn().mockReturnValue({
-    sendMail: jest.fn().mockResolvedValue(true),
-  }),
-}));
-
 jest.mock("@/lib/job-scheduler", () => ({
   queueForgotPasswordEmail: jest.fn().mockResolvedValue(undefined),
 }));
