@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Box, ClipboardList } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
+import Image from "next/image";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
@@ -16,6 +17,7 @@ export default function AdminSidebar() {
   return (
     <aside className="w-full md:w-64 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col">
       <div className="h-16 flex items-center px-6 border-b border-gray-200">
+        <Image src="/logo.png" alt={APP_NAME} width={70} height={70} />
         <span className="font-bold text-xl text-gray-800">{APP_NAME}</span>
       </div>
       <nav className="flex-1 px-4 py-6 space-y-2">
