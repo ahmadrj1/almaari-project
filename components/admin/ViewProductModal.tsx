@@ -78,7 +78,7 @@ export default function ViewProductModal({
             Loading...
           </div>
         ) : product ? (
-          <ProductCard product={product} />
+          <ProductCard product={product} isAdmin={true} />
         ) : (
           <div className="flex h-64 items-center justify-center text-gray-400 text-sm">
             Failed to load product.

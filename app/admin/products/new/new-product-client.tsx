@@ -18,6 +18,13 @@ import { z } from "zod";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { Spinner } from "@/components/ui/spinner";
 
+import {
+  generateVariantSku,
+  extractTitlePrefix,
+  resolveColorCode,
+  resolveSizeCode,
+} from "@/lib/sku";
+
 const formSchema = z.object({
   title: z.string().trim().min(1, "Title is required"),
   price: z
@@ -42,6 +49,14 @@ export default function NewProductClient() {
   const [sizes, setSizes] = useState<Size[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
 
+  const [skuInfo, setSkuInfo] = useState<{
+    titlePrefix: string;
+    nextCode: string;
+  }>({
+    titlePrefix: "PROD",
+    nextCode: "001",
+  });
+
   const [categoryId, setCategoryId] = useState("");
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
@@ -55,6 +70,48 @@ export default function NewProductClient() {
 
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      const _prefix = extractTitlePrefix(title);
+      try {
+        const res = await fetch(
+          `/api/admin/products/next-sku?title=${encodeURIComponent(title || "PROD")}`,
+        );
+        const data = await res.json();
+        if (data.success) {
+          const next = data.data;
+          setSkuInfo(next);
+          // Re-derive SKUs for existing variants with updated prefix and code
+          setVariants((prev) =>
+            prev.map((v) => {
+              const col = colors.find((c) => c.id === v.colorId);
+              const sz = sizes.find((s) => s.id === v.sizeId);
+              const colCode =
+                col?.code || resolveColorCode(v.colorName || "", colors);
+              const szCode = resolveSizeCode(
+                sz?.name || v.sizeName || "",
+                sizes,
+              );
+              return {
+                ...v,
+                sku: generateVariantSku(
+                  next.titlePrefix,
+                  next.nextCode,
+                  szCode,
+                  colCode,
+                ),
+              };
+            }),
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch next SKU code:", err);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [title, colors, sizes]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -163,6 +220,16 @@ export default function NewProductClient() {
 
     const qtyToAdd = Number(variantQty);
 
+    const colCode =
+      colorObj?.code || resolveColorCode(colorObj?.name || "", colors);
+    const szCode = resolveSizeCode(sizeObj?.name || "", sizes);
+    const sku = generateVariantSku(
+      skuInfo.titlePrefix,
+      skuInfo.nextCode,
+      szCode,
+      colCode,
+    );
+
     const existingVariant = variants.find(
       (v) => v.colorId === selectedColor && v.sizeId === selectedSize,
     );
@@ -174,6 +241,7 @@ export default function NewProductClient() {
             ? {
                 ...v,
                 stock: Number(v.stock) + qtyToAdd,
+                sku,
               }
             : v,
         ),
@@ -188,6 +256,7 @@ export default function NewProductClient() {
           stock: qtyToAdd,
           colorName: colorObj?.name,
           sizeName: sizeObj?.name,
+          sku,
         },
       ]);
     }
@@ -567,28 +636,54 @@ export default function NewProductClient() {
             </div>
 
             <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-              {variants.map((variant) => (
-                <div
-                  key={variant.id}
-                  className="grid gap-3 bg-gray-50 p-2 rounded md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
-                >
-                  <div className="min-w-0 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
-                    {variant.colorName}
-                  </div>
-                  <div className="min-w-0 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
-                    {variant.sizeName}
-                  </div>
-                  <div className="min-w-0 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
-                    {variant.stock}
-                  </div>
-                  <button
-                    onClick={() => removeVariant(variant.id)}
-                    className="w-full md:w-9 h-9 border border-red-200 text-red-500 rounded flex items-center justify-center hover:bg-red-50 transition-colors shrink-0 bg-white"
+              {variants.map((variant) => {
+                const col = colors.find((c) => c.id === variant.colorId);
+                const sz = sizes.find((s) => s.id === variant.sizeId);
+                const colCode =
+                  col?.code ||
+                  resolveColorCode(variant.colorName || "", colors);
+                const szCode = resolveSizeCode(
+                  sz?.name || variant.sizeName || "",
+                  sizes,
+                );
+                const displaySku =
+                  variant.sku ||
+                  generateVariantSku(
+                    skuInfo.titlePrefix,
+                    skuInfo.nextCode,
+                    szCode,
+                    colCode,
+                  );
+
+                return (
+                  <div
+                    key={variant.id}
+                    className="grid gap-2 bg-gray-50 p-2 rounded md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto] items-center"
                   >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
+                    <div
+                      className="min-w-0 font-mono text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1.5 border border-blue-200 rounded truncate"
+                      title={displaySku}
+                    >
+                      {displaySku}
+                    </div>
+                    <div className="min-w-0 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
+                      {variant.colorName}
+                    </div>
+                    <div className="min-w-0 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
+                      {variant.sizeName}
+                    </div>
+                    <div className="min-w-0 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
+                      {variant.stock}
+                    </div>
+                    <button
+                      onClick={() => removeVariant(variant.id)}
+                      className="w-full md:w-9 h-9 border border-red-200 text-red-500 rounded flex items-center justify-center hover:bg-red-50 transition-colors shrink-0 bg-white"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

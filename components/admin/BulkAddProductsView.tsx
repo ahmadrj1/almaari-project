@@ -11,6 +11,7 @@ import BulkProductCard, {
   BulkProductCardRef,
 } from "@/components/admin/BulkProductCard";
 import { resolvedImageStore } from "@/lib/resolved-image-store";
+import { extractTitlePrefix } from "@/lib/sku";
 
 export default function BulkAddProductsView() {
   const router = useRouter();
@@ -24,7 +25,6 @@ export default function BulkAddProductsView() {
           : null;
       if (!draftStr) return [];
       const parsed: ParsedCSVProduct[] = JSON.parse(draftStr);
-      // Re-attach resolved images from module-level store (not JSON-serializable)
       return parsed.map((p) => ({
         ...p,
         resolvedImages: resolvedImageStore.get(p.id),
@@ -72,9 +72,106 @@ export default function BulkAddProductsView() {
     fetchData();
   }, []);
 
+  // Validate user-entered SKUs from CSV against DB on mount
+  useEffect(() => {
+    const skusToValidate = Array.from(
+      new Set([
+        ...products.filter((p) => p.sku).map((p) => p.sku as string),
+        ...products.flatMap((p) =>
+          p.variants.filter((v) => v.sku).map((v) => v.sku as string),
+        ),
+      ]),
+    );
+
+    if (skusToValidate.length === 0) return;
+
+    fetch("/api/admin/products/validate-skus", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ skus: skusToValidate }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.success) return;
+
+        const matched: Record<
+          string,
+          {
+            productId: string;
+            productTitle: string;
+            baseSku: string;
+            variantSku?: string;
+            image?: string;
+            images?: Array<{
+              id: string;
+              url: string;
+              colorId?: string | null;
+              colorName?: string | null;
+              sortOrder?: number;
+            }>;
+            categoryName?: string | null;
+            categoryId?: string | null;
+          }
+        > = data.data.matched || {};
+        const unmatched: string[] =
+          data.data.unmatched || data.data.notFound || [];
+
+        unmatched.forEach((sku) => {
+          showToast(
+            "info",
+            `Product with SKU '${sku}' not found — will be created as new.`,
+          );
+        });
+
+        setProducts((prev) =>
+          prev.map((p) => {
+            const productSku = p.sku;
+            const variantSkus = p.variants
+              .map((v) => v.sku)
+              .filter(Boolean) as string[];
+            const foundSku =
+              productSku && matched[productSku]
+                ? productSku
+                : variantSkus.find((s) => matched[s]);
+
+            if (foundSku) {
+              const match = matched[foundSku];
+              return {
+                ...p,
+                isUpdate: true,
+                targetProductId: match.productId,
+                baseSku: match.baseSku,
+                sku: p.sku || match.variantSku || match.baseSku,
+                existingImage: match.image,
+                existingImages: match.images || [],
+                categoryName: p.categoryName || match.categoryName || "",
+              };
+            }
+
+            const isUnmatched =
+              (productSku && unmatched.includes(productSku)) ||
+              variantSkus.some((s) => unmatched.includes(s));
+
+            if (isUnmatched) {
+              return { ...p, sku: undefined, isUpdate: false };
+            }
+            return p;
+          }),
+        );
+      })
+      .catch(console.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally once on mount
+
   const handleRemoveProduct = (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
     cardRefs.current.delete(id);
+  };
+
+  const handleTitleChange = (id: string, newTitle: string) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, title: newTitle } : p)),
+    );
   };
 
   const handleAddNewBlankProduct = () => {
@@ -104,9 +201,7 @@ export default function BulkAddProductsView() {
         const isValid = ref.validate();
         if (!isValid) {
           isValidAll = false;
-          if (!firstInvalidRef) {
-            firstInvalidRef = ref;
-          }
+          if (!firstInvalidRef) firstInvalidRef = ref;
         }
       }
     }
@@ -119,7 +214,6 @@ export default function BulkAddProductsView() {
 
     setSubmitting(true);
 
-    // Calculate total files to upload for progress tracking
     let totalFiles = 0;
     for (const prod of products) {
       const ref = cardRefs.current.get(prod.id);
@@ -140,8 +234,27 @@ export default function BulkAddProductsView() {
     });
 
     try {
-      const formattedProducts = [];
+      type FormattedProduct = {
+        title: string;
+        description: string;
+        price: number;
+        image: string;
+        categoryName: string;
+        sku?: string;
+        isUpdate?: boolean;
+        targetProductId?: string;
+        variants: { colorName: string; sizeName: string; stock: number }[];
+        images: {
+          url: string | undefined;
+          colorName: string | undefined;
+          sortOrder: number;
+        }[];
+      };
+
+      const formattedProducts: FormattedProduct[] = [];
       let uploadedFilesCount = 0;
+      let createCount = 0;
+      let updateCount = 0;
 
       for (const prod of products) {
         const ref = cardRefs.current.get(prod.id);
@@ -176,18 +289,22 @@ export default function BulkAddProductsView() {
 
         const mainImage =
           uploadedImageUrls[0] ||
+          (data.isUpdate ? prod.existingImage || "" : "") ||
           "https://images.unsplash.com/photo-1523275335684-37898b6baf30";
 
-        formattedProducts.push({
+        const formatted: FormattedProduct = {
           title: data.title,
           description: data.description,
           price: Number(data.price),
           image: mainImage,
           categoryName: data.categoryName,
+          sku: data.sku,
+          isUpdate: data.isUpdate,
+          targetProductId: data.targetProductId,
           variants: data.variants.map((v) => ({
-            colorName: v.colorName,
-            sizeName: v.sizeName,
-            stock: v.stock,
+            colorName: v.colorName ?? "",
+            sizeName: v.sizeName ?? "",
+            stock: Number(v.stock),
           })),
           images: data.productImages.map((imgUpload, idx) => {
             const colorObj = colors.find((c) => c.id === imgUpload.colorId);
@@ -197,7 +314,11 @@ export default function BulkAddProductsView() {
               sortOrder: idx,
             };
           }),
-        });
+        };
+
+        formattedProducts.push(formatted);
+        if (formatted.isUpdate) updateCount++;
+        else createCount++;
       }
 
       setUploadProgress({
@@ -216,9 +337,14 @@ export default function BulkAddProductsView() {
 
       if (res.ok && resData.success) {
         sessionStorage.removeItem("bulk_products_draft");
+        const parts: string[] = [];
+        if (createCount > 0)
+          parts.push(`${createCount} new product${createCount > 1 ? "s" : ""}`);
+        if (updateCount > 0)
+          parts.push(`${updateCount} update${updateCount > 1 ? "s" : ""}`);
         showToast(
           "success",
-          `Successfully queued ${formattedProducts.length} products to Background Job Server!`,
+          `Successfully queued ${parts.join(" and ")} to Background Job Server!`,
         );
         router.push("/admin/products");
       } else {
@@ -245,9 +371,9 @@ export default function BulkAddProductsView() {
   }
 
   return (
-    <div className="bg-slate-50 min-h-[calc(100vh-8rem)] px-6 rounded-xl space-y-6">
+    <div className="bg-slate-50 h-[calc(100vh-7.5rem)] p-6 rounded-xl flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 z-40 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm gap-4 shrink-0 mb-6">
         <div className="flex items-center gap-4">
           <Link
             href="/admin/products"
@@ -301,25 +427,43 @@ export default function BulkAddProductsView() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-6 max-w-5xl mx-auto pb-12">
-          {products.map((product, idx) => (
-            <BulkProductCard
-              key={product.id}
-              ref={(el) => {
-                if (el) cardRefs.current.set(product.id, el);
-                else cardRefs.current.delete(product.id);
-              }}
-              index={idx}
-              initialData={product}
-              colors={colors}
-              sizes={sizes}
-              categories={categories}
-              onRemove={handleRemoveProduct}
-              onCategoryCreated={(newCat) => {
-                setCategories((prev) => [...prev, newCat]);
-              }}
-            />
-          ))}
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-6 max-w-5xl mx-auto w-full pb-8 pr-2">
+          {products.map((product, idx) => {
+            const currentPrefix = extractTitlePrefix(product.title);
+            let prefixOffset = 0;
+            for (let j = 0; j < idx; j++) {
+              const other = products[j];
+              if (
+                !other.isUpdate &&
+                extractTitlePrefix(other.title) === currentPrefix
+              ) {
+                prefixOffset++;
+              }
+            }
+
+            return (
+              <BulkProductCard
+                key={product.id}
+                ref={(el) => {
+                  if (el) cardRefs.current.set(product.id, el);
+                  else cardRefs.current.delete(product.id);
+                }}
+                index={idx}
+                prefixOffset={prefixOffset}
+                onTitleChange={(newTitle) =>
+                  handleTitleChange(product.id, newTitle)
+                }
+                initialData={product}
+                colors={colors}
+                sizes={sizes}
+                categories={categories}
+                onRemove={handleRemoveProduct}
+                onCategoryCreated={(newCat) => {
+                  setCategories((prev) => [...prev, newCat]);
+                }}
+              />
+            );
+          })}
         </div>
       )}
 

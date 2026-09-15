@@ -57,27 +57,34 @@ export async function queueBulkProductsUpload(
     price: number;
     image: string;
     categoryName?: string;
+    sku?: string;
+    targetProductId?: string;
     variants?: Array<{
       colorName: string;
       hexCode?: string;
       sizeName: string;
       stock: number;
+      sku?: string;
     }>;
     images?: Array<{ url: string; colorName?: string; sortOrder?: number }>;
   }>,
+  method: "POST" | "PATCH" = "POST",
 ) {
   try {
     const res = await fetch(
       `${JOB_SCHEDULER_URL}/api/v1/jobs/bulk-products-upload`,
       {
-        method: "POST",
+        method,
         headers: schedulerHeaders(),
         body: JSON.stringify({ products }),
       },
     );
     return await res.json();
   } catch (error) {
-    console.error("[JOB SCHEDULER ERROR] queueBulkProductsUpload:", error);
+    console.error(
+      `[JOB SCHEDULER ERROR] queueBulkProductsUpload (${method}):`,
+      error,
+    );
     return null;
   }
 }

@@ -217,6 +217,7 @@ export default function AdminOrderDetailsClient({
               <th className="py-3 px-4 font-medium bg-gray-50 rounded-tl-lg">
                 Title
               </th>
+              <th className="py-3 px-4 font-medium bg-gray-50">SKU</th>
               <th className="py-3 px-4 font-medium bg-gray-50">Price</th>
               <th className="py-3 px-4 font-medium bg-gray-50">Quantity</th>
               <th className="py-3 px-4 font-medium bg-gray-50 rounded-tr-lg">
@@ -264,6 +265,15 @@ export default function AdminOrderDetailsClient({
                         </span>
                       )}
                     </span>
+                  </td>
+                  <td className="py-4 px-4 text-gray-600">
+                    {item.sku ? (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono font-semibold bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap">
+                        {item.sku}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">—</span>
+                    )}
                   </td>
                   <td className="py-4 px-4 text-gray-600">
                     Rs. {Number(item.price).toFixed(2)}
