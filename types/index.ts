@@ -93,6 +93,7 @@ export interface Notification {
 export interface Color {
   id: string;
   name: string;
+  code: string;
   hexCode: string;
 }
 export interface Size {
@@ -106,12 +107,14 @@ export interface FormVariant {
   stock: string | number;
   colorName?: string;
   sizeName?: string;
+  sku?: string;
 }
 
 export type ProductVariant = {
   id: string;
   stock: number;
-  color: { id: string; name: string; hexCode: string };
+  sku: string;
+  color: { id: string; name: string; code?: string; hexCode: string };
   size: { id: string; name: string; sortOrder: number };
 };
 export interface Category {
@@ -129,6 +132,8 @@ export interface ProductImageUpload {
 export interface ProductSummary {
   id: string;
   title: string;
+  titlePrefix?: string;
+  code?: string;
   price: number | string;
   image: string;
   totalStock: number;
@@ -136,6 +141,7 @@ export interface ProductSummary {
   variants: {
     id: string;
     stock: number;
+    sku?: string;
     color: {
       id: string;
       name: string;
@@ -150,6 +156,7 @@ export interface OrderItem {
   price: number | string;
   colorName: string;
   sizeName: string;
+  sku?: string | null;
   product: {
     title: string;
     image: string;
@@ -159,6 +166,7 @@ export interface OrderItem {
       color?: { name: string };
       size?: { name: string };
       stock: number;
+      sku?: string;
     }[];
   } | null;
 }

@@ -135,7 +135,7 @@ export default function AdminProductsClient() {
         <div className="flex-1">
           <input
             type="text"
-            placeholder="Search products or categories..."
+            placeholder="Search products, SKU or categories..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -151,6 +151,7 @@ export default function AdminProductsClient() {
           <thead>
             <tr className="border-b border-gray-200 text-sm text-gray-500">
               <th className="pb-3 font-medium">Title</th>
+              <th className="pb-3 font-medium">SKU</th>
               <th className="pb-3 font-medium">Price</th>
               <th className="pb-3 font-medium">Category</th>
               <th className="pb-3 font-medium">Stock</th>
@@ -160,7 +161,7 @@ export default function AdminProductsClient() {
           <tbody className="text-sm">
             {loading ? (
               <tr>
-                <td colSpan={5} className="py-8">
+                <td colSpan={6} className="py-8">
                   <div className="flex items-center justify-center text-gray-500">
                     Loading...
                   </div>
@@ -168,7 +169,7 @@ export default function AdminProductsClient() {
               </tr>
             ) : products.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-8">
+                <td colSpan={6} className="py-8">
                   <div className="flex items-center justify-center">
                     <EmptyState
                       icon={<ShoppingBag className="w-12 h-12 text-gray-400" />}
@@ -200,6 +201,15 @@ export default function AdminProductsClient() {
                     <span className="font-medium text-gray-800 line-clamp-2 max-w-[300px]">
                       {product.title}
                     </span>
+                  </td>
+                  <td className="py-4 text-gray-600">
+                    {product.titlePrefix && product.code ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        {product.titlePrefix}-{product.code}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">—</span>
+                    )}
                   </td>
                   <td className="py-4 text-gray-600">
                     Rs. {Number(product.price).toFixed(2)}

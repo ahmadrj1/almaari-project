@@ -34,6 +34,14 @@ const formSchema = z.object({
   categoryId: z.string().min(1, "Category is required"),
 });
 
+import {
+  generateVariantSku,
+  extractTitlePrefix,
+  resolveColorCode,
+  resolveSizeCode,
+  parseSku,
+} from "@/lib/sku";
+
 export interface BulkProductCardRef {
   validate: () => boolean;
   getData: () => {
@@ -43,6 +51,9 @@ export interface BulkProductCardRef {
     price: string;
     categoryId: string;
     categoryName: string;
+    sku?: string;
+    isUpdate?: boolean;
+    targetProductId?: string;
     variants: Variant[];
     productImages: ProductImageUpload[];
   };
@@ -51,33 +62,84 @@ export interface BulkProductCardRef {
 
 interface BulkProductCardProps {
   index: number;
+  prefixOffset?: number;
   initialData: ParsedCSVProduct;
   colors: Color[];
   sizes: Size[];
   categories: Category[];
   onRemove: (id: string) => void;
   onCategoryCreated: (newCat: Category) => void;
+  onTitleChange?: (newTitle: string) => void;
 }
 
 const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
   (
     {
       index,
+      prefixOffset = 0,
       initialData,
       colors,
       sizes,
       categories,
       onRemove,
       onCategoryCreated,
+      onTitleChange,
     },
     ref,
   ) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const existingParsed =
+      initialData.isUpdate && (initialData.baseSku || initialData.sku)
+        ? parseSku(initialData.baseSku || initialData.sku!)
+        : null;
+
     const [title, setTitle] = useState(initialData.title || "");
     const [price, setPrice] = useState(initialData.price || "");
     const [description] = useState(initialData.description || "");
+
+    const baseInitialNum = 1 + prefixOffset;
+    const [skuInfo, setSkuInfo] = useState<{
+      titlePrefix: string;
+      nextCode: string;
+    }>({
+      titlePrefix:
+        existingParsed?.titlePrefix ||
+        extractTitlePrefix(initialData.title || "PROD"),
+      nextCode: existingParsed?.code || String(baseInitialNum).padStart(3, "0"),
+    });
+
+    useEffect(() => {
+      if (initialData.isUpdate && existingParsed) {
+        return;
+      }
+      const t = extractTitlePrefix(title);
+      const timer = setTimeout(() => {
+        fetch(
+          `/api/admin/products/next-sku?title=${encodeURIComponent(title || "PROD")}`,
+        )
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.success) {
+              const baseNum = parseInt(d.data.nextCode, 10);
+              const offsetNum = isNaN(baseNum) ? 1 : baseNum + prefixOffset;
+              setSkuInfo({
+                titlePrefix: d.data.titlePrefix,
+                nextCode: String(offsetNum).padStart(3, "0"),
+              });
+            }
+          })
+          .catch(() => {
+            const offsetNum = 1 + prefixOffset;
+            setSkuInfo({
+              titlePrefix: t,
+              nextCode: String(offsetNum).padStart(3, "0"),
+            });
+          });
+      }, 500);
+      return () => clearTimeout(timer);
+    }, [title, initialData.isUpdate, existingParsed, prefixOffset]);
 
     const matchedCategory = categories.find(
       (c) =>
@@ -115,6 +177,7 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
             ? foundSize.name
             : v.sizeName || sizes[0]?.name || "Standard",
           stock: Number(v.stock) || 0,
+          sku: v.sku,
         };
       });
     });
@@ -151,20 +214,114 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
 
     const [productImages, setProductImages] = useState<ProductImageUpload[]>(
       () => {
+        const existingList: ProductImageUpload[] = [];
+
+        if (
+          initialData.existingImages &&
+          initialData.existingImages.length > 0
+        ) {
+          initialData.existingImages.forEach((img) => {
+            existingList.push({
+              id: img.id,
+              previewUrl: img.url,
+              colorId:
+                img.colorId || resolveColorId(img.colorName || undefined),
+              isExisting: true,
+            });
+          });
+        } else if (initialData.existingImage) {
+          existingList.push({
+            id: `existing-main-${initialData.id}`,
+            previewUrl: initialData.existingImage,
+            colorId: "",
+            isExisting: true,
+          });
+        }
+
+        const newList: ProductImageUpload[] = [];
         if (
           initialData.resolvedImages &&
           initialData.resolvedImages.length > 0
         ) {
-          return initialData.resolvedImages.map((r, i) => ({
-            id: `resolved-${i}-${Date.now()}`,
-            file: r.file,
-            previewUrl: URL.createObjectURL(r.file),
-            colorId: resolveColorId(r.colorName),
-          }));
+          initialData.resolvedImages.forEach((r, i) => {
+            newList.push({
+              id: `resolved-${i}-${Date.now()}`,
+              file: r.file,
+              previewUrl: URL.createObjectURL(r.file),
+              colorId: resolveColorId(r.colorName),
+            });
+          });
         }
-        return [];
+
+        const newColorIds = new Set(
+          newList.map((n) => n.colorId).filter(Boolean),
+        );
+        const hasNewGlobal = newList.some((n) => !n.colorId);
+
+        const filteredExisting = existingList.filter((oldImg) => {
+          if (oldImg.colorId && newColorIds.has(oldImg.colorId)) {
+            return false;
+          }
+          if (!oldImg.colorId && hasNewGlobal) {
+            return false;
+          }
+          return true;
+        });
+
+        return [...filteredExisting, ...newList];
       },
     );
+
+    useEffect(() => {
+      const existingList: ProductImageUpload[] = [];
+      if (initialData.existingImages && initialData.existingImages.length > 0) {
+        initialData.existingImages.forEach((img) => {
+          existingList.push({
+            id: img.id,
+            previewUrl: img.url,
+            colorId: img.colorId || resolveColorId(img.colorName || undefined),
+            isExisting: true,
+          });
+        });
+      } else if (initialData.existingImage) {
+        existingList.push({
+          id: `existing-main-${initialData.id}`,
+          previewUrl: initialData.existingImage!,
+          colorId: "",
+          isExisting: true,
+        });
+      }
+
+      if (existingList.length === 0) return;
+
+      setProductImages((prev) => {
+        const hasExisting = prev.some((img) => img.isExisting);
+        if (hasExisting) return prev;
+
+        const newImages = prev.filter((img) => !img.isExisting);
+        const newColorIds = new Set(
+          newImages.map((n) => n.colorId).filter(Boolean),
+        );
+        const hasNewGlobal = newImages.some((n) => !n.colorId);
+
+        const filteredExisting = existingList.filter((oldImg) => {
+          if (oldImg.colorId && newColorIds.has(oldImg.colorId)) {
+            return false;
+          }
+          if (!oldImg.colorId && hasNewGlobal) {
+            return false;
+          }
+          return true;
+        });
+
+        return [...filteredExisting, ...newImages];
+      });
+    }, [
+      initialData.existingImages,
+      initialData.existingImage,
+      initialData.id,
+      resolveColorId,
+    ]);
 
     useEffect(() => {
       if (
@@ -173,25 +330,34 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
         initialData.resolvedImages.length > 0
       ) {
         setProductImages((prev) => {
-          if (prev.length === 0) {
-            return initialData.resolvedImages!.map((r, i) => ({
-              id: `resolved-${i}-${Date.now()}`,
-              file: r.file,
-              previewUrl: URL.createObjectURL(r.file),
-              colorId: resolveColorId(r.colorName),
-            }));
-          }
-
-          const hasUnlinked = prev.some((img) => !img.colorId);
-          if (!hasUnlinked) return prev;
-
-          return prev.map((img, idx) => {
+          let updated = prev.map((img, idx) => {
             if (img.colorId) return img;
             const r = initialData.resolvedImages?.[idx];
             if (!r) return img;
             const matchedId = resolveColorId(r.colorName);
             return matchedId ? { ...img, colorId: matchedId } : img;
           });
+
+          const newColorIds = new Set(
+            updated
+              .filter((img) => !img.isExisting && img.colorId)
+              .map((img) => img.colorId),
+          );
+
+          if (newColorIds.size > 0) {
+            updated = updated.filter((img) => {
+              if (
+                img.isExisting &&
+                img.colorId &&
+                newColorIds.has(img.colorId)
+              ) {
+                return false;
+              }
+              return true;
+            });
+          }
+
+          return updated;
         });
       }
     }, [colors, initialData.resolvedImages, resolveColorId]);
@@ -259,6 +425,9 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
             ? newCategoryName.trim()
             : categories.find((c) => c.id === categoryId)?.name ||
               newCategoryName.trim(),
+        sku: initialData.baseSku || initialData.sku,
+        isUpdate: initialData.isUpdate,
+        targetProductId: initialData.targetProductId,
         variants,
         productImages,
       }),
@@ -406,6 +575,16 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
             <h2 className="text-xl font-semibold text-slate-800">
               {title || "Untitled Product"}
             </h2>
+            {initialData.isUpdate && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm">
+                <span>⚡ Updating Product</span>
+                {(initialData.baseSku || initialData.sku) && (
+                  <span className="font-mono bg-emerald-200/80 px-1.5 py-0.5 rounded text-[11px] text-emerald-900 font-bold">
+                    Old SKU: {initialData.baseSku || initialData.sku}
+                  </span>
+                )}
+              </span>
+            )}
           </div>
           <button
             onClick={() => onRemove(initialData.id)}
@@ -499,7 +678,9 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
                 type="text"
                 value={title}
                 onChange={(e) => {
-                  setTitle(e.target.value);
+                  const val = e.target.value;
+                  setTitle(val);
+                  onTitleChange?.(val);
                   clearError("title");
                 }}
                 placeholder="e.g. Cargo Trousers for Men"
@@ -702,39 +883,82 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
                 {variants.map((variant) => (
                   <div
                     key={variant.id}
-                    className="flex items-center gap-3 bg-gray-50 p-2 rounded"
+                    className="flex flex-col gap-1.5 bg-gray-50 p-2 rounded"
                   >
-                    <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
-                      {variant.colorName}
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
+                        {variant.colorName}
+                      </div>
+                      <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
+                        {variant.sizeName}
+                      </div>
+                      <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
+                        <input
+                          type="number"
+                          min="0"
+                          value={variant.stock}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "" || Number(val) >= 0) {
+                              const updated = variants.map((v) =>
+                                v.id === variant.id
+                                  ? { ...v, stock: Number(val) }
+                                  : v,
+                              );
+                              setVariants(updated);
+                            }
+                          }}
+                          className="w-full focus:outline-none bg-transparent"
+                        />
+                      </div>
+                      <button
+                        onClick={() => removeVariant(variant.id)}
+                        className="w-9 h-9 border border-red-200 text-red-500 rounded flex items-center justify-center hover:bg-red-50 transition-colors shrink-0 bg-white"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
-                    <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
-                      {variant.sizeName}
-                    </div>
-                    <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
-                      <input
-                        type="number"
-                        min="0"
-                        value={variant.stock}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === "" || Number(val) >= 0) {
-                            const updated = variants.map((v) =>
-                              v.id === variant.id
-                                ? { ...v, stock: Number(val) }
-                                : v,
-                            );
-                            setVariants(updated);
-                          }
-                        }}
-                        className="w-full focus:outline-none bg-transparent"
-                      />
-                    </div>
-                    <button
-                      onClick={() => removeVariant(variant.id)}
-                      className="w-9 h-9 border border-red-200 text-red-500 rounded flex items-center justify-center hover:bg-red-50 transition-colors shrink-0 bg-white"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    {initialData.isUpdate ? (
+                      <div className="flex items-center gap-1.5 self-start">
+                        <span className="text-[10px] font-medium text-emerald-700">
+                          Old SKU:
+                        </span>
+                        <span
+                          className="text-[10px] font-mono font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5"
+                          title="Existing Variant SKU"
+                        >
+                          {variant.sku ||
+                            (existingParsed
+                              ? generateVariantSku(
+                                  existingParsed.titlePrefix,
+                                  existingParsed.code,
+                                  resolveSizeCode(
+                                    variant.sizeName ?? "",
+                                    sizes,
+                                  ),
+                                  resolveColorCode(
+                                    variant.colorName ?? "",
+                                    colors,
+                                  ),
+                                )
+                              : initialData.baseSku ||
+                                initialData.sku ||
+                                "N/A")}
+                        </span>
+                      </div>
+                    ) : (
+                      <span
+                        className="text-[10px] font-mono font-semibold text-slate-500 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 self-start"
+                        title="New Generated SKU"
+                      >
+                        {generateVariantSku(
+                          skuInfo.titlePrefix,
+                          skuInfo.nextCode,
+                          resolveSizeCode(variant.sizeName ?? "", sizes),
+                          resolveColorCode(variant.colorName ?? "", colors),
+                        )}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
