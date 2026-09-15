@@ -35,6 +35,8 @@ enum Role {
 model Product {
   id          String    @id @default(uuid())
   title       String
+  titlePrefix String
+  code        String
   description String
   price       Decimal   @db.Decimal(10, 2)
   image       String
@@ -48,6 +50,8 @@ model Product {
   cartItems  CartItem[]
   orderItems OrderItem[]
   images     ProductImage[]
+
+  @@unique([titlePrefix, code])
 }
 
 model Category {
@@ -61,6 +65,7 @@ model Category {
 model Color {
   id       String           @id @default(uuid())
   name     String           @unique
+  code     String           @unique
   hexCode  String
   variants ProductVariant[]
   images   ProductImage[]
@@ -90,6 +95,7 @@ model ProductVariant {
   colorId   String
   sizeId    String
   stock     Int    @default(0)
+  sku       String @unique
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   color   Color   @relation(fields: [colorId], references: [id])
@@ -157,6 +163,7 @@ model OrderItem {
   productId String
   colorName String
   sizeName  String
+  sku       String?
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Restrict)

@@ -22,11 +22,16 @@ export interface ProductCardProps {
     variantId: string,
     quantity: number,
   ) => void;
+  isAdmin?: boolean;
 }
 
-export function ProductCard({ product, onAddToCart }: ProductCardProps) {
+export function ProductCard({
+  product,
+  onAddToCart,
+  isAdmin: propIsAdmin,
+}: ProductCardProps) {
   const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "ADMIN";
+  const isAdmin = propIsAdmin ?? session?.user?.role === "ADMIN";
   const [quantity, setQuantity] = React.useState(1);
   const [isAdding, setIsAdding] = React.useState(false);
   const variants = React.useMemo(
@@ -233,9 +238,23 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         )}
 
         {isAdmin ? (
-          <p className="mt-3 text-xs text-gray-400">
-            {isOutOfStock ? "Out of stock" : `${maxStock} in stock`}
-          </p>
+          <div className="mt-3 flex items-center justify-between gap-2 text-xs">
+            <span className="text-gray-500">
+              {isOutOfStock ? (
+                <span className="text-red-500 font-medium">Out of stock</span>
+              ) : (
+                `${maxStock} in stock`
+              )}
+            </span>
+            {selectedVariant?.sku && (
+              <span
+                className="font-mono text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded truncate max-w-[55%]"
+                title={selectedVariant.sku}
+              >
+                SKU: {selectedVariant.sku}
+              </span>
+            )}
+          </div>
         ) : (
           <div className="mt-3 flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">

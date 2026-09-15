@@ -18,6 +18,12 @@ import { z } from "zod";
 import { MAX_UPLOAD_SIZE } from "@/lib/constants";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  generateVariantSku,
+  extractTitlePrefix,
+  resolveColorCode,
+  resolveSizeCode,
+} from "@/lib/sku";
 
 const formSchema = z.object({
   title: z.string().trim().min(1, "Title is required"),
@@ -41,6 +47,7 @@ export default function EditProductClient({
   const { showToast } = useToast();
 
   const [title, setTitle] = useState("");
+  const [productCode, setProductCode] = useState("001");
   const [price, setPrice] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -84,6 +91,7 @@ export default function EditProductClient({
       if (dataProduct.success) {
         const p = dataProduct.data;
         setTitle(p.title);
+        setProductCode(p.code || "001");
         setPrice(
           p.price !== undefined && p.price !== null ? String(p.price) : "",
         );
@@ -96,13 +104,15 @@ export default function EditProductClient({
               colorId: string;
               sizeId: string;
               stock: number;
-              color: { name: string };
+              sku?: string;
+              color: { name: string; code?: string };
               size: { name: string };
             }) => ({
               id: v.id,
               colorId: v.colorId,
               sizeId: v.sizeId,
               stock: v.stock,
+              sku: v.sku,
               colorName: v.color.name,
               sizeName: v.size.name,
             }),
@@ -215,6 +225,16 @@ export default function EditProductClient({
 
     const qtyToAdd = Number(variantQty);
 
+    const colCode =
+      colorObj?.code || resolveColorCode(colorObj?.name || "", colors);
+    const szCode = resolveSizeCode(sizeObj?.name || "", sizes);
+    const sku = generateVariantSku(
+      extractTitlePrefix(title),
+      productCode,
+      szCode,
+      colCode,
+    );
+
     const existingVariant = variants.find(
       (v) => v.colorId === selectedColor && v.sizeId === selectedSize,
     );
@@ -226,6 +246,7 @@ export default function EditProductClient({
             ? {
                 ...v,
                 stock: Number(v.stock) + qtyToAdd,
+                sku,
               }
             : v,
         ),
@@ -240,6 +261,7 @@ export default function EditProductClient({
           stock: qtyToAdd,
           colorName: colorObj?.name,
           sizeName: sizeObj?.name,
+          sku,
         },
       ]);
     }
@@ -627,42 +649,68 @@ export default function EditProductClient({
             </div>
 
             <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-              {variants.map((variant) => (
-                <div
-                  key={variant.id}
-                  className="flex items-center gap-3 bg-gray-50 p-2 rounded"
-                >
-                  <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
-                    {variant.colorName}
-                  </div>
-                  <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
-                    {variant.sizeName}
-                  </div>
-                  <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
-                    <input
-                      type="number"
-                      min="0"
-                      value={variant.stock}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "" || Number(val) >= 0) {
-                          const updated = variants.map((v) =>
-                            v.id === variant.id ? { ...v, stock: val } : v,
-                          );
-                          setVariants(updated);
-                        }
-                      }}
-                      className="w-full focus:outline-none bg-transparent"
-                    />
-                  </div>
-                  <button
-                    onClick={() => removeVariant(variant.id)}
-                    className="w-9 h-9 border border-red-200 text-red-500 rounded flex items-center justify-center hover:bg-red-50 transition-colors shrink-0 bg-white"
+              {variants.map((variant) => {
+                const col = colors.find((c) => c.id === variant.colorId);
+                const sz = sizes.find((s) => s.id === variant.sizeId);
+                const colCode =
+                  col?.code ||
+                  resolveColorCode(variant.colorName || "", colors);
+                const szCode = resolveSizeCode(
+                  sz?.name || variant.sizeName || "",
+                  sizes,
+                );
+                const displaySku =
+                  variant.sku ||
+                  generateVariantSku(
+                    extractTitlePrefix(title),
+                    productCode,
+                    szCode,
+                    colCode,
+                  );
+
+                return (
+                  <div
+                    key={variant.id}
+                    className="flex items-center gap-3 bg-gray-50 p-2 rounded"
                   >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
+                    <div
+                      className="w-40 font-mono text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1.5 border border-blue-200 rounded truncate shrink-0"
+                      title={displaySku}
+                    >
+                      {displaySku}
+                    </div>
+                    <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
+                      {variant.colorName}
+                    </div>
+                    <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
+                      {variant.sizeName}
+                    </div>
+                    <div className="flex-1 text-sm text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded">
+                      <input
+                        type="number"
+                        min="0"
+                        value={variant.stock}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || Number(val) >= 0) {
+                            const updated = variants.map((v) =>
+                              v.id === variant.id ? { ...v, stock: val } : v,
+                            );
+                            setVariants(updated);
+                          }
+                        }}
+                        className="w-full focus:outline-none bg-transparent"
+                      />
+                    </div>
+                    <button
+                      onClick={() => removeVariant(variant.id)}
+                      className="w-9 h-9 border border-red-200 text-red-500 rounded flex items-center justify-center hover:bg-red-50 transition-colors shrink-0 bg-white"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

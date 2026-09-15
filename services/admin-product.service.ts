@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { ADMIN_PRODUCTS_PER_PAGE_DEFAULT } from "@/lib/constants";
 import { AppError } from "@/lib/api-error";
 import { createBroadcastNotification } from "@/lib/notifications";
+import { extractTitlePrefix, generateVariantSku } from "@/lib/sku";
 
 export class AdminProductService {
   static async getProducts({
@@ -24,13 +25,17 @@ export class AdminProductService {
       const getWordCondition = (w: string): Prisma.ProductWhereInput => ({
         OR: [
           { title: { contains: w, mode: "insensitive" } },
+          { titlePrefix: { contains: w, mode: "insensitive" } },
+          { code: { contains: w, mode: "insensitive" } },
           { description: { contains: w, mode: "insensitive" } },
           { category: { name: { contains: w, mode: "insensitive" } } },
           {
             variants: {
               some: {
                 OR: [
+                  { sku: { contains: w, mode: "insensitive" } },
                   { color: { name: { contains: w, mode: "insensitive" } } },
+                  { color: { code: { contains: w, mode: "insensitive" } } },
                   { size: { name: { contains: w, mode: "insensitive" } } },
                 ],
               },
@@ -40,12 +45,29 @@ export class AdminProductService {
       });
 
       if (words.length === 1) {
-        where.OR = getWordCondition(words[0]).OR;
+        where.OR = [
+          ...((getWordCondition(words[0]).OR as Prisma.ProductWhereInput[]) ||
+            []),
+          {
+            variants: {
+              some: {
+                sku: { contains: trimmed, mode: "insensitive" },
+              },
+            },
+          },
+        ];
       } else {
         where.OR = [
           { title: { contains: trimmed, mode: "insensitive" } },
           { description: { contains: trimmed, mode: "insensitive" } },
           { category: { name: { contains: trimmed, mode: "insensitive" } } },
+          {
+            variants: {
+              some: {
+                sku: { contains: trimmed, mode: "insensitive" },
+              },
+            },
+          },
           {
             AND: words.map((w) => getWordCondition(w)),
           },
@@ -64,7 +86,7 @@ export class AdminProductService {
           take: limit,
           include: {
             variants: {
-              include: { color: true },
+              include: { color: true, size: true },
             },
           },
         }),
@@ -110,9 +132,40 @@ export class AdminProductService {
     }
 
     const newProduct = await prisma.$transaction(async (tx) => {
+      const titlePrefix = extractTitlePrefix(title);
+
+      // Advisory transaction lock to prevent race condition
+      await tx.$executeRawUnsafe(
+        `SELECT pg_advisory_xact_lock(hashtext($1))`,
+        titlePrefix,
+      );
+
+      const existingProducts = await tx.product.findMany({
+        where: { titlePrefix },
+        select: { code: true },
+      });
+
+      let maxCode = 0;
+      for (const p of existingProducts) {
+        const num = parseInt(p.code, 10);
+        if (!isNaN(num) && num > maxCode) {
+          maxCode = num;
+        }
+      }
+      const code = String(maxCode + 1).padStart(3, "0");
+
+      const [colors, sizes] = await Promise.all([
+        tx.color.findMany(),
+        tx.size.findMany(),
+      ]);
+      const colorMap = new Map(colors.map((c) => [c.id, c.code]));
+      const sizeMap = new Map(sizes.map((s) => [s.id, s.name]));
+
       const product = await tx.product.create({
         data: {
           title,
+          titlePrefix,
+          code,
           description: description || "",
           price,
           image,
@@ -123,11 +176,22 @@ export class AdminProductService {
                 colorId: string;
                 sizeId: string;
                 stock: string | number;
-              }) => ({
-                colorId: v.colorId,
-                sizeId: v.sizeId,
-                stock: Number(v.stock),
-              }),
+              }) => {
+                const colCode = colorMap.get(v.colorId) || "DEF";
+                const sizeCode = sizeMap.get(v.sizeId) || "STD";
+                const sku = generateVariantSku(
+                  titlePrefix,
+                  code,
+                  sizeCode,
+                  colCode,
+                );
+                return {
+                  colorId: v.colorId,
+                  sizeId: v.sizeId,
+                  stock: Number(v.stock),
+                  sku,
+                };
+              },
             ),
           },
           images: images
@@ -145,7 +209,10 @@ export class AdminProductService {
               }
             : undefined,
         },
-        include: { variants: true, images: true },
+        include: {
+          variants: { include: { color: true, size: true } },
+          images: true,
+        },
       });
       return product;
     });
@@ -199,16 +266,54 @@ export class AdminProductService {
     }
 
     return prisma.$transaction(async (tx) => {
+      const existingProduct = await tx.product.findUnique({
+        where: { id },
+      });
+      if (!existingProduct) {
+        throw new AppError("Product not found", 404);
+      }
+
+      const newTitlePrefix = extractTitlePrefix(title);
+      let finalTitlePrefix = existingProduct.titlePrefix;
+      let finalCode = existingProduct.code;
+
+      if (newTitlePrefix !== existingProduct.titlePrefix) {
+        await tx.$executeRawUnsafe(
+          `SELECT pg_advisory_xact_lock(hashtext($1))`,
+          newTitlePrefix,
+        );
+        const samePrefixProducts = await tx.product.findMany({
+          where: { titlePrefix: newTitlePrefix },
+          select: { code: true },
+        });
+        let maxCode = 0;
+        for (const p of samePrefixProducts) {
+          const num = parseInt(p.code, 10);
+          if (!isNaN(num) && num > maxCode) maxCode = num;
+        }
+        finalCode = String(maxCode + 1).padStart(3, "0");
+        finalTitlePrefix = newTitlePrefix;
+      }
+
       await tx.product.update({
         where: { id },
         data: {
           title,
+          titlePrefix: finalTitlePrefix,
+          code: finalCode,
           description: description || "",
           price,
           categoryId: categoryId || null,
           ...(image && { image }),
         },
       });
+
+      const [colors, sizes] = await Promise.all([
+        tx.color.findMany(),
+        tx.size.findMany(),
+      ]);
+      const colorMap = new Map(colors.map((c) => [c.id, c.code]));
+      const sizeMap = new Map(sizes.map((s) => [s.id, s.name]));
 
       // Upsert each variant to preserve existing IDs (and cascaded CartItems)
       const existingVariants = await tx.productVariant.findMany({
@@ -238,11 +343,23 @@ export class AdminProductService {
 
       // Upsert each incoming variant
       for (const v of variants) {
+        const colCode = colorMap.get(v.colorId) || "DEF";
+        const sizeCode = sizeMap.get(v.sizeId) || "STD";
+        const sku = generateVariantSku(
+          finalTitlePrefix,
+          finalCode,
+          sizeCode,
+          colCode,
+        );
+
         const existingId = existingMap.get(`${v.colorId}:${v.sizeId}`);
         if (existingId) {
           await tx.productVariant.update({
             where: { id: existingId },
-            data: { stock: Number(v.stock) },
+            data: {
+              stock: Number(v.stock),
+              sku,
+            },
           });
         } else {
           await tx.productVariant.create({
@@ -251,6 +368,7 @@ export class AdminProductService {
               colorId: v.colorId,
               sizeId: v.sizeId,
               stock: Number(v.stock),
+              sku,
             },
           });
         }

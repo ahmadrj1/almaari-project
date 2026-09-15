@@ -5,6 +5,7 @@ export interface ParsedCSVVariant {
   hexCode?: string;
   sizeName: string;
   stock: number;
+  sku?: string;
 }
 
 export interface ParsedCSVImage {
@@ -13,12 +14,26 @@ export interface ParsedCSVImage {
   colorName: string;
 }
 
+export interface ExistingProductImage {
+  id: string;
+  url: string;
+  colorId?: string | null;
+  colorName?: string | null;
+  sortOrder?: number;
+}
+
 export interface ParsedCSVProduct {
   id: string;
   title: string;
   description: string;
   price: string;
   categoryName: string;
+  sku?: string;
+  isUpdate?: boolean;
+  targetProductId?: string;
+  baseSku?: string;
+  existingImage?: string;
+  existingImages?: ExistingProductImage[];
   variants: ParsedCSVVariant[];
   /** All image entries collected across all rows for this product */
   csvImages?: ParsedCSVImage[];
@@ -92,6 +107,8 @@ export function parseCSVToProducts(csvText: string): ParsedCSVProduct[] {
       rowObj["image"] ||
       "";
 
+    const sku = (rowObj["sku"] || rowObj["skucode"] || "").trim();
+
     const csvImage: ParsedCSVImage | undefined = imagePath.trim()
       ? { imagePath: imagePath.trim(), colorName: colorName.trim() }
       : undefined;
@@ -103,6 +120,7 @@ export function parseCSVToProducts(csvText: string): ParsedCSVProduct[] {
         description: description.trim(),
         price: price ? String(price) : "",
         categoryName: categoryName.trim(),
+        sku: sku || undefined,
         csvImages: csvImage ? [csvImage] : [],
         variants: [
           {
@@ -110,11 +128,15 @@ export function parseCSVToProducts(csvText: string): ParsedCSVProduct[] {
             hexCode: hexCode.trim(),
             sizeName: sizeName.trim(),
             stock: isNaN(stock) ? 0 : stock,
+            sku: sku || undefined,
           },
         ],
       });
     } else {
       const existing = productMap.get(key)!;
+      if (!existing.sku && sku) {
+        existing.sku = sku;
+      }
       if (!existing.description && description) {
         existing.description = description.trim();
       }
@@ -149,6 +171,7 @@ export function parseCSVToProducts(csvText: string): ParsedCSVProduct[] {
           hexCode: hexCode.trim(),
           sizeName: sizeName.trim(),
           stock: isNaN(stock) ? 0 : stock,
+          sku: sku || undefined,
         });
       }
     }

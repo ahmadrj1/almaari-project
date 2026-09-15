@@ -15,11 +15,15 @@ export async function POST(req: NextRequest) {
       price: number;
       image: string;
       categoryName?: string;
+      sku?: string;
+      isUpdate?: boolean;
+      targetProductId?: string;
       variants?: Array<{
         colorName: string;
         hexCode?: string;
         sizeName: string;
         stock: number;
+        sku?: string;
       }>;
       images?: Array<{ url: string; colorName?: string; sortOrder?: number }>;
     }> = [];
@@ -89,11 +93,15 @@ export async function POST(req: NextRequest) {
         hexCode?: string;
         sizeName?: string;
         stock?: number | string;
+        sku?: string;
+        isUpdate?: boolean;
+        targetProductId?: string;
         variants?: Array<{
           colorName: string;
           hexCode?: string;
           sizeName: string;
           stock: number;
+          sku?: string;
         }>;
         images?: Array<{ url: string; colorName?: string; sortOrder?: number }>;
       }> = [];
@@ -107,6 +115,9 @@ export async function POST(req: NextRequest) {
           description: p.description,
           price: parseFloat(p.price || "0"),
           categoryName: p.categoryName || undefined,
+          sku: p.sku,
+          isUpdate: p.isUpdate,
+          targetProductId: p.targetProductId,
           variants: p.variants.map((v) => ({
             colorName: v.colorName,
             hexCode:
@@ -115,6 +126,7 @@ export async function POST(req: NextRequest) {
               "#000000",
             sizeName: v.sizeName,
             stock: v.stock,
+            sku: v.sku,
           })),
           images:
             p.csvImages?.map((img, idx) => ({
@@ -144,6 +156,7 @@ export async function POST(req: NextRequest) {
             hexCode: p.hexCode || "#000000",
             sizeName: p.sizeName || "Standard",
             stock: Number(p.stock) || 0,
+            sku: p.sku,
           },
         ];
 
@@ -153,15 +166,28 @@ export async function POST(req: NextRequest) {
           price: Number(p.price) || 0,
           image: mainImageUrl,
           categoryName: p.categoryName,
+          sku: p.sku,
+          isUpdate: p.isUpdate,
+          targetProductId: p.targetProductId,
           variants,
           images: p.images || [],
         };
       });
     }
 
-    const jobRes = await queueBulkProductsUpload(formattedProducts);
+    const toCreate = formattedProducts.filter((p) => !p.isUpdate);
+    const toUpdate = formattedProducts.filter((p) => Boolean(p.isUpdate));
 
-    if (formattedProducts.length > 0) {
+    const responses: { create?: unknown; update?: unknown } = {};
+
+    if (toCreate.length > 0) {
+      responses.create = await queueBulkProductsUpload(toCreate, "POST");
+    }
+    if (toUpdate.length > 0) {
+      responses.update = await queueBulkProductsUpload(toUpdate, "PATCH");
+    }
+
+    if (toCreate.length > 0) {
       await createBroadcastNotification(
         "NEW_PRODUCT",
         "New Products Added!",
@@ -171,9 +197,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Bulk upload task successfully queued in Background Job Server",
+      message: "Bulk upload tasks successfully queued in Background Job Server",
       totalProducts: formattedProducts.length,
-      jobResponse: jobRes,
+      createdCount: toCreate.length,
+      updatedCount: toUpdate.length,
+      jobResponse: responses,
     });
   } catch (error) {
     console.error("[BULK UPLOAD API ERROR]", error);
