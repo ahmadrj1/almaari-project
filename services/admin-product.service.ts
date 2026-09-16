@@ -136,7 +136,7 @@ export class AdminProductService {
 
       // Advisory transaction lock to prevent race condition
       await tx.$executeRawUnsafe(
-        `SELECT pg_advisory_xact_lock(hashtext($1))`,
+        `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`,
         titlePrefix,
       );
 
@@ -279,7 +279,7 @@ export class AdminProductService {
 
       if (newTitlePrefix !== existingProduct.titlePrefix) {
         await tx.$executeRawUnsafe(
-          `SELECT pg_advisory_xact_lock(hashtext($1))`,
+          `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`,
           newTitlePrefix,
         );
         const samePrefixProducts = await tx.product.findMany({
