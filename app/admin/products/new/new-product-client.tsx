@@ -175,6 +175,7 @@ export default function NewProductClient() {
       );
       if (invalidTypes.length > 0) {
         showToast("error", "Only JPG, JPEG, and PNG images are allowed.");
+        e.target.value = "";
         return;
       }
 
@@ -191,6 +192,7 @@ export default function NewProductClient() {
       }));
       setProductImages((prev) => [...prev, ...newImages]);
       setErrors((prev) => ({ ...prev, images: "" }));
+      e.target.value = "";
     }
   };
 
@@ -325,14 +327,15 @@ export default function NewProductClient() {
             body: formData,
           });
           const uploadData = await uploadRes.json();
-          if (uploadData.success) {
-            uploadedImages.push({
-              url: uploadData.imagePath,
-              colorId: img.colorId || null,
-            });
-          } else {
-            throw new Error("Image upload failed");
+          if (!uploadRes.ok || !uploadData.success) {
+            throw new Error(
+              uploadData.error || uploadData.message || "Image upload failed",
+            );
           }
+          uploadedImages.push({
+            url: uploadData.imagePath,
+            colorId: img.colorId || null,
+          });
         }
       }
 
@@ -356,15 +359,20 @@ export default function NewProductClient() {
         }),
       });
 
-      if (res.ok) {
+      const resData = await res.json();
+      if (res.ok && resData.success) {
         showToast("success", "Product added successfully!");
         router.push("/admin/products");
       } else {
-        throw new Error("Failed to save product");
+        throw new Error(
+          resData.error || resData.message || "Failed to save product",
+        );
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(error);
-      showToast("error", "Error saving product");
+      const errorMessage =
+        error instanceof Error ? error.message : "Error saving product";
+      showToast("error", errorMessage);
     } finally {
       setSaving(false);
     }
@@ -397,15 +405,15 @@ export default function NewProductClient() {
             <span className="text-xs text-gray-500">
               Upload multiple images
             </span>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleAddImage}
-              className="hidden"
-              accept="image/*"
-              multiple
-            />
           </div>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleAddImage}
+            className="hidden"
+            accept="image/*"
+            multiple
+          />
           {errors.images && (
             <span className="text-xs text-red-500 block">{errors.images}</span>
           )}

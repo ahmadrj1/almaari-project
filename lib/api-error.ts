@@ -53,6 +53,15 @@ export function handleApiError(error: unknown, context: string): NextResponse {
         { status: 409 },
       );
     }
+    if (error.code === "P2003") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Operation cannot be completed because related records exist",
+        },
+        { status: 400 },
+      );
+    }
     return NextResponse.json(
       { success: false, error: "Database operation failed" },
       { status: 500 },

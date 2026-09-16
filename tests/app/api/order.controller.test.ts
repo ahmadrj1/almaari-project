@@ -154,6 +154,27 @@ describe("OrderController", () => {
 
       expect(OrderService.getOrders).toHaveBeenCalledWith("user-1", 1);
     });
+
+    it("returns 400 when page is invalid or non-positive", async () => {
+      (auth as jest.Mock).mockResolvedValue({ user: { id: "user-1" } });
+
+      const res1 = await OrderController.getOrders(
+        makeReq("/api/orders?page=abc"),
+      );
+      expect(res1.status).toBe(400);
+      const data1 = await res1.json();
+      expect(data1.error).toBe("Page must be a positive integer");
+
+      const res2 = await OrderController.getOrders(
+        makeReq("/api/orders?page=0"),
+      );
+      expect(res2.status).toBe(400);
+
+      const res3 = await OrderController.getOrders(
+        makeReq("/api/orders?page=-2"),
+      );
+      expect(res3.status).toBe(400);
+    });
   });
 
   describe("getOrderById", () => {

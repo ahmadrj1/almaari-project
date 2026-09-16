@@ -10,7 +10,10 @@ export class AddressController {
       if (!session?.user?.id) throw new AppError("Unauthorized", 401);
 
       const data = await AddressService.getAddresses(session.user.id);
-      return NextResponse.json({ success: true, data });
+      return NextResponse.json(
+        { success: true, data },
+        { headers: { "Cache-Control": "private, no-store, must-revalidate" } },
+      );
     } catch (error) {
       return handleApiError(error, "AddressController.getAddresses");
     }
