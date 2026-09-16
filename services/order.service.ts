@@ -345,8 +345,9 @@ export class OrderService {
   }
 
   static async getOrders(userId: string, page: number) {
+    const validPage = Math.max(1, Math.floor(page) || 1);
     const limit = ORDERS_PER_PAGE_DEFAULT;
-    const skip = (page - 1) * limit;
+    const skip = (validPage - 1) * limit;
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({

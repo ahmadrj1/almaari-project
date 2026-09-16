@@ -28,10 +28,20 @@ export class OrderController {
       if (!session?.user?.id) throw new AppError("Unauthorized", 401);
 
       const url = new URL(req.url);
-      const page = parseInt(url.searchParams.get("page") || "1");
+      const pageParam = url.searchParams.get("page");
+      let page = 1;
+      if (pageParam !== null) {
+        page = Number(pageParam);
+        if (!Number.isInteger(page) || page < 1) {
+          throw new AppError("Page must be a positive integer", 400);
+        }
+      }
 
       const data = await OrderService.getOrders(session.user.id, page);
-      return NextResponse.json({ success: true, data });
+      return NextResponse.json(
+        { success: true, data },
+        { headers: { "Cache-Control": "private, no-store, must-revalidate" } },
+      );
     } catch (error) {
       return handleApiError(error, "OrderController.getOrders");
     }

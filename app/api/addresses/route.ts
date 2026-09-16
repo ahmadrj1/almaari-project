@@ -1,5 +1,7 @@
 import { AddressController } from "@/controllers/address.controller";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   return AddressController.getAddresses(req);
 }

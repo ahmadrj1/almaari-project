@@ -140,7 +140,11 @@ export default function AddressesClient() {
         showToast("success", "Address deleted");
         await fetchAddresses();
       } else {
-        showToast("error", "Failed to delete address");
+        const data = await res.json().catch(() => ({}));
+        showToast(
+          "error",
+          data.error || data.message || "Failed to delete address",
+        );
       }
     } catch {
       showToast("error", "An error occurred deleting address");
@@ -241,7 +245,13 @@ export default function AddressesClient() {
                   </button>
                   <button
                     onClick={() => setAddressToDelete(address.id)}
-                    className="text-red-500 hover:text-red-600 font-medium transition"
+                    disabled={address.isDefault}
+                    title={
+                      address.isDefault
+                        ? "Cannot delete default address"
+                        : "Delete address"
+                    }
+                    className="text-red-500 hover:text-red-600 font-medium transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Delete
                   </button>

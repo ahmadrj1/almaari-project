@@ -250,6 +250,7 @@ export class ProductService {
 
   static async getDemoProducts() {
     const products = await prisma.product.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: "desc" },
       take: 12,
       include: {

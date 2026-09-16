@@ -10,7 +10,10 @@ export class CartController {
       if (!session?.user?.id) throw new AppError("Unauthorized", 401);
 
       const data = await CartService.getCart(session.user.id);
-      return NextResponse.json({ success: true, data });
+      return NextResponse.json(
+        { success: true, data },
+        { headers: { "Cache-Control": "private, no-store, must-revalidate" } },
+      );
     } catch (error) {
       return handleApiError(error, "CartController.getCart");
     }
@@ -20,10 +23,20 @@ export class CartController {
     try {
       const session = await auth();
       if (!session?.user?.id)
-        return NextResponse.json({ success: true, count: 0 });
+        return NextResponse.json(
+          { success: true, count: 0 },
+          {
+            headers: {
+              "Cache-Control": "private, no-store, must-revalidate",
+            },
+          },
+        );
 
       const count = await CartService.getCartCount(session.user.id);
-      return NextResponse.json({ success: true, count });
+      return NextResponse.json(
+        { success: true, count },
+        { headers: { "Cache-Control": "private, no-store, must-revalidate" } },
+      );
     } catch (_error) {
       return NextResponse.json({ success: true, count: 0 });
     }
