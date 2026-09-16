@@ -79,12 +79,19 @@ export class AddressService {
       throw new AppError("Address not found", 404);
     }
 
-    // Instead of completely preventing deletion if used in orders, Prisma might restrict if we have restrict set.
-    // However, our schema says Order has no onDelete action defined on address.
-    // Wait, Address -> Order relation:
-    // `address Address @relation(fields: [addressId], references: [id])`
-    // This is Restrict by default. So we can't delete if orders are attached.
-    // We should just let prisma throw if it's in use, or we can soft-delete if we implement it, but for now let's just delete.
+    if (address.isDefault) {
+      throw new AppError(
+        "Default address cannot be deleted. Please set another address as default first.",
+        400,
+      );
+    }
+
+    if (address.orders && address.orders.length > 0) {
+      throw new AppError(
+        "Cannot delete address associated with existing orders.",
+        400,
+      );
+    }
 
     return prisma.address.delete({
       where: { id: addressId },

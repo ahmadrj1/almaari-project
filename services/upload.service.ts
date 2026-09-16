@@ -20,7 +20,10 @@ export class UploadService {
       !process.env.CLOUDINARY_API_KEY ||
       !process.env.CLOUDINARY_API_SECRET
     ) {
-      throw new AppError("Cloudinary is not configured", 500);
+      throw new AppError(
+        "Cloudinary is not configured. Please check environment variables.",
+        500,
+      );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -37,7 +40,12 @@ export class UploadService {
           },
           (error, result) => {
             if (error) {
-              reject(error);
+              reject(
+                new AppError(
+                  error.message || "Failed to upload image to Cloudinary",
+                  500,
+                ),
+              );
               return;
             }
             resolve(result || {});

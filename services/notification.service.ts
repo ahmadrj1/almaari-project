@@ -44,8 +44,10 @@ export class NotificationService {
       ];
     }
 
-    const take = limit !== undefined ? limit + 1 : undefined;
-    const skip = offset;
+    const take =
+      limit !== undefined ? Math.max(0, Math.floor(limit)) + 1 : undefined;
+    const skip =
+      offset !== undefined ? Math.max(0, Math.floor(offset)) : undefined;
 
     const notifications = await prisma.notification.findMany({
       where: whereClause,

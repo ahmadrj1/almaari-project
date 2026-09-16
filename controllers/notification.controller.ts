@@ -11,11 +11,30 @@ export class NotificationController {
 
       const url = new URL(req.url);
       const filter = url.searchParams.get("filter") || "unread";
+      if (!["unread", "all"].includes(filter)) {
+        throw new AppError("Filter must be 'unread' or 'all'", 400);
+      }
+
       const limitStr = url.searchParams.get("limit");
       const offsetStr = url.searchParams.get("offset");
 
-      const limit = limitStr ? parseInt(limitStr, 10) : undefined;
-      const offset = offsetStr ? parseInt(offsetStr, 10) : undefined;
+      let limit: number | undefined;
+      if (limitStr !== null) {
+        const parsedLimit = Number(limitStr);
+        if (!Number.isInteger(parsedLimit) || parsedLimit < 0) {
+          throw new AppError("Limit must be a non-negative integer", 400);
+        }
+        limit = parsedLimit;
+      }
+
+      let offset: number | undefined;
+      if (offsetStr !== null) {
+        const parsedOffset = Number(offsetStr);
+        if (!Number.isInteger(parsedOffset) || parsedOffset < 0) {
+          throw new AppError("Offset must be a non-negative integer", 400);
+        }
+        offset = parsedOffset;
+      }
 
       const data = await NotificationService.getNotifications(
         session.user.id,
@@ -23,7 +42,10 @@ export class NotificationController {
         limit,
         offset,
       );
-      return NextResponse.json({ success: true, data });
+      return NextResponse.json(
+        { success: true, data },
+        { headers: { "Cache-Control": "private, no-store, must-revalidate" } },
+      );
     } catch (error) {
       return handleApiError(error, "NotificationController.getNotifications");
     }
