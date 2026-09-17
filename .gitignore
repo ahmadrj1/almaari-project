@@ -52,4 +52,4 @@ details.md
 /public/images/products/*
 
 # FASTAPI Server
-/job-schedular
+/job-schedular/venv
