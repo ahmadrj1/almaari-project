@@ -12,7 +12,7 @@ import {
   Category,
   ProductImageUpload,
 } from "@/types";
-import { MAX_UPLOAD_SIZE } from "@/lib/constants";
+import { MAX_UPLOAD_SIZE, NEXT_SKU_DEBOUNCE_MS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
@@ -108,7 +108,7 @@ export default function NewProductClient() {
       } catch (err) {
         console.error("Failed to fetch next SKU code:", err);
       }
-    }, 300);
+    }, NEXT_SKU_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
   }, [title, colors, sizes]);
@@ -263,6 +263,7 @@ export default function NewProductClient() {
       ]);
     }
 
+    setSelectedColor("");
     setSelectedSize("");
     setVariantQty("");
     setErrors((prev) => ({ ...prev, variants: "" }));
@@ -529,23 +530,24 @@ export default function NewProductClient() {
               <SortDropdown
                 className={`w-full min-w-0 ${errors.categoryId ? "ring-1 ring-red-500 rounded-lg" : ""}`}
                 buttonClassName={`rounded-lg py-2.5 text-sm ${errors.categoryId ? "border-red-500" : "border-gray-200"}`}
-                menuClassName="max-h-56"
+                menuClassName="max-h-72"
                 value={categoryId}
                 placeholder="Select Category"
-                options={[
-                  ...categories.map((c) => ({
-                    label: c.name,
-                    value: c.id,
-                  })),
-                  {
-                    label: (
-                      <span className="font-semibold text-blue-600">
-                        + Create New Category
-                      </span>
-                    ),
-                    value: "create_new",
-                  },
-                ]}
+                searchable
+                searchPlaceholder="Search category..."
+                emptyMessage="No categories found"
+                options={categories.map((c) => ({
+                  label: c.name,
+                  value: c.id,
+                }))}
+                footerOption={{
+                  label: (
+                    <span className="font-semibold text-blue-600">
+                      + Create New Category
+                    </span>
+                  ),
+                  value: "create_new",
+                }}
                 onValueChange={(value) => {
                   setCategoryId(value);
                   if (errors.categoryId)
