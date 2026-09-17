@@ -542,6 +542,7 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
         ]);
       }
 
+      setSelectedColor("");
       setSelectedSize("");
       setVariantQty("");
       clearError("variants");

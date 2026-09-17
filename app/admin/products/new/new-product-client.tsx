@@ -12,7 +12,7 @@ import {
   Category,
   ProductImageUpload,
 } from "@/types";
-import { MAX_UPLOAD_SIZE } from "@/lib/constants";
+import { MAX_UPLOAD_SIZE, NEXT_SKU_DEBOUNCE_MS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
@@ -108,7 +108,7 @@ export default function NewProductClient() {
       } catch (err) {
         console.error("Failed to fetch next SKU code:", err);
       }
-    }, 300);
+    }, NEXT_SKU_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
   }, [title, colors, sizes]);
@@ -263,6 +263,7 @@ export default function NewProductClient() {
       ]);
     }
 
+    setSelectedColor("");
     setSelectedSize("");
     setVariantQty("");
     setErrors((prev) => ({ ...prev, variants: "" }));
