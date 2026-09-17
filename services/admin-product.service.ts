@@ -131,91 +131,95 @@ export class AdminProductService {
       throw new AppError("Missing required fields", 400);
     }
 
-    const newProduct = await prisma.$transaction(async (tx) => {
-      const titlePrefix = extractTitlePrefix(title);
+    // Fetch static lookup data outside the transaction to reduce transaction duration
+    const [colors, sizes] = await Promise.all([
+      prisma.color.findMany(),
+      prisma.size.findMany(),
+    ]);
+    const colorMap = new Map(colors.map((c) => [c.id, c.code]));
+    const sizeMap = new Map(sizes.map((s) => [s.id, s.name]));
 
-      // Advisory transaction lock to prevent race condition
-      await tx.$executeRawUnsafe(
-        `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`,
-        titlePrefix,
-      );
+    const newProduct = await prisma.$transaction(
+      async (tx) => {
+        const titlePrefix = extractTitlePrefix(title);
 
-      const existingProducts = await tx.product.findMany({
-        where: { titlePrefix },
-        select: { code: true },
-      });
-
-      let maxCode = 0;
-      for (const p of existingProducts) {
-        const num = parseInt(p.code, 10);
-        if (!isNaN(num) && num > maxCode) {
-          maxCode = num;
-        }
-      }
-      const code = String(maxCode + 1).padStart(3, "0");
-
-      const [colors, sizes] = await Promise.all([
-        tx.color.findMany(),
-        tx.size.findMany(),
-      ]);
-      const colorMap = new Map(colors.map((c) => [c.id, c.code]));
-      const sizeMap = new Map(sizes.map((s) => [s.id, s.name]));
-
-      const product = await tx.product.create({
-        data: {
-          title,
+        // Advisory transaction lock to prevent race condition
+        await tx.$executeRawUnsafe(
+          `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`,
           titlePrefix,
-          code,
-          description: description || "",
-          price,
-          image,
-          categoryId: categoryId || null,
-          variants: {
-            create: variants.map(
-              (v: {
-                colorId: string;
-                sizeId: string;
-                stock: string | number;
-              }) => {
-                const colCode = colorMap.get(v.colorId) || "DEF";
-                const sizeCode = sizeMap.get(v.sizeId) || "STD";
-                const sku = generateVariantSku(
-                  titlePrefix,
-                  code,
-                  sizeCode,
-                  colCode,
-                );
-                return {
-                  colorId: v.colorId,
-                  sizeId: v.sizeId,
-                  stock: Number(v.stock),
-                  sku,
-                };
-              },
-            ),
+        );
+
+        const existingProducts = await tx.product.findMany({
+          where: { titlePrefix },
+          select: { code: true },
+        });
+
+        let maxCode = 0;
+        for (const p of existingProducts) {
+          const num = parseInt(p.code, 10);
+          if (!isNaN(num) && num > maxCode) {
+            maxCode = num;
+          }
+        }
+        const code = String(maxCode + 1).padStart(3, "0");
+
+        const product = await tx.product.create({
+          data: {
+            title,
+            titlePrefix,
+            code,
+            description: description || "",
+            price,
+            image,
+            categoryId: categoryId || null,
+            variants: {
+              create: variants.map(
+                (v: {
+                  colorId: string;
+                  sizeId: string;
+                  stock: string | number;
+                }) => {
+                  const colCode = colorMap.get(v.colorId) || "DEF";
+                  const sizeCode = sizeMap.get(v.sizeId) || "STD";
+                  const sku = generateVariantSku(
+                    titlePrefix,
+                    code,
+                    sizeCode,
+                    colCode,
+                  );
+                  return {
+                    colorId: v.colorId,
+                    sizeId: v.sizeId,
+                    stock: Number(v.stock),
+                    sku,
+                  };
+                },
+              ),
+            },
+            images: images
+              ? {
+                  create: images.map(
+                    (
+                      img: { url: string; colorId: string | null },
+                      idx: number,
+                    ) => ({
+                      colorId: img.colorId || null,
+                      url: img.url,
+                      sortOrder: idx,
+                    }),
+                  ),
+                }
+              : undefined,
           },
-          images: images
-            ? {
-                create: images.map(
-                  (
-                    img: { url: string; colorId: string | null },
-                    idx: number,
-                  ) => ({
-                    colorId: img.colorId || null,
-                    url: img.url,
-                    sortOrder: idx,
-                  }),
-                ),
-              }
-            : undefined,
-        },
-        include: {
-          variants: { include: { color: true, size: true } },
-          images: true,
-        },
-      });
-      return product;
-    });
+          include: {
+            variants: { include: { color: true, size: true } },
+            images: true,
+          },
+        });
+        return product;
+      },
+      { timeout: 15000 },
+    );
 
     createBroadcastNotification(
       "NEW_PRODUCT",
@@ -265,140 +269,144 @@ export class AdminProductService {
       throw new AppError("Missing required fields", 400);
     }
 
-    return prisma.$transaction(async (tx) => {
-      const existingProduct = await tx.product.findUnique({
-        where: { id },
-      });
-      if (!existingProduct) {
-        throw new AppError("Product not found", 404);
-      }
+    // Fetch static lookup data outside the transaction to reduce transaction duration
+    const [colors, sizes] = await Promise.all([
+      prisma.color.findMany(),
+      prisma.size.findMany(),
+    ]);
+    const colorMap = new Map(colors.map((c) => [c.id, c.code]));
+    const sizeMap = new Map(sizes.map((s) => [s.id, s.name]));
 
-      const newTitlePrefix = extractTitlePrefix(title);
-      let finalTitlePrefix = existingProduct.titlePrefix;
-      let finalCode = existingProduct.code;
-
-      if (newTitlePrefix !== existingProduct.titlePrefix) {
-        await tx.$executeRawUnsafe(
-          `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`,
-          newTitlePrefix,
-        );
-        const samePrefixProducts = await tx.product.findMany({
-          where: { titlePrefix: newTitlePrefix },
-          select: { code: true },
+    return prisma.$transaction(
+      async (tx) => {
+        const existingProduct = await tx.product.findUnique({
+          where: { id },
         });
-        let maxCode = 0;
-        for (const p of samePrefixProducts) {
-          const num = parseInt(p.code, 10);
-          if (!isNaN(num) && num > maxCode) maxCode = num;
+        if (!existingProduct) {
+          throw new AppError("Product not found", 404);
         }
-        finalCode = String(maxCode + 1).padStart(3, "0");
-        finalTitlePrefix = newTitlePrefix;
-      }
 
-      await tx.product.update({
-        where: { id },
-        data: {
-          title,
-          titlePrefix: finalTitlePrefix,
-          code: finalCode,
-          description: description || "",
-          price,
-          categoryId: categoryId || null,
-          ...(image && { image }),
-        },
-      });
+        const newTitlePrefix = extractTitlePrefix(title);
+        let finalTitlePrefix = existingProduct.titlePrefix;
+        let finalCode = existingProduct.code;
 
-      const [colors, sizes] = await Promise.all([
-        tx.color.findMany(),
-        tx.size.findMany(),
-      ]);
-      const colorMap = new Map(colors.map((c) => [c.id, c.code]));
-      const sizeMap = new Map(sizes.map((s) => [s.id, s.name]));
+        if (newTitlePrefix !== existingProduct.titlePrefix) {
+          await tx.$executeRawUnsafe(
+            `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`,
+            newTitlePrefix,
+          );
+          const samePrefixProducts = await tx.product.findMany({
+            where: { titlePrefix: newTitlePrefix },
+            select: { code: true },
+          });
+          let maxCode = 0;
+          for (const p of samePrefixProducts) {
+            const num = parseInt(p.code, 10);
+            if (!isNaN(num) && num > maxCode) maxCode = num;
+          }
+          finalCode = String(maxCode + 1).padStart(3, "0");
+          finalTitlePrefix = newTitlePrefix;
+        }
 
-      // Upsert each variant to preserve existing IDs (and cascaded CartItems)
-      const existingVariants = await tx.productVariant.findMany({
-        where: { productId: id },
-        select: { id: true, colorId: true, sizeId: true },
-      });
-      const existingMap = new Map(
-        existingVariants.map((v) => [`${v.colorId}:${v.sizeId}`, v.id]),
-      );
-
-      const incomingKeys = new Set(
-        variants.map(
-          (v: { colorId: string; sizeId: string; stock: string | number }) =>
-            `${v.colorId}:${v.sizeId}`,
-        ),
-      );
-
-      // Delete variants not present in the incoming list
-      const idsToDelete = existingVariants
-        .filter((v) => !incomingKeys.has(`${v.colorId}:${v.sizeId}`))
-        .map((v) => v.id);
-      if (idsToDelete.length > 0) {
-        await tx.productVariant.deleteMany({
-          where: { id: { in: idsToDelete } },
+        await tx.product.update({
+          where: { id },
+          data: {
+            title,
+            titlePrefix: finalTitlePrefix,
+            code: finalCode,
+            description: description || "",
+            price,
+            categoryId: categoryId || null,
+            ...(image && { image }),
+          },
         });
-      }
 
-      // Upsert each incoming variant
-      for (const v of variants) {
-        const colCode = colorMap.get(v.colorId) || "DEF";
-        const sizeCode = sizeMap.get(v.sizeId) || "STD";
-        const sku = generateVariantSku(
-          finalTitlePrefix,
-          finalCode,
-          sizeCode,
-          colCode,
-        );
-
-        const existingId = existingMap.get(`${v.colorId}:${v.sizeId}`);
-        if (existingId) {
-          await tx.productVariant.update({
-            where: { id: existingId },
-            data: {
-              stock: Number(v.stock),
-              sku,
-            },
-          });
-        } else {
-          await tx.productVariant.create({
-            data: {
-              productId: id,
-              colorId: v.colorId,
-              sizeId: v.sizeId,
-              stock: Number(v.stock),
-              sku,
-            },
-          });
-        }
-      }
-
-      if (images) {
-        await tx.productImage.deleteMany({
+        // Upsert each variant to preserve existing IDs (and cascaded CartItems)
+        const existingVariants = await tx.productVariant.findMany({
           where: { productId: id },
+          select: { id: true, colorId: true, sizeId: true },
         });
-        await tx.productImage.createMany({
-          data: images.map(
-            (img: { url: string; colorId: string | null }, idx: number) => ({
-              productId: id,
-              colorId: img.colorId || null,
-              url: img.url,
-              sortOrder: idx,
-            }),
-          ),
-        });
-      }
+        const existingMap = new Map(
+          existingVariants.map((v) => [`${v.colorId}:${v.sizeId}`, v.id]),
+        );
 
-      return tx.product.findUnique({
-        where: { id },
-        include: {
-          category: true,
-          images: true,
-          variants: { include: { color: true, size: true } },
-        },
-      });
-    });
+        const incomingKeys = new Set(
+          variants.map(
+            (v: { colorId: string; sizeId: string; stock: string | number }) =>
+              `${v.colorId}:${v.sizeId}`,
+          ),
+        );
+
+        // Delete variants not present in the incoming list
+        const idsToDelete = existingVariants
+          .filter((v) => !incomingKeys.has(`${v.colorId}:${v.sizeId}`))
+          .map((v) => v.id);
+        if (idsToDelete.length > 0) {
+          await tx.productVariant.deleteMany({
+            where: { id: { in: idsToDelete } },
+          });
+        }
+
+        // Upsert each incoming variant
+        for (const v of variants) {
+          const colCode = colorMap.get(v.colorId) || "DEF";
+          const sizeCode = sizeMap.get(v.sizeId) || "STD";
+          const sku = generateVariantSku(
+            finalTitlePrefix,
+            finalCode,
+            sizeCode,
+            colCode,
+          );
+
+          const existingId = existingMap.get(`${v.colorId}:${v.sizeId}`);
+          if (existingId) {
+            await tx.productVariant.update({
+              where: { id: existingId },
+              data: {
+                stock: Number(v.stock),
+                sku,
+              },
+            });
+          } else {
+            await tx.productVariant.create({
+              data: {
+                productId: id,
+                colorId: v.colorId,
+                sizeId: v.sizeId,
+                stock: Number(v.stock),
+                sku,
+              },
+            });
+          }
+        }
+
+        if (images) {
+          await tx.productImage.deleteMany({
+            where: { productId: id },
+          });
+          await tx.productImage.createMany({
+            data: images.map(
+              (img: { url: string; colorId: string | null }, idx: number) => ({
+                productId: id,
+                colorId: img.colorId || null,
+                url: img.url,
+                sortOrder: idx,
+              }),
+            ),
+          });
+        }
+
+        return tx.product.findUnique({
+          where: { id },
+          include: {
+            category: true,
+            images: true,
+            variants: { include: { color: true, size: true } },
+          },
+        });
+      },
+      { timeout: 15000 },
+    );
   }
 
   static async deleteProduct(id: string) {

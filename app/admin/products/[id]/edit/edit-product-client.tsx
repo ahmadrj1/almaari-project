@@ -15,7 +15,7 @@ import {
 } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { MAX_UPLOAD_SIZE } from "@/lib/constants";
+import { MAX_UPLOAD_SIZE, NEXT_SKU_DEBOUNCE_MS } from "@/lib/constants";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -144,6 +144,45 @@ export default function EditProductClient({
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (!title) return;
+      try {
+        const res = await fetch(
+          `/api/admin/products/next-sku?title=${encodeURIComponent(title)}`,
+        );
+        const data = await res.json();
+        if (data.success) {
+          setProductCode(data.data.nextCode);
+          setVariants((prev) =>
+            prev.map((v) => {
+              const col = colors.find((c) => c.id === v.colorId);
+              const sz = sizes.find((s) => s.id === v.sizeId);
+              const colCode =
+                col?.code || resolveColorCode(v.colorName || "", colors);
+              const szCode = resolveSizeCode(
+                sz?.name || v.sizeName || "",
+                sizes,
+              );
+              return {
+                ...v,
+                sku: generateVariantSku(
+                  data.data.titlePrefix,
+                  data.data.nextCode,
+                  szCode,
+                  colCode,
+                ),
+              };
+            }),
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch next SKU code:", err);
+      }
+    }, NEXT_SKU_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [title, colors, sizes]);
+
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) return;
     setIsCreatingCategory(true);
@@ -266,6 +305,7 @@ export default function EditProductClient({
       ]);
     }
 
+    setSelectedColor("");
     setSelectedSize("");
     setVariantQty("");
     setErrors((prev) => ({ ...prev, variants: "" }));
@@ -532,23 +572,24 @@ export default function EditProductClient({
               <SortDropdown
                 className={`w-full min-w-0 ${errors.categoryId ? "ring-1 ring-red-500 rounded-lg" : ""}`}
                 buttonClassName={`rounded-lg py-2.5 text-sm ${errors.categoryId ? "border-red-500" : "border-gray-200"}`}
-                menuClassName="max-h-56"
+                menuClassName="max-h-72"
                 value={categoryId}
                 placeholder="Select Category"
-                options={[
-                  ...categories.map((c) => ({
-                    label: c.name,
-                    value: c.id,
-                  })),
-                  {
-                    label: (
-                      <span className="font-semibold text-blue-600">
-                        + Create New Category
-                      </span>
-                    ),
-                    value: "create_new",
-                  },
-                ]}
+                searchable
+                searchPlaceholder="Search category..."
+                emptyMessage="No categories found"
+                options={categories.map((c) => ({
+                  label: c.name,
+                  value: c.id,
+                }))}
+                footerOption={{
+                  label: (
+                    <span className="font-semibold text-blue-600">
+                      + Create New Category
+                    </span>
+                  ),
+                  value: "create_new",
+                }}
                 onValueChange={(value) => {
                   setCategoryId(value);
                   if (errors.categoryId)
