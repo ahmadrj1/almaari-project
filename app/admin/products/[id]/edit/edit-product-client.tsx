@@ -572,23 +572,24 @@ export default function EditProductClient({
               <SortDropdown
                 className={`w-full min-w-0 ${errors.categoryId ? "ring-1 ring-red-500 rounded-lg" : ""}`}
                 buttonClassName={`rounded-lg py-2.5 text-sm ${errors.categoryId ? "border-red-500" : "border-gray-200"}`}
-                menuClassName="max-h-56"
+                menuClassName="max-h-72"
                 value={categoryId}
                 placeholder="Select Category"
-                options={[
-                  ...categories.map((c) => ({
-                    label: c.name,
-                    value: c.id,
-                  })),
-                  {
-                    label: (
-                      <span className="font-semibold text-blue-600">
-                        + Create New Category
-                      </span>
-                    ),
-                    value: "create_new",
-                  },
-                ]}
+                searchable
+                searchPlaceholder="Search category..."
+                emptyMessage="No categories found"
+                options={categories.map((c) => ({
+                  label: c.name,
+                  value: c.id,
+                }))}
+                footerOption={{
+                  label: (
+                    <span className="font-semibold text-blue-600">
+                      + Create New Category
+                    </span>
+                  ),
+                  value: "create_new",
+                }}
                 onValueChange={(value) => {
                   setCategoryId(value);
                   if (errors.categoryId)
