@@ -63,12 +63,7 @@ export function handleApiError(error: unknown, context: string): NextResponse {
       );
     }
     return NextResponse.json(
-      {
-        success: false,
-        error: "Database operation failed",
-        code: error.code,
-        meta: error.meta,
-      },
+      { success: false, error: "Database operation failed" },
       { status: 500 },
     );
   }
