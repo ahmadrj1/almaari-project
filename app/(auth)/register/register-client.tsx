@@ -40,7 +40,11 @@ export default function RegisterPage() {
         callbackUrlParam.startsWith("/") &&
         !callbackUrlParam.startsWith("//")
       ) {
-        if (role === "ADMIN" || !callbackUrlParam.startsWith("/admin")) {
+        if (role === "ADMIN") {
+          if (callbackUrlParam.startsWith("/admin")) {
+            destination = callbackUrlParam;
+          }
+        } else if (!callbackUrlParam.startsWith("/admin")) {
           destination = callbackUrlParam;
         }
       }

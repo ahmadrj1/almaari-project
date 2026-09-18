@@ -1,11 +1,19 @@
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { getServerSessionSnapshot } from "@/lib/auth-session";
+import { Role } from "@prisma/client";
+import { redirect } from "next/navigation";
 
-export default function MainLayout({
+export default async function MainLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getServerSessionSnapshot();
+  if (session?.user?.role === Role.ADMIN) {
+    redirect("/admin/products");
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F5F7FA]">
       <Navbar />

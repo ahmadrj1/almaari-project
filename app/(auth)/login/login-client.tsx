@@ -35,6 +35,9 @@ export default function LoginPage() {
     if (!target || !target.startsWith("/") || target.startsWith("//")) {
       return defaultPath;
     }
+    if (role === "ADMIN" && !target.startsWith("/admin")) {
+      return defaultPath;
+    }
     if (role !== "ADMIN" && target.startsWith("/admin")) {
       return defaultPath;
     }
