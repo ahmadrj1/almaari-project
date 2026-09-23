@@ -5,10 +5,35 @@ import { prisma } from "@/lib/db";
 import Groq from "groq-sdk";
 import { searchProducts, searchUserOrders } from "@/lib/embedding.service";
 import { CartService } from "@/services/cart.service";
-import { CHATBOT_CONTEXT_PAIRS_LIMIT, CHATBOT_NAME } from "@/lib/constants";
+import {
+  CHATBOT_CONTEXT_PAIRS_LIMIT,
+  CHATBOT_NAME,
+  STORE_KNOWLEDGE,
+} from "@/lib/constants";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const MODEL = process.env.GROQ_CHAT_MODEL ?? "qwen/qwen3.8-27b";
+
+const GUEST_SYSTEM_PROMPT = `You are ${CHATBOT_NAME}, a helpful shopping assistant for Almaari, an e-commerce store.
+
+GUEST MODE - STRICT SCOPE RULES (CLIENT NOT LOGGED IN):
+- The user is currently browsing as a guest without logging in.
+- Guest users are ONLY allowed to inquire about products (e.g. product recommendations, features, materials, pricing, variants, colors, sizes, stock availability, categories) and general store information (shipping info, store policy, contact).
+- Guest users CANNOT view order status, view order history, or access account details.
+- Guest users CANNOT place orders or add items to cart.
+- If the user asks about their orders, order tracking, order history, or asks to place an order or add to cart:
+  Politely inform them that guest visitors can only inquire about products, and that they must log in to their account to track orders or manage their cart.
+- NEVER include <!--ADD_TO_CART:...--> tags for guest users.
+- Do NOT answer questions about competitors, off-topic subjects, politics, or code.
+- If you recommend products that match what the user is asking for, include their product IDs at the END of your response in this exact format:
+  <!--PRODUCT_CARDS:[productId1, productId2]-->
+  Only include IDs of products that match what the user is asking for. If no products match, do not include the tag.
+
+CONTEXT PROVIDED:
+- Retrieved products from the store catalog will be injected before your response.
+- Use that context to answer accurately. If no relevant products are found, say so honestly.
+
+${STORE_KNOWLEDGE}`;
 
 const SYSTEM_PROMPT = `You are ${CHATBOT_NAME}, a helpful shopping assistant for Almaari, an e-commerce store.
 
@@ -40,7 +65,9 @@ RESPONSE STYLE:
 
 CONTEXT PROVIDED:
 - Retrieved products or orders from the store database will be injected before your response.
-- Use that context to answer accurately. If no relevant results are found, say so honestly.`;
+- Use that context to answer accurately. If no relevant results are found, say so honestly.
+
+${STORE_KNOWLEDGE}`;
 
 async function generateChatTitle(firstMessage: string): Promise<string> {
   try {
@@ -62,42 +89,54 @@ async function generateChatTitle(firstMessage: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role === Role.ADMIN) {
+  if (session?.user?.role === Role.ADMIN) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = session.user.id;
+  const userId = session?.user?.id;
+  const isGuest = !userId;
+
   const body = await req.json();
-  const { message, sessionId } = body as {
+  const { message, sessionId, history } = body as {
     message: string;
     sessionId?: string;
+    history?: Array<{ role: "user" | "assistant"; content: string }>;
   };
 
   if (!message?.trim()) {
     return NextResponse.json({ error: "Message is required" }, { status: 400 });
   }
 
-  // ─── Resolve or create chat session ───────────────────────────────────────
-  let chatSession = sessionId
-    ? await prisma.chatSession.findFirst({
-        where: { id: sessionId, userId },
-        include: {
-          messages: { orderBy: { createdAt: "asc" } },
-        },
-      })
-    : null;
+  // ─── Resolve or create chat session (Authenticated users only) ─────────────
+  let chatSession = null;
+  let isNewSession = false;
 
-  const isNewSession = !chatSession;
-  if (!chatSession) {
-    const title = await generateChatTitle(message);
-    chatSession = await prisma.chatSession.create({
-      data: { userId, title },
-      include: { messages: { orderBy: { createdAt: "asc" } } },
-    });
+  if (!isGuest && userId) {
+    chatSession = sessionId
+      ? await prisma.chatSession.findFirst({
+          where: { id: sessionId, userId },
+          include: {
+            messages: { orderBy: { createdAt: "asc" } },
+          },
+        })
+      : null;
+
+    isNewSession = !chatSession;
+    if (!chatSession) {
+      const title = await generateChatTitle(message);
+      chatSession = await prisma.chatSession.create({
+        data: { userId, title },
+        include: { messages: { orderBy: { createdAt: "asc" } } },
+      });
+    }
   }
 
   // ─── Build context window (last N pairs) ──────────────────────────────────
-  const allMessages = chatSession.messages ?? [];
+  const allMessages: Array<{ role: string; content: string }> = isGuest
+    ? Array.isArray(history)
+      ? history
+      : []
+    : (chatSession?.messages ?? []);
   const contextMessages = allMessages.slice(-CHATBOT_CONTEXT_PAIRS_LIMIT * 2);
 
   // ─── RAG: Semantic retrieval ───────────────────────────────────────────────
@@ -124,7 +163,9 @@ export async function POST(req: NextRequest) {
 
   const [productResults, orderResults] = await Promise.allSettled([
     searchProducts(searchTerms, 4),
-    searchUserOrders(message, userId, 15),
+    !isGuest && userId
+      ? searchUserOrders(message, userId, 15)
+      : Promise.resolve([]),
   ]);
 
   const products =
@@ -141,7 +182,7 @@ export async function POST(req: NextRequest) {
   const asksCount =
     /\b(how many|order count|total order|number of order)\b/i.test(qLower);
 
-  if (asksToday || asksCount) {
+  if (!isGuest && userId && (asksToday || asksCount)) {
     const startOfToday = new Date(
       Date.UTC(
         now.getUTCFullYear(),
@@ -178,7 +219,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  if (orders.length > 0) {
+  if (!isGuest && orders.length > 0) {
     ragContextParts.push("\nUSER'S RELEVANT ORDERS:");
     orders.forEach((o, i) => {
       const paymentInfo =
@@ -189,7 +230,7 @@ export async function POST(req: NextRequest) {
         `${i + 1}. Order #${o.shortId} (Full ID: ${o.orderId}, Date Placed: ${o.createdAt.split("T")[0]}) — Order Status: ${o.status} — ${paymentInfo} — Delivery Address: ${o.address} — Subtotal: PKR ${o.subTotal} — Tax: PKR ${o.tax} — Total: PKR ${o.total} — Items: ${o.items.map((item) => `${item.title} (${item.colorName}/${item.sizeName}) x${item.quantity} (PKR ${item.price})`).join(", ")}`,
       );
     });
-  } else if (asksToday) {
+  } else if (!isGuest && asksToday) {
     ragContextParts.push(
       "\nUSER'S RELEVANT ORDERS: None. No orders found for today.",
     );
@@ -199,13 +240,14 @@ export async function POST(req: NextRequest) {
     ragContextParts.length > 0 ? ragContextParts.join("\n") : "";
 
   // ─── Groq LLM Inference ───────────────────────────────────────────────────
+  const promptToUse = isGuest ? GUEST_SYSTEM_PROMPT : SYSTEM_PROMPT;
   const groqMessages: Array<{
     role: "system" | "user" | "assistant";
     content: string;
   }> = [
     {
       role: "system",
-      content: `${SYSTEM_PROMPT}\n\nIMPORTANT: The current date is ${formattedCurrentDate} (${currentDateStr}).`,
+      content: `${promptToUse}\n\nIMPORTANT: The current date is ${formattedCurrentDate} (${currentDateStr}).`,
     },
   ];
 
@@ -234,12 +276,13 @@ export async function POST(req: NextRequest) {
   let assistantText =
     completion.choices[0]?.message?.content ?? "Sorry, I could not respond.";
 
-  // ─── Handle explicit add-to-cart ─────────────────────────────────────────
+  // ─── Handle explicit add-to-cart (Authenticated only) ────────────────────
   let cartAction: { success: boolean; message: string } | null = null;
-  const addToCartMatch = assistantText.match(
-    /<!--ADD_TO_CART:(\{[\s\S]*?\})-->/,
-  );
-  if (addToCartMatch) {
+  const addToCartMatch =
+    !isGuest && userId
+      ? assistantText.match(/<!--ADD_TO_CART:(\{[\s\S]*?\})-->/)
+      : null;
+  if (addToCartMatch && userId) {
     try {
       const parsed = JSON.parse(addToCartMatch[1]);
       let { productId, variantId, quantity = 1 } = parsed;
@@ -327,30 +370,32 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ─── Persist messages ─────────────────────────────────────────────────────
-  await prisma.chatMessage.createMany({
-    data: [
-      { sessionId: chatSession.id, role: "user", content: message },
-      {
-        sessionId: chatSession.id,
-        role: "assistant",
-        content: assistantText,
-        metadata:
-          productCards.length > 0
-            ? (JSON.parse(
-                JSON.stringify({ productCards }),
-              ) as Prisma.InputJsonValue)
-            : Prisma.JsonNull,
-      },
-    ],
-  });
+  // ─── Persist messages (Authenticated only) ────────────────────────────────
+  if (!isGuest && chatSession) {
+    await prisma.chatMessage.createMany({
+      data: [
+        { sessionId: chatSession.id, role: "user", content: message },
+        {
+          sessionId: chatSession.id,
+          role: "assistant",
+          content: assistantText,
+          metadata:
+            productCards.length > 0
+              ? (JSON.parse(
+                  JSON.stringify({ productCards }),
+                ) as Prisma.InputJsonValue)
+              : Prisma.JsonNull,
+        },
+      ],
+    });
+  }
 
   return NextResponse.json({
     success: true,
     data: {
-      sessionId: chatSession.id,
-      sessionTitle: chatSession.title,
-      isNewSession,
+      sessionId: isGuest ? null : chatSession?.id,
+      sessionTitle: isGuest ? "Guest Chat" : chatSession?.title,
+      isNewSession: isGuest ? false : isNewSession,
       message: assistantText.replace(/<!--[\s\S]*?-->/g, "").trim(),
       productCards,
       cartAction,
@@ -362,7 +407,10 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id || session.user.role === Role.ADMIN) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Please login to add items to your cart." },
+      { status: 401 },
+    );
   }
 
   const { productId, variantId, quantity = 1 } = await req.json();
