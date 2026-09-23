@@ -81,6 +81,15 @@ function applyFixedSessionCookie(
 export default async function proxy(req: NextRequest) {
   const isDev = process.env.NEXT_PUBLIC_APP_ENV === "dev";
 
+  const { pathname } = req.nextUrl;
+
+  if (
+    pathname.startsWith("/_next/") ||
+    /\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml)$/i.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+
   if (
     isDev &&
     req.nextUrl.pathname.startsWith("/api/") &&
@@ -158,6 +167,6 @@ export default async function proxy(req: NextRequest) {
 export const config = {
   matcher: [
     "/api/:path*",
-    "/((?!_next/static|_next/image|favicon\\.ico|images).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml)$).*)",
   ],
 };

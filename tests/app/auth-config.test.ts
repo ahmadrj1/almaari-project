@@ -167,4 +167,33 @@ describe("auth.config.ts authorized callback", () => {
       expect(res).toBe(false);
     });
   });
+
+  describe("Static assets and API routes access for ADMIN", () => {
+    it("allows ADMIN to access static logo.png", async () => {
+      const res = await authorized({
+        auth: { user: { role: "ADMIN" }, expires: "" } as any,
+        request: createReq("/logo.png"),
+      });
+
+      expect(res).toBe(true);
+    });
+
+    it("allows ADMIN to access static bot.png", async () => {
+      const res = await authorized({
+        auth: { user: { role: "ADMIN" }, expires: "" } as any,
+        request: createReq("/bot.png"),
+      });
+
+      expect(res).toBe(true);
+    });
+
+    it("allows ADMIN to access Next image optimization routes", async () => {
+      const res = await authorized({
+        auth: { user: { role: "ADMIN" }, expires: "" } as any,
+        request: createReq("/_next/image", "?url=%2Flogo.png&w=128&q=75"),
+      });
+
+      expect(res).toBe(true);
+    });
+  });
 });
