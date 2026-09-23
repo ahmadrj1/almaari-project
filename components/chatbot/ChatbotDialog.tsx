@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
+import { useSession } from "next-auth/react";
 import {
   X,
   Plus,
@@ -54,6 +55,12 @@ const USER_SUGGESTED_ACTIONS = [
   "Show my recent orders",
   "Recommend popular products",
   "Help me place an order",
+];
+
+const GUEST_SUGGESTED_ACTIONS = [
+  "Recommend popular products",
+  "What categories and items do you offer?",
+  "Tell me about your best-selling products",
 ];
 
 function FormattedMessage({
@@ -278,6 +285,8 @@ function generateClientMessageId(prefix = "msg"): string {
 }
 
 export function ChatbotDialog({ onClose }: ChatbotDialogProps) {
+  const { data: _session, status } = useSession();
+  const isGuest = status !== "authenticated";
   const { showToast } = useToast();
   const { refresh: refreshCart } = useCartCount();
   const [isClosing, setIsClosing] = useState(false);
@@ -303,14 +312,16 @@ export function ChatbotDialog({ onClose }: ChatbotDialogProps) {
       .then((d) => setIsOnline(d.online === true))
       .catch(() => setIsOnline(false));
 
-    // Load archived sessions
-    fetch("/api/chatbot/sessions")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setSessions(d.data);
-      })
-      .catch(() => {});
-  }, []);
+    // Load archived sessions only for authenticated users
+    if (status === "authenticated") {
+      fetch("/api/chatbot/sessions")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success) setSessions(d.data);
+        })
+        .catch(() => {});
+    }
+  }, [status]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -373,17 +384,27 @@ export function ChatbotDialog({ onClose }: ChatbotDialogProps) {
     setInput("");
 
     const tempId = generateClientMessageId("user");
-    setMessages((prev) => [
-      ...prev,
+    const nextMessages: Message[] = [
+      ...messages,
       { id: tempId, role: "user", content: userText },
-    ]);
+    ];
+    setMessages(nextMessages);
     setLoading(true);
 
     try {
       const res = await fetch("/api/chatbot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userText, sessionId }),
+        body: JSON.stringify({
+          message: userText,
+          sessionId,
+          history: isGuest
+            ? messages.slice(-6).map((m) => ({
+                role: m.role,
+                content: m.content,
+              }))
+            : undefined,
+        }),
       });
       const data = await res.json();
 
@@ -446,6 +467,11 @@ export function ChatbotDialog({ onClose }: ChatbotDialogProps) {
     variantLabel: string,
     quantity: number,
   ) => {
+    if (isGuest) {
+      showToast("info", "Please log in to add items to your cart.");
+      return;
+    }
+
     const key = `${productId}-${variantId}`;
     setAddingToCart(key);
     try {
@@ -520,44 +546,46 @@ export function ChatbotDialog({ onClose }: ChatbotDialogProps) {
             </p>
           </div>
 
-          {/* Sessions dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowSessions((v) => !v)}
-              title="Previous chats"
-              className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
-            >
-              <ChevronDown size={16} />
-            </button>
-            {showSessions && sessions.length > 0 && (
-              <div className="absolute right-0 top-full mt-1 w-56 bg-white text-gray-800 rounded-xl shadow-xl ring-1 ring-black/10 z-10 overflow-hidden max-h-56 overflow-y-auto">
-                <p className="text-xs text-gray-500 px-3 pt-2 pb-1 font-medium">
-                  Previous Chats
-                </p>
-                {sessions.map((s) => (
-                  <button
-                    key={s.id}
-                    disabled={loadingSession}
-                    onClick={() => loadArchivedSession(s.id)}
-                    className="w-full text-left px-3 py-2 hover:bg-blue-50 disabled:opacity-60 transition-colors text-sm truncate border-t border-gray-50 flex items-center justify-between"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate">{s.title}</p>
-                      <span className="block text-xs text-gray-400">
-                        {new Date(s.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    {loadingSessionId === s.id && (
-                      <Loader2
-                        size={14}
-                        className="animate-spin text-blue-600 ml-2 shrink-0"
-                      />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Sessions dropdown (Authenticated only) */}
+          {status === "authenticated" && (
+            <div className="relative">
+              <button
+                onClick={() => setShowSessions((v) => !v)}
+                title="Previous chats"
+                className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+              >
+                <ChevronDown size={16} />
+              </button>
+              {showSessions && sessions.length > 0 && (
+                <div className="absolute right-0 top-full mt-1 w-56 bg-white text-gray-800 rounded-xl shadow-xl ring-1 ring-black/10 z-10 overflow-hidden max-h-56 overflow-y-auto">
+                  <p className="text-xs text-gray-500 px-3 pt-2 pb-1 font-medium">
+                    Previous Chats
+                  </p>
+                  {sessions.map((s) => (
+                    <button
+                      key={s.id}
+                      disabled={loadingSession}
+                      onClick={() => loadArchivedSession(s.id)}
+                      className="w-full text-left px-3 py-2 hover:bg-blue-50 disabled:opacity-60 transition-colors text-sm truncate border-t border-gray-50 flex items-center justify-between"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate">{s.title}</p>
+                        <span className="block text-xs text-gray-400">
+                          {new Date(s.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {loadingSessionId === s.id && (
+                        <Loader2
+                          size={14}
+                          className="animate-spin text-blue-600 ml-2 shrink-0"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* New chat */}
           <button
@@ -604,15 +632,24 @@ export function ChatbotDialog({ onClose }: ChatbotDialogProps) {
                     Hi! How can I help you today?
                   </p>
                   <p className="text-xs text-center text-gray-400 max-w-xs">
-                    Ask about products, your orders, or choose a suggested
-                    action below.
+                    {isGuest
+                      ? "Inquire about our products, pricing, stock, or store details."
+                      : "Ask about products, your orders, or choose a suggested action below."}
                   </p>
+                  {isGuest && (
+                    <span className="inline-block text-[11px] font-medium text-blue-600 bg-blue-50 border border-blue-200/60 rounded-full px-2.5 py-0.5">
+                      Guest Mode • Product inquiries only
+                    </span>
+                  )}
 
                   <div className="w-full flex flex-col gap-1.5 mt-2">
                     <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-left">
                       Suggested actions:
                     </p>
-                    {USER_SUGGESTED_ACTIONS.map((prompt) => (
+                    {(isGuest
+                      ? GUEST_SUGGESTED_ACTIONS
+                      : USER_SUGGESTED_ACTIONS
+                    ).map((prompt) => (
                       <button
                         key={prompt}
                         onClick={() => sendMessage(prompt)}

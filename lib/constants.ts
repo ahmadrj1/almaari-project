@@ -53,6 +53,18 @@ export const PRODUCT_DESCRIPTION_MAX_LENGTH = 500;
 export const CHATBOT_NAME = "Almaari Assistant";
 export const CHATBOT_CONTEXT_PAIRS_LIMIT = 5;
 
+export const STORE_KNOWLEDGE = `STORE & PLATFORM POLICIES & KNOWLEDGE:
+- Remember Me / Sessions: When the "Remember me" checkbox is enabled, user stays logged in for 7 days. Otherwise, sessions last 24 hours.
+- Return, Exchange & Refund Policy: The store has NO return, exchange, or refund policy regarding placed orders.
+- Payment Retries: Users can retry failed payments within 5 days after placing an order. After 5 days, the order is automatically cancelled.
+- Order Again: Only cancelled orders show the "Order Again" button. Clicking it adds the same items with the same quantity to the cart (if stock is available).
+- User Data Privacy & Security: User data is kept private and secure. Passwords are securely hashed before being saved in the database.
+- Payment Processing: All payments and card details are handled strictly by Stripe in a secure way.
+- AI Disclaimer: AI can make mistakes. Make sure to double check everything.
+- Password Resets: Password reset email links expire in 15 minutes.
+- Legal & Policies: There is no official privacy policy or terms and conditions page on the website.
+- Contact Details: There is no contact email or phone number for the website.`;
+
 export const SEARCH_STOP_WORDS = [
   "the",
   "and",

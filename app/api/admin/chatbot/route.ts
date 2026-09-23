@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import Groq from "groq-sdk";
-import { CHATBOT_CONTEXT_PAIRS_LIMIT } from "@/lib/constants";
+import { CHATBOT_CONTEXT_PAIRS_LIMIT, STORE_KNOWLEDGE } from "@/lib/constants";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const MODEL = process.env.GROQ_CHAT_MODEL ?? "qwen/qwen3.8-27b";
@@ -16,7 +16,9 @@ ADMIN RULES:
 - Answer questions accurately using only the data provided in the CONTEXT. If specific data is not available, state so clearly.
 - Format responses cleanly with bold numbers, bullet points, or markdown tables when displaying breakdowns.
 - NEVER perform add-to-cart operations and NEVER emit cart tags. Admins do not shop via this interface.
-- Keep responses professional, concise, actionable, and data-driven.`;
+- Keep responses professional, concise, actionable, and data-driven.
+
+${STORE_KNOWLEDGE}`;
 
 async function fetchAdminContext(message: string): Promise<string> {
   const query = message.toLowerCase();
