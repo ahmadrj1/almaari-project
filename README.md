@@ -52,7 +52,7 @@ Full-stack e-commerce application built with Next.js 16, React 19, TypeScript, P
 - **Authentication & Security**:
   - NextAuth v5 credentials-based authentication with bcrypt-hashed passwords.
   - Google OAuth single sign-on.
-  - Remember-me session toggle: 30-day cookie expiry when checked, 1-day session cookie when unchecked.
+  - Remember-me session toggle: 7-day cookie expiry when checked, 24-hour session cookie when unchecked.
   - Immediate forced logout if the authenticated user record is removed from the database.
   - Secure token-based forgot password and password reset flow handled asynchronously.
 - **Real-Time Notifications**:
@@ -218,8 +218,8 @@ Full-stack e-commerce application built with Next.js 16, React 19, TypeScript, P
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | `GET` | `/api/chatbot/health` | Public | Bot service health check returning online status. |
-| `POST` | `/api/chatbot` | User | Main RAG inference endpoint (semantic search + Groq LLM + persistence). |
-| `PUT` | `/api/chatbot` | User | Add recommended product variant to cart from bot cards. |
+| `POST` | `/api/chatbot` | Guest/User | Main RAG inference endpoint. Guests restricted to product queries only; authenticated users get full order history + cart actions. |
+| `PUT` | `/api/chatbot` | User | Add recommended product variant to cart from bot cards (requires authentication). |
 | `GET` | `/api/chatbot/sessions` | User | List authenticated user's archived chat sessions. |
 | `GET` | `/api/chatbot/sessions/[id]` | User | Fetch full message history of an archived chat session. |
 
