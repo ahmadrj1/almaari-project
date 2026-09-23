@@ -79,7 +79,14 @@ export default {
       }
 
       if (userRole === "ADMIN") {
-        return Response.redirect(new URL("/admin/products", nextUrl));
+        const isStaticOrApi =
+          nextUrl.pathname.startsWith("/_next/") ||
+          nextUrl.pathname.startsWith("/api/") ||
+          /\.[a-zA-Z0-9]+$/.test(nextUrl.pathname);
+
+        if (!isStaticOrApi) {
+          return Response.redirect(new URL("/admin/products", nextUrl));
+        }
       }
 
       if (isProtectedRoute && !isLoggedIn) {
