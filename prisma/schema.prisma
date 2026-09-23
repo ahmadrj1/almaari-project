@@ -25,6 +25,7 @@ model User {
   notifications     Notification[]
   notificationReads NotificationRead[]
   stripeCustomerId  String?  @unique
+  chatSessions      ChatSession[]
 }
 
 enum Role {
@@ -37,7 +38,7 @@ model Product {
   title       String
   titlePrefix String
   code        String
-  description String
+  description String?
   price       Decimal   @db.Decimal(10, 2)
   image       String
   categoryId  String?
@@ -45,11 +46,12 @@ model Product {
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
-  category   Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  category   Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   variants   ProductVariant[]
   cartItems  CartItem[]
   orderItems OrderItem[]
   images     ProductImage[]
+  embedding  ProductEmbedding?
 
   @@unique([titlePrefix, code])
 }
@@ -141,6 +143,7 @@ model Order {
   paymentStatus          PaymentStatus  @default(PENDING)
   paymentIntentId        String?        @unique
   stripePaymentMethodId  String?
+  embedding              OrderEmbedding?
 }
 
 enum PaymentMethod {
@@ -217,3 +220,53 @@ model NotificationRead {
 
   @@unique([userId, notificationId])
 }
+
+model ProductEmbedding {
+  id        String   @id @default(uuid())
+  productId String   @unique
+  content   String
+  embedding Json
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model OrderEmbedding {
+  id        String   @id @default(uuid())
+  orderId   String   @unique
+  userId    String
+  content   String
+  embedding Json
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ChatSession {
+  id        String        @id @default(uuid())
+  userId    String
+  title     String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  messages  ChatMessage[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid())
+  sessionId String
+  role      String
+  content   String
+  metadata  Json?
+  createdAt DateTime    @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+

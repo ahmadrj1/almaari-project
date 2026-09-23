@@ -178,6 +178,25 @@ export async function POST(req: NextRequest) {
     const toCreate = formattedProducts.filter((p) => !p.isUpdate);
     const toUpdate = formattedProducts.filter((p) => Boolean(p.isUpdate));
 
+    // Validate description for all products
+    const { PRODUCT_DESCRIPTION_MAX_LENGTH } = await import("@/lib/constants");
+    const invalidDescriptions = formattedProducts
+      .map((p, i) => ({ p, i }))
+      .filter(
+        ({ p }) =>
+          !p.description ||
+          p.description.trim().length === 0 ||
+          p.description.length > PRODUCT_DESCRIPTION_MAX_LENGTH,
+      );
+    if (invalidDescriptions.length > 0) {
+      return NextResponse.json(
+        {
+          error: `${invalidDescriptions.length} product(s) are missing a valid description (max ${PRODUCT_DESCRIPTION_MAX_LENGTH} characters).`,
+        },
+        { status: 400 },
+      );
+    }
+
     const responses: { create?: unknown; update?: unknown } = {};
 
     if (toCreate.length > 0) {

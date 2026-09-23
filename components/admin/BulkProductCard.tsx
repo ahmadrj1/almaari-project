@@ -17,13 +17,24 @@ import {
   Category,
   ProductImageUpload,
 } from "@/types";
-import { MAX_UPLOAD_SIZE } from "@/lib/constants";
+import {
+  MAX_UPLOAD_SIZE,
+  PRODUCT_DESCRIPTION_MAX_LENGTH,
+} from "@/lib/constants";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { z } from "zod";
 import { ParsedCSVProduct } from "@/lib/csv-parser";
 
 const formSchema = z.object({
   title: z.string().trim().min(1, "Title is required"),
+  description: z
+    .string()
+    .trim()
+    .min(1, "Description is required")
+    .max(
+      PRODUCT_DESCRIPTION_MAX_LENGTH,
+      `Description cannot exceed ${PRODUCT_DESCRIPTION_MAX_LENGTH} characters`,
+    ),
   price: z
     .string()
     .trim()
@@ -97,7 +108,9 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
 
     const [title, setTitle] = useState(initialData.title || "");
     const [price, setPrice] = useState(initialData.price || "");
-    const [description] = useState(initialData.description || "");
+    const [description, setDescription] = useState(
+      initialData.description || "",
+    );
 
     const baseInitialNum = 1 + prefixOffset;
     const [skuInfo, setSkuInfo] = useState<{
@@ -391,6 +404,7 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
 
         const result = formSchema.safeParse({
           title,
+          description,
           price,
           categoryId: effectiveCategoryId,
         });
@@ -696,6 +710,42 @@ const BulkProductCard = forwardRef<BulkProductCardRef, BulkProductCardProps>(
                   {errors.title}
                 </span>
               )}
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">
+                Description <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => {
+                  if (e.target.value.length <= PRODUCT_DESCRIPTION_MAX_LENGTH) {
+                    setDescription(e.target.value);
+                    clearError("description");
+                  }
+                }}
+                placeholder="Describe the product — material, style, fit, etc."
+                rows={4}
+                className={`w-full border ${
+                  errors.description
+                    ? "border-red-500 ring-1 ring-red-500"
+                    : "border-gray-200"
+                } rounded p-2.5 text-sm focus:outline-none focus:border-blue-500 resize-none`}
+              />
+              <div className="flex justify-between mt-1">
+                {errors.description ? (
+                  <span className="text-xs text-red-500">
+                    {errors.description}
+                  </span>
+                ) : (
+                  <span />
+                )}
+                <span
+                  className={`text-xs ${description.length >= PRODUCT_DESCRIPTION_MAX_LENGTH ? "text-red-500" : "text-gray-400"}`}
+                >
+                  {description.length} / {PRODUCT_DESCRIPTION_MAX_LENGTH}
+                </span>
+              </div>
             </div>
 
             <div className="flex gap-4">

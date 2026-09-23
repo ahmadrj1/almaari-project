@@ -159,13 +159,15 @@ export function parseCSVToProducts(csvText: string): ParsedCSVProduct[] {
           existing.csvImages = [...(existing.csvImages ?? []), csvImage];
         }
       }
-      // Add variant if not duplicate
-      const hasVariant = existing.variants.some(
+      // Add variant if not duplicate, or increment stock if duplicate variant within CSV
+      const existingVariant = existing.variants.find(
         (v) =>
           v.colorName.toLowerCase() === colorName.trim().toLowerCase() &&
           v.sizeName.toLowerCase() === sizeName.trim().toLowerCase(),
       );
-      if (!hasVariant) {
+      if (existingVariant) {
+        existingVariant.stock += isNaN(stock) ? 0 : stock;
+      } else {
         existing.variants.push({
           colorName: colorName.trim(),
           hexCode: hexCode.trim(),

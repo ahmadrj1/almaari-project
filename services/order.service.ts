@@ -7,6 +7,7 @@ import {
 } from "@/lib/constants";
 import { AppError } from "@/lib/api-error";
 import { createNotification } from "@/lib/notifications";
+import { upsertOrderEmbedding } from "@/lib/embedding.service";
 
 export class OrderService {
   static async createOrder(
@@ -254,6 +255,11 @@ export class OrderService {
 
       const { queueOrderStatusEmail } = await import("@/lib/job-scheduler");
       await queueOrderStatusEmail(order.id);
+
+      // Fire-and-forget: generate embedding for new order
+      upsertOrderEmbedding(order.id).catch((err) =>
+        console.error("[EMBEDDING] order placement failed:", err),
+      );
 
       return { order };
     }

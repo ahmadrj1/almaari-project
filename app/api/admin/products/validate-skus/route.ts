@@ -60,7 +60,7 @@ export async function POST(req: Request) {
         titlePrefix: string;
         code: string;
         image: string;
-        description: string;
+        description: string | null;
         price: unknown;
         categoryId: string | null;
         category: { id: string; name: string } | null;

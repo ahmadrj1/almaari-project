@@ -45,6 +45,22 @@ describe("GET /login/redirect", () => {
     );
   });
 
+  it("redirects ADMIN to /admin/products when callbackUrl points to a user side route", async () => {
+    (getServerSessionSnapshot as jest.Mock).mockResolvedValue({
+      user: { role: Role.ADMIN },
+    });
+
+    const req = new Request(
+      "http://localhost:3000/login/redirect?callbackUrl=/orders",
+    );
+    const res = await GET(req);
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe(
+      "http://localhost:3000/admin/products",
+    );
+  });
+
   it("redirects USER to / when callbackUrl points to an admin route", async () => {
     (getServerSessionSnapshot as jest.Mock).mockResolvedValue({
       user: { role: Role.USER },
