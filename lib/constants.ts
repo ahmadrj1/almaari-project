@@ -48,3 +48,37 @@ export const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB in bytes
 export const JUST_AUTHENTICATED_KEY = "just_authenticated";
 export const STRIPE_MIN_AMOUNT_PKR = 150;
 export const NEXT_SKU_DEBOUNCE_MS = 400;
+
+export const PRODUCT_DESCRIPTION_MAX_LENGTH = 500;
+export const CHATBOT_NAME = "Almaari Assistant";
+export const CHATBOT_CONTEXT_PAIRS_LIMIT = 5;
+
+export const SEARCH_STOP_WORDS = [
+  "the",
+  "and",
+  "for",
+  "with",
+  "need",
+  "want",
+  "like",
+  "show",
+  "have",
+  "some",
+  "what",
+  "where",
+  "when",
+  "does",
+  "this",
+  "that",
+  "your",
+  "are",
+  "can",
+  "you",
+  "please",
+  "give",
+  "item",
+  "product",
+  "products",
+  "look",
+  "looking",
+] as const;

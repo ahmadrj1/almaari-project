@@ -321,6 +321,12 @@ def process_bulk_products_task(self, products_data: list, action: str = "create"
                 processed_count += 1
                 print(f"[BULK UPLOAD] Processed ({action}) product {processed_count}/{len(products_data)}: {title}")
 
+                try:
+                    from tasks.embedding_tasks import generate_product_embedding_task
+                    generate_product_embedding_task.delay(product_id)
+                except Exception as emb_err:
+                    print(f"[BULK UPLOAD WARNING] Failed to enqueue embedding for {product_id}: {emb_err}")
+
             except Exception as e:
                 db.rollback()
                 err_msg = f"Failed product '{prod.get('title')}': {str(e)}"

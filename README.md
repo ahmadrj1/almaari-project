@@ -18,6 +18,7 @@ Full-stack e-commerce application built with Next.js 16, React 19, TypeScript, P
 | **Authentication** | NextAuth v5 (Beta 32), Google OAuth, Credentials (bcryptjs), Custom session proxy |
 | **Payments** | Stripe Elements, Stripe SetupIntents, Webhooks |
 | **Storage & Media** | Cloudinary |
+| **AI & Search** | Groq SDK (Qwen 3.8-27B), Hugging Face Transformers (`@xenova/transformers`, `all-MiniLM-L6-v2`), Cosine Similarity RAG |
 | **Logging & Utilities**| Pino, Pino-Pretty, ExcelJS, Zod |
 
 ---
@@ -68,6 +69,14 @@ Full-stack e-commerce application built with Next.js 16, React 19, TypeScript, P
   - Asynchronous email delivery via Celery worker (password reset emails, order status change emails).
   - Background batch ingestion for bulk product imports.
   - Celery Beat scheduled task for automated periodic cancellation of stale failed orders.
+- **AI Shopping Assistant (RAG Pipeline & Chatbot)**:
+  - Context-aware shopping chatbot powered by Groq LLM (`qwen/qwen3.8-27b`) and local embeddings (`all-MiniLM-L6-v2`) via `@xenova/transformers`.
+  - Guardrail-restricted scope: handles products, real-time inventory, pricing, and order status/history.
+  - Hybrid semantic retrieval: vector cosine similarity plus lexical keyword boosts on product title, category, and description with dynamic relevance cutoff.
+  - Live order tracking: direct lookup by short/full order ID and recent order history. Always fetches live order status from the database while suppressing payment status for Cash on Delivery (COD) orders.
+  - Interactive product recommendations: renders variant cards with live stock indicators and direct add-to-cart buttons that optimistically sync the navbar cart badge counter.
+  - Chat session management: AI-generated chat titles, session history dropdown (read-only archived chat viewing), and fresh chat creation.
+  - Animated popup interface replacing floating trigger with real-time online/offline health indicator.
 
 ---
 
@@ -207,6 +216,16 @@ Full-stack e-commerce application built with Next.js 16, React 19, TypeScript, P
 | `POST` | `/api/admin/upload` | Admin | Upload images directly to Cloudinary and receive CDN URLs. |
 | `GET` | `/api/admin/colors-sizes` | Admin | Get available color hex codes and size options for variant matrix. |
 
+### AI Shopping Assistant (`/api/chatbot`)
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/chatbot/health` | Public | Bot service health check returning online status. |
+| `POST` | `/api/chatbot` | User | Main RAG inference endpoint (semantic search + Groq LLM + persistence). |
+| `PUT` | `/api/chatbot` | User | Add recommended product variant to cart from bot cards. |
+| `GET` | `/api/chatbot/sessions` | User | List authenticated user's archived chat sessions. |
+| `GET` | `/api/chatbot/sessions/[id]` | User | Fetch full message history of an archived chat session. |
+
 ---
 
 ## API Endpoints: Job Scheduler Microservice (FastAPI)
@@ -336,6 +355,10 @@ JOB_SCHEDULER_SECRET="job-scheduler-secret"
 
 # WebSockets
 NEXT_PUBLIC_SOCKET_ENABLED="true"
+
+# Groq AI Setup
+GROQ_API_KEY="your-groq-api-key"
+GROQ_CHAT_MODEL="qwen/qwen3.8-27b"
 ```
 
 Job Scheduler `.env` in `job-schedular/.env`:
@@ -368,6 +391,9 @@ npx prisma migrate dev
 
 # Seed database (optional)
 npx prisma db seed
+
+# Generate/sync vector embeddings for products and orders
+npx tsx scripts/sync-embeddings.ts
 
 # Run Next.js application with Socket.IO server
 npm run dev

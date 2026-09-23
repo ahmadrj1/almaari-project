@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 
 import { ToastProvider } from "@/hooks/use-toast";
 import { ToastContainer } from "@/components/ui/toast-container";
+import { ChatbotButton } from "@/components/ui/chatbot-button";
 import { SessionProvider } from "next-auth/react";
 import { CartCountProvider } from "@/hooks/use-cart-count";
 import { AuthProvider } from "@/components/providers/auth-provider";
@@ -42,6 +43,7 @@ export default async function RootLayout({
                 <Analytics />
                 <SpeedInsights />
                 <ToastContainer />
+                <ChatbotButton />
               </CartCountProvider>
             </ToastProvider>
           </AuthProvider>

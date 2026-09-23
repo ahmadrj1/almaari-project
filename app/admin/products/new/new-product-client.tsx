@@ -12,7 +12,11 @@ import {
   Category,
   ProductImageUpload,
 } from "@/types";
-import { MAX_UPLOAD_SIZE, NEXT_SKU_DEBOUNCE_MS } from "@/lib/constants";
+import {
+  MAX_UPLOAD_SIZE,
+  NEXT_SKU_DEBOUNCE_MS,
+  PRODUCT_DESCRIPTION_MAX_LENGTH,
+} from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
@@ -27,6 +31,14 @@ import {
 
 const formSchema = z.object({
   title: z.string().trim().min(1, "Title is required"),
+  description: z
+    .string()
+    .trim()
+    .min(1, "Description is required")
+    .max(
+      PRODUCT_DESCRIPTION_MAX_LENGTH,
+      `Description cannot exceed ${PRODUCT_DESCRIPTION_MAX_LENGTH} characters`,
+    ),
   price: z
     .string()
     .trim()
@@ -42,6 +54,7 @@ export default function NewProductClient() {
   const { showToast } = useToast();
 
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -286,6 +299,7 @@ export default function NewProductClient() {
 
     const result = formSchema.safeParse({
       title,
+      description,
       price,
       categoryId: effectiveCategoryId,
     });
@@ -347,6 +361,7 @@ export default function NewProductClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
+          description: description.trim(),
           price: Number(price),
           image: primaryImage,
           categoryId:
@@ -479,6 +494,39 @@ export default function NewProductClient() {
                 {errors.title}
               </span>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">
+              Description <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => {
+                if (e.target.value.length <= PRODUCT_DESCRIPTION_MAX_LENGTH) {
+                  setDescription(e.target.value);
+                  if (errors.description)
+                    setErrors((prev) => ({ ...prev, description: "" }));
+                }
+              }}
+              placeholder="Describe the product — material, style, fit, etc."
+              rows={4}
+              className={`w-full border ${errors.description ? "border-red-500 ring-1 ring-red-500" : "border-gray-200"} rounded p-2.5 text-sm focus:outline-none focus:border-blue-500 resize-none`}
+            />
+            <div className="flex justify-between mt-1">
+              {errors.description ? (
+                <span className="text-xs text-red-500">
+                  {errors.description}
+                </span>
+              ) : (
+                <span />
+              )}
+              <span
+                className={`text-xs ${description.length >= PRODUCT_DESCRIPTION_MAX_LENGTH ? "text-red-500" : "text-gray-400"}`}
+              >
+                {description.length} / {PRODUCT_DESCRIPTION_MAX_LENGTH}
+              </span>
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

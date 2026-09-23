@@ -3,6 +3,7 @@ import { OrderStatus, Prisma } from "@prisma/client";
 import { ADMIN_ORDERS_PER_PAGE_DEFAULT, STATUS_LEVELS } from "@/lib/constants";
 import { AppError } from "@/lib/api-error";
 import { createNotification } from "@/lib/notifications";
+import { upsertOrderEmbedding } from "@/lib/embedding.service";
 
 export class AdminOrderService {
   static async getOrders({
@@ -254,6 +255,11 @@ export class AdminOrderService {
 
     const { queueOrderStatusEmail } = await import("@/lib/job-scheduler");
     await queueOrderStatusEmail(id);
+
+    // Fire-and-forget: update embedding to reflect new status
+    upsertOrderEmbedding(id).catch((err) =>
+      console.error("[EMBEDDING] order status update failed:", err),
+    );
 
     return updated;
   }

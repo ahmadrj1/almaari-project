@@ -211,13 +211,27 @@ export default function BulkUploadModal({
                 />
               </button>
 
-              {/* Tooltip showing rules for the CSV */}
+              {/* Tooltip showing rules for the XLSX template */}
               <div className="pointer-events-none invisible group-hover:visible group-focus-within:visible opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-200 absolute right-0 top-full mt-2 w-80 sm:w-96 p-3.5 bg-slate-900 text-white rounded-xl shadow-xl z-50 text-xs space-y-2 border border-slate-700">
                 <div className="flex items-center gap-1.5 pb-1.5 border-b border-slate-700 text-blue-400 font-semibold text-xs">
                   <Info size={14} />
-                  <span>CSV Template Rules &amp; Guidelines</span>
+                  <span>XLSX Template Columns &amp; Rules</span>
                 </div>
                 <ul className="space-y-1.5 text-slate-300 leading-relaxed list-disc pl-4 text-[11px]">
+                  <li>
+                    <strong className="text-white">Columns:</strong>{" "}
+                    <code className="text-blue-300 font-mono">sku</code>,{" "}
+                    <code className="text-blue-300 font-mono">title</code>,{" "}
+                    <code className="text-blue-300 font-mono">description</code>
+                    , <code className="text-blue-300 font-mono">price</code>,{" "}
+                    <code className="text-blue-300 font-mono">
+                      categoryName
+                    </code>
+                    , <code className="text-blue-300 font-mono">colorName</code>
+                    , <code className="text-blue-300 font-mono">sizeName</code>,{" "}
+                    <code className="text-blue-300 font-mono">stock</code>,{" "}
+                    <code className="text-blue-300 font-mono">imagePath</code>
+                  </li>
                   <li>
                     <strong className="text-white">SKU:</strong> Leave empty to
                     create a new product (auto-generates{" "}
@@ -232,10 +246,10 @@ export default function BulkUploadModal({
                     <strong className="text-white">Grouping by Title:</strong>{" "}
                     Rows with the same{" "}
                     <code className="text-blue-300 font-mono">title</code> are
-                    grouped into a single product with multiple variants.
+                    grouped into one product with multiple variants.
                   </li>
                   <li>
-                    <strong className="text-white">Required Columns:</strong>{" "}
+                    <strong className="text-white">Required:</strong>{" "}
                     <code className="text-blue-300 font-mono">title</code>,{" "}
                     <code className="text-blue-300 font-mono">price</code> (&gt;
                     0),{" "}
@@ -245,17 +259,25 @@ export default function BulkUploadModal({
                     0).
                   </li>
                   <li>
-                    <strong className="text-white">Color &amp; Size:</strong>{" "}
-                    Select from dropdowns or use existing store values (e.g. XS,
-                    S, M, L, XL, XXL, Fixed).
+                    <strong className="text-white">
+                      Color, Size &amp; Category:
+                    </strong>{" "}
+                    Dropdowns are pre-filled with your store&apos;s existing
+                    values.
                   </li>
                   <li>
-                    <strong className="text-white">Images:</strong> Enter image
+                    <strong className="text-white">Images:</strong> Enter the
                     filename (e.g.{" "}
                     <code className="text-blue-300 font-mono">shirt.jpg</code>)
                     in{" "}
                     <code className="text-blue-300 font-mono">imagePath</code>{" "}
-                    and attach matching image files during upload.
+                    and attach the matching image files on upload.
+                  </li>
+                  <li>
+                    <strong className="text-white">Workflow:</strong> Fill
+                    template → save as{" "}
+                    <code className="text-blue-300 font-mono">.csv</code> →
+                    upload CSV here.
                   </li>
                 </ul>
               </div>

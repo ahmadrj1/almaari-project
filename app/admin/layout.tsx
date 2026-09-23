@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { getServerSessionSnapshot } from "@/lib/auth-session";
 import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
+import { AdminChatbotButton } from "@/components/admin/AdminChatbotButton";
 
 export default async function AdminLayout({
   children,
@@ -93,6 +94,8 @@ export default async function AdminLayout({
 
         <main className="flex-1 p-6 overflow-y-auto">{children}</main>
       </div>
+
+      <AdminChatbotButton />
     </div>
   );
 }
