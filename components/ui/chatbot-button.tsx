@@ -33,8 +33,10 @@ export function ChatbotButton() {
     return null;
   }
 
+  const isHomeScreen = pathname === "/";
+
   const handleClick = () => {
-    if (status !== "authenticated") {
+    if (status !== "authenticated" && !isHomeScreen) {
       showToast("info", "Please login to chat with the assistant.");
       return;
     }
