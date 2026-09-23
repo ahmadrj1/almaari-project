@@ -259,16 +259,10 @@ def process_bulk_products_task(self, products_data: list, action: str = "create"
                     ).fetchone()
 
                     if var_existing:
-                        if existing_product:
-                            db.execute(
-                                text('UPDATE "ProductVariant" SET stock = :stock, sku = :sku WHERE id = :id'),
-                                {"id": var_existing.id, "stock": stock, "sku": variant_sku},
-                            )
-                        else:
-                            db.execute(
-                                text('UPDATE "ProductVariant" SET stock = stock + :stock, sku = :sku WHERE id = :id'),
-                                {"id": var_existing.id, "stock": stock, "sku": variant_sku},
-                            )
+                        db.execute(
+                            text('UPDATE "ProductVariant" SET stock = stock + :stock, sku = :sku WHERE id = :id'),
+                            {"id": var_existing.id, "stock": stock, "sku": variant_sku},
+                        )
                     else:
                         variant_id = str(uuid.uuid4())
                         db.execute(
@@ -326,6 +320,12 @@ def process_bulk_products_task(self, products_data: list, action: str = "create"
                 db.commit()
                 processed_count += 1
                 print(f"[BULK UPLOAD] Processed ({action}) product {processed_count}/{len(products_data)}: {title}")
+
+                try:
+                    from tasks.embedding_tasks import generate_product_embedding_task
+                    generate_product_embedding_task.delay(product_id)
+                except Exception as emb_err:
+                    print(f"[BULK UPLOAD WARNING] Failed to enqueue embedding for {product_id}: {emb_err}")
 
             except Exception as e:
                 db.rollback()

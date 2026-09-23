@@ -51,7 +51,9 @@ export default {
           !rawCallback.startsWith("//")
         ) {
           if (userRole === "ADMIN") {
-            target = rawCallback;
+            if (rawCallback.startsWith("/admin")) {
+              target = rawCallback;
+            }
           } else if (!rawCallback.startsWith("/admin")) {
             target = rawCallback;
           }
@@ -74,6 +76,10 @@ export default {
           return Response.redirect(new URL("/", nextUrl));
         }
         return true;
+      }
+
+      if (userRole === "ADMIN") {
+        return Response.redirect(new URL("/admin/products", nextUrl));
       }
 
       if (isProtectedRoute && !isLoggedIn) {

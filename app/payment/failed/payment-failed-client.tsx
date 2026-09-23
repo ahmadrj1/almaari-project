@@ -43,16 +43,13 @@ export default function PaymentFailedClient(props: ComponentProps) {
 
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-left space-y-1">
           <p className="text-amber-800 font-semibold text-sm">
-            🔄 Automatic Retries Enabled
+            ⚠️ Please Note:
           </p>
           <p className="text-amber-700 text-sm leading-relaxed">
-            Stripe will automatically retry your payment{" "}
-            <strong>2 more times</strong> with a gap of <strong>3 days</strong>{" "}
-            between each attempt. Your order remains active and your items are
-            reserved until all retries are exhausted.
-          </p>
-          <p className="text-amber-700 text-sm">
-            You will be notified of the outcome of each retry attempt.
+            Your order will remain pending for the next <strong>5 days</strong>{" "}
+            and all ordered items will be reserved for you during this time.
+            Please make sure to retry the payment for this order within this
+            time to avoid automatic order cancellation.
           </p>
         </div>
 

@@ -26,6 +26,7 @@ export async function GET() {
     sheet.columns = [
       { header: "sku", key: "sku", width: 22 },
       { header: "title", key: "title", width: 30 },
+      { header: "description", key: "description", width: 35 },
       { header: "price", key: "price", width: 12 },
       { header: "categoryName", key: "categoryName", width: 20 },
       { header: "colorName", key: "colorName", width: 18 },
@@ -54,6 +55,8 @@ export async function GET() {
     sheet.addRow({
       sku: "",
       title: "Classic Denim Jacket",
+      description:
+        "Timeless denim jacket crafted from premium cotton with durable stitching and a comfortable regular fit.",
       price: 49.99,
       categoryName: categoryNames[0] ?? "Jackets",
       colorName: colorNames[0] ?? "Blue",
@@ -80,7 +83,7 @@ export async function GET() {
     if (categoryNames.length > 0) {
       const catList = buildInlineList(categoryNames);
       for (let r = 2; r <= MAX_ROWS; r++) {
-        sheet.getCell(`D${r}`).dataValidation = {
+        sheet.getCell(`E${r}`).dataValidation = {
           type: "list",
           allowBlank: true,
           formulae: [catList],
@@ -94,7 +97,7 @@ export async function GET() {
     if (colorNames.length > 0) {
       const colorList = buildInlineList(colorNames);
       for (let r = 2; r <= MAX_ROWS; r++) {
-        sheet.getCell(`E${r}`).dataValidation = {
+        sheet.getCell(`F${r}`).dataValidation = {
           type: "list",
           allowBlank: true,
           formulae: [colorList],
@@ -108,7 +111,7 @@ export async function GET() {
     if (sizeNames.length > 0) {
       const sizeList = buildInlineList(sizeNames);
       for (let r = 2; r <= MAX_ROWS; r++) {
-        sheet.getCell(`F${r}`).dataValidation = {
+        sheet.getCell(`G${r}`).dataValidation = {
           type: "list",
           allowBlank: true,
           formulae: [sizeList],
@@ -121,7 +124,8 @@ export async function GET() {
 
     sheet.getCell("A1").note =
       "Leave empty for new products. Enter existing SKU (e.g. SHIR-001-S-BLK or SHIR-001) to update.";
-    sheet.getCell("H1").note =
+    sheet.getCell("C1").note = "Required description (max 500 characters).";
+    sheet.getCell("I1").note =
       "Filename only (e.g. shirt_blue.jpg). On upload, select the folder containing your images to auto-match.";
 
     // ── Color reference sheet ───────────────────────────────────────────

@@ -43,7 +43,16 @@ type ProductWithVariants = Product & {
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (
+      status === "authenticated" &&
+      (session?.user as { role?: string })?.role === "ADMIN"
+    ) {
+      router.replace("/admin/products");
+    }
+  }, [status, session, router]);
   const { showToast } = useToast();
   const { refresh } = useCartCount();
 

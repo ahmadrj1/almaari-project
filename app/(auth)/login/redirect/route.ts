@@ -18,7 +18,9 @@ export async function GET(request: Request) {
     !rawCallback.startsWith("//")
   ) {
     if (isAdmin) {
-      targetPath = rawCallback;
+      if (rawCallback.startsWith("/admin")) {
+        targetPath = rawCallback;
+      }
     } else if (!rawCallback.startsWith("/admin")) {
       targetPath = rawCallback;
     }

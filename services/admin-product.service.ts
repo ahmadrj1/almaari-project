@@ -1,9 +1,16 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import { ADMIN_PRODUCTS_PER_PAGE_DEFAULT } from "@/lib/constants";
+import {
+  ADMIN_PRODUCTS_PER_PAGE_DEFAULT,
+  PRODUCT_DESCRIPTION_MAX_LENGTH,
+} from "@/lib/constants";
 import { AppError } from "@/lib/api-error";
 import { createBroadcastNotification } from "@/lib/notifications";
 import { extractTitlePrefix, generateVariantSku } from "@/lib/sku";
+import {
+  upsertProductEmbedding,
+  deleteProductEmbedding,
+} from "@/lib/embedding.service";
 
 export class AdminProductService {
   static async getProducts({
@@ -130,6 +137,16 @@ export class AdminProductService {
     if (!title || !price || !image || !variants || variants.length === 0) {
       throw new AppError("Missing required fields", 400);
     }
+    if (
+      !description ||
+      description.trim().length === 0 ||
+      description.length > PRODUCT_DESCRIPTION_MAX_LENGTH
+    ) {
+      throw new AppError(
+        `Description is required and must not exceed ${PRODUCT_DESCRIPTION_MAX_LENGTH} characters`,
+        400,
+      );
+    }
 
     // Fetch static lookup data outside the transaction to reduce transaction duration
     const [colors, sizes] = await Promise.all([
@@ -228,6 +245,11 @@ export class AdminProductService {
       { productId: newProduct.id },
     );
 
+    // Fire-and-forget: generate embedding asynchronously
+    upsertProductEmbedding(newProduct.id).catch((err) =>
+      console.error("[EMBEDDING] createProduct failed:", err),
+    );
+
     return newProduct;
   }
 
@@ -268,6 +290,16 @@ export class AdminProductService {
     if (!title || !price || !variants || variants.length === 0) {
       throw new AppError("Missing required fields", 400);
     }
+    if (
+      !description ||
+      description.trim().length === 0 ||
+      description.length > PRODUCT_DESCRIPTION_MAX_LENGTH
+    ) {
+      throw new AppError(
+        `Description is required and must not exceed ${PRODUCT_DESCRIPTION_MAX_LENGTH} characters`,
+        400,
+      );
+    }
 
     // Fetch static lookup data outside the transaction to reduce transaction duration
     const [colors, sizes] = await Promise.all([
@@ -277,7 +309,7 @@ export class AdminProductService {
     const colorMap = new Map(colors.map((c) => [c.id, c.code]));
     const sizeMap = new Map(sizes.map((s) => [s.id, s.name]));
 
-    return prisma.$transaction(
+    const updated = await prisma.$transaction(
       async (tx) => {
         const existingProduct = await tx.product.findUnique({
           where: { id },
@@ -407,6 +439,13 @@ export class AdminProductService {
       },
       { timeout: 15000 },
     );
+
+    // Fire-and-forget: update embedding asynchronously
+    upsertProductEmbedding(id).catch((err) =>
+      console.error("[EMBEDDING] updateProduct failed:", err),
+    );
+
+    return updated;
   }
 
   static async deleteProduct(id: string) {
@@ -417,6 +456,12 @@ export class AdminProductService {
         data: { deletedAt: new Date() },
       });
     });
+
+    // Remove embedding for soft-deleted product
+    deleteProductEmbedding(id).catch((err) =>
+      console.error("[EMBEDDING] deleteProduct failed:", err),
+    );
+
     return "Product deleted successfully";
   }
 }
