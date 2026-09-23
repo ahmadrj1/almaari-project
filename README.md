@@ -109,9 +109,6 @@ Full-stack e-commerce application built with Next.js 16, React 19, TypeScript, P
 
 ### Admin Pages (`/admin`) — Desktop Only (Not Responsive)
 
-> [!WARNING]
-> Admin pages are explicitly non-responsive and require desktop viewport (1024px+).
-
 | Route | Type | Description |
 |---|---|---|
 | `/admin/products` | SSR + Client | Admin product catalog with inventory alerts, search, filter, edit links, and soft delete. |
@@ -246,80 +243,6 @@ Authentication: Protected endpoints require header `X-Scheduler-Secret: <JOB_SCH
 
 - **`cancel_stale_failed_orders_task`**: Inspects orders with failed or pending payments exceeding timeout window, cancels them, restores variant inventory stock, and emits notification.
 - **Beat Schedule**: Runs periodically every `ORDER_CANCELLATION_INTERVAL_MINUTES` (configured in `celery_app.py`, default: every 15 minutes).
-
----
-
-## What to Test
-
-### 1. Automated Test Suites
-
-Run Jest tests:
-
-```bash
-npm test
-```
-
-The automated test suite covers:
-
-- **API Route & Controller Tests**:
-  - `tests/app/api/auth.test.ts` & `auth.service.test.ts`: User registration, credentials validation, password reset token generation and verification.
-  - `tests/app/api/login-redirect.test.ts`: Redirection and role-based routing.
-  - `tests/app/api/order.test.ts`, `order.routes.test.ts`, `order.controller.test.ts`, `order.service.test.ts`: Order creation, pricing calculation, stock reduction, retry payment, and reorder logic.
-  - `tests/app/api/product.controller.test.ts`: Product pagination, search filtering, variant resolution.
-  - `tests/app/api/admin-order.service.test.ts`: Admin order status transitions and inventory restoration on cancellation.
-- **Client Component Unit Tests**:
-  - `tests/components/login-client.test.tsx`: Form validation, remember-me state, Google OAuth triggers.
-  - `tests/components/register-client.test.tsx`: Form fields, password confirmation, error handling.
-  - `tests/components/cart-client.test.tsx`: Cart item rendering, quantity increments/decrements, removal.
-  - `tests/components/orders-client.test.tsx`: Order history display, status pills, retry payment trigger.
-  - `tests/components/forgot-password-client.test.tsx`: Email input submission and confirmation states.
-  - `tests/components/reset-password-client.test.tsx`: Password matching and reset confirmation.
-
----
-
-### 2. Manual QA & Feature Verification Matrix
-
-#### Authentication & Session Tests
-- [ ] **Registration**: Register with valid data; attempt duplicate email (should show 409 conflict).
-- [ ] **Login with Remember-Me Checked**: Log in; check cookies — session should have 7-day expiration.
-- [ ] **Login with Remember-Me Unchecked**: Log in; session should expire in 24 hours.
-- [ ] **Google OAuth**: Click "Sign in with Google" and verify successful authentication and profile synchronization.
-- [ ] **Force Logout on Deletion**: Delete the logged-in user record directly in the database; refresh the browser and verify the user is forced out immediately.
-- [ ] **Forgot Password**: Request reset link; check that FastAPI server queues `send_forgot_password_email_task` and receives the reset email.
-- [ ] **Token Expiration**: Test with expired or manipulated token; verify redirection to `/reset-link-expired`.
-
-#### Product Catalog & Search Tests
-- [ ] **Filters**: Filter by category, color, size, and price range. Ensure result counts match.
-- [ ] **Keyword Search**: Type product names or SKUs; check debounce and query output.
-- [ ] **Pagination vs Infinite Scroll**: Test regular page pagination on `/products` and cursor scroll on `/api/products/cursor`.
-- [ ] **Out of Stock**: Verify products with `stock: 0` show "Out of Stock" badge and disable Add to Cart.
-
-#### Cart & Checkout Tests
-- [ ] **Guest Cart to Auth Cart Merge**: Add items as guest, log in, and verify items merge into the authenticated cart.
-- [ ] **Quantity Bounds**: Attempt to add more items than available stock; verify validation error.
-- [ ] **Stripe Payment**: Complete checkout using test card `4242 4242 4242 4242`. Verify redirect to `/payment/success` and webhook updates order to `PAID`.
-- [ ] **Cash on Delivery**: Select COD, complete checkout; verify order created with status `PENDING` without Stripe charge.
-- [ ] **Failed Payment**: Use a failing test card; verify redirection to `/payment/failed` and ability to trigger "Retry Payment".
-
-#### Order Processing & Inventory Tests
-- [ ] **Inventory Deduction**: Check variant inventory before order; place order and confirm stock is decremented.
-- [ ] **Order Cancellation Stock Restoration**: As admin, change order status to `CANCELLED`; verify product variant stock increments back.
-- [ ] **Reorder Flow**: Click "Reorder" from `/orders/[id]`; verify items are re-added to cart.
-
-#### Real-Time Notifications Tests
-- [ ] **Socket.IO Event Push**: Trigger an order status change from admin panel or via `/api/internal/socket-notify`; verify in-app notification dropdown updates in real time without manual page refresh.
-- [ ] **Mark as Read**: Click "Mark all as read" in notification dropdown; verify badge resets to 0.
-
-#### Admin Dashboard Tests (Desktop Only)
-- [ ] **Screen Constraint**: Verify admin dashboard works as expected on desktop viewports (>= 1024px). Confirm no mobile responsive modifications are made to admin views.
-- [ ] **Product Creation**: Create a product with multiple variants; verify automatic SKU generation (`<NAME-3>-<COL-3>-<SIZE>`) and Cloudinary image upload.
-- [ ] **Bulk Product Upload**: In `/admin/products/bulk-add`, upload valid `.xlsx` file; verify job queues in FastAPI and completes asynchronously.
-- [ ] **Soft Delete**: Soft-delete a product; verify it disappears from customer storefront `/products` while remaining visible in admin catalog.
-
-#### Job Scheduler Microservice Tests
-- [ ] **Health Endpoint**: Send `GET http://localhost:8000/health`; receive `{"status": "ok"}`.
-- [ ] **Secret Header**: Send request to `/api/v1/jobs/forgot-password` without `X-Scheduler-Secret`; receive `403 Forbidden`.
-- [ ] **Celery Beat Execution**: Verify Celery Beat log shows periodic `cancel-failed-orders-periodic` triggers.
 
 ---
 
