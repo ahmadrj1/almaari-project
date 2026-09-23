@@ -52,7 +52,7 @@ Full-stack e-commerce application built with Next.js 16, React 19, TypeScript, P
 - **Authentication & Security**:
   - NextAuth v5 credentials-based authentication with bcrypt-hashed passwords.
   - Google OAuth single sign-on.
-  - Remember-me session toggle: 30-day cookie expiry when checked, 1-day session cookie when unchecked.
+  - Remember-me session toggle: 7-day cookie expiry when checked, 24-hour session cookie when unchecked.
   - Immediate forced logout if the authenticated user record is removed from the database.
   - Secure token-based forgot password and password reset flow handled asynchronously.
 - **Real-Time Notifications**:
@@ -221,8 +221,8 @@ Full-stack e-commerce application built with Next.js 16, React 19, TypeScript, P
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | `GET` | `/api/chatbot/health` | Public | Bot service health check returning online status. |
-| `POST` | `/api/chatbot` | User | Main RAG inference endpoint (semantic search + Groq LLM + persistence). |
-| `PUT` | `/api/chatbot` | User | Add recommended product variant to cart from bot cards. |
+| `POST` | `/api/chatbot` | Guest/User | Main RAG inference endpoint. Guests restricted to product queries only; authenticated users get full order history + cart actions. |
+| `PUT` | `/api/chatbot` | User | Add recommended product variant to cart from bot cards (requires authentication). |
 | `GET` | `/api/chatbot/sessions` | User | List authenticated user's archived chat sessions. |
 | `GET` | `/api/chatbot/sessions/[id]` | User | Fetch full message history of an archived chat session. |
 
@@ -281,8 +281,8 @@ The automated test suite covers:
 
 #### Authentication & Session Tests
 - [ ] **Registration**: Register with valid data; attempt duplicate email (should show 409 conflict).
-- [ ] **Login with Remember-Me Checked**: Log in; check cookies — session should have 30-day expiration.
-- [ ] **Login with Remember-Me Unchecked**: Log in; session should expire in 1 day.
+- [ ] **Login with Remember-Me Checked**: Log in; check cookies — session should have 7-day expiration.
+- [ ] **Login with Remember-Me Unchecked**: Log in; session should expire in 24 hours.
 - [ ] **Google OAuth**: Click "Sign in with Google" and verify successful authentication and profile synchronization.
 - [ ] **Force Logout on Deletion**: Delete the logged-in user record directly in the database; refresh the browser and verify the user is forced out immediately.
 - [ ] **Forgot Password**: Request reset link; check that FastAPI server queues `send_forgot_password_email_task` and receives the reset email.
