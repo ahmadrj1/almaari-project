@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/db";
-import { SEARCH_STOP_WORDS } from "./constants";
+import {
+  EMBEDDING_MODEL_TS,
+  EMBEDDING_SIMILARITY_THRESHOLD,
+  EMBEDDING_TOP_CANDIDATES,
+  SEARCH_STOP_WORDS,
+} from "./constants";
 
 // Lazy-load the pipeline to avoid import issues in edge/server contexts
 let embedder: ((text: string) => Promise<number[]>) | null = null;
@@ -8,7 +13,7 @@ async function getEmbedder() {
   if (embedder) return embedder;
 
   const { pipeline } = await import("@xenova/transformers");
-  const pipe = await pipeline("feature-extraction", "Xenova/all-mpnet-base-v2");
+  const pipe = await pipeline("feature-extraction", EMBEDDING_MODEL_TS);
 
   embedder = async (text: string): Promise<number[]> => {
     const result = await pipe(text, { pooling: "mean", normalize: true });
@@ -309,7 +314,7 @@ export async function searchProducts(
         productId: e.productId,
         score: cosineSimilarity(queryVector, e.embedding as number[]),
       }))
-      .filter((e) => e.score >= 0.35) // 768d vectors: tighter baseline
+      .filter((e) => e.score >= EMBEDDING_SIMILARITY_THRESHOLD)
       .sort((a, b) => b.score - a.score);
   } catch (err) {
     console.error("[searchProducts embedding error]:", err);
@@ -317,7 +322,7 @@ export async function searchProducts(
 
   // Combine direct matches + top 10 vector candidates
   const candidateIdSet = new Set<string>(directMatchIds);
-  for (const s of rawScored.slice(0, 10)) {
+  for (const s of rawScored.slice(0, EMBEDDING_TOP_CANDIDATES)) {
     candidateIdSet.add(s.productId);
   }
 
@@ -359,7 +364,7 @@ export async function searchProducts(
 
   const topScore = scored[0].score;
   // Must score >= 0.35 absolute AND >= 55% of top score
-  const threshold = Math.max(0.35, topScore * 0.55);
+  const threshold = Math.max(EMBEDDING_SIMILARITY_THRESHOLD, topScore * 0.55);
   return scored.filter((item) => item.score >= threshold).slice(0, limit);
 }
 

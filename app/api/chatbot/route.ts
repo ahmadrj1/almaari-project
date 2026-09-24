@@ -7,7 +7,10 @@ import { searchProducts, searchUserOrders } from "@/lib/embedding.service";
 import { CartService } from "@/services/cart.service";
 import {
   CHATBOT_CONTEXT_PAIRS_LIMIT,
+  CHATBOT_MAX_TOKENS,
   CHATBOT_NAME,
+  CHATBOT_TEMPERATURE,
+  CHATBOT_TOP_P,
   STORE_KNOWLEDGE,
 } from "@/lib/constants";
 
@@ -345,7 +348,9 @@ export async function POST(req: NextRequest) {
   const completion = await groq.chat.completions.create({
     model: MODEL,
     messages: groqMessages,
-    max_tokens: 750,
+    temperature: CHATBOT_TEMPERATURE,
+    top_p: CHATBOT_TOP_P,
+    max_tokens: CHATBOT_MAX_TOKENS,
   });
 
   let assistantText =
