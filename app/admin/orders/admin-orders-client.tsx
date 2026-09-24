@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Box,
   CircleDollarSign,
+  ShoppingBag,
 } from "lucide-react";
 import { STATUS_COLORS, ADMIN_ORDERS_PER_PAGE_DEFAULT } from "@/lib/constants";
 import { Order } from "@/types";
@@ -17,6 +18,7 @@ export default function AdminOrdersClient() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState({
     totalOrders: 0,
+    totalOngoingOrders: 0,
     totalUnits: 0,
     totalAmount: 0,
   });
@@ -59,16 +61,21 @@ export default function AdminOrdersClient() {
 
   return (
     <div className="min-h-[calc(100vh-8rem)] flex flex-col">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {[
           {
-            label: "Total Ongoing Orders:",
+            label: "Total Orders:",
             value: stats.totalOrders,
+            Icon: ShoppingBag,
+          },
+          {
+            label: "Total Ongoing Orders:",
+            value: stats.totalOngoingOrders,
             Icon: ClipboardList,
           },
-          { label: "Total Units:", value: stats.totalUnits, Icon: Box },
+          { label: "Total Units Sold:", value: stats.totalUnits, Icon: Box },
           {
-            label: "Total Amount:",
+            label: "Total Revenue:",
             value: `Rs. ${Number(stats.totalAmount).toFixed(2)}`,
             Icon: CircleDollarSign,
           },
