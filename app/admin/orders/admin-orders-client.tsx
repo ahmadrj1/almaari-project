@@ -62,7 +62,7 @@ export default function AdminOrdersClient() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {[
           {
-            label: "Total Orders:",
+            label: "Total Ongoing Orders:",
             value: stats.totalOrders,
             Icon: ClipboardList,
           },
