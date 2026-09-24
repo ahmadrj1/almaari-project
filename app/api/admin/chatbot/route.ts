@@ -5,8 +5,17 @@ import { prisma } from "@/lib/db";
 import Groq from "groq-sdk";
 import { CHATBOT_CONTEXT_PAIRS_LIMIT, STORE_KNOWLEDGE } from "@/lib/constants";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-const MODEL = process.env.GROQ_CHAT_MODEL ?? "qwen/qwen3.8-27b";
+const isGemini = Boolean(process.env.GEMINI_API_KEY);
+const groq = new Groq({
+  apiKey: process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY || "",
+  baseURL: isGemini
+    ? "https://generativelanguage.googleapis.com/v1beta"
+    : undefined,
+});
+const MODEL =
+  process.env.GEMINI_CHAT_MODEL ||
+  process.env.GROQ_CHAT_MODEL ||
+  (isGemini ? "gemini-3.5-flash-lite" : "qwen/qwen3.8-27b");
 
 const ADMIN_SYSTEM_PROMPT = `You are the Almaari Admin AI Assistant.
 You provide executive-level analytics, sales metrics, order intelligence, and inventory insights to store administrators.
