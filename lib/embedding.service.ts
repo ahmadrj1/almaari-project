@@ -8,7 +8,7 @@ async function getEmbedder() {
   if (embedder) return embedder;
 
   const { pipeline } = await import("@xenova/transformers");
-  const pipe = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+  const pipe = await pipeline("feature-extraction", "Xenova/all-mpnet-base-v2");
 
   embedder = async (text: string): Promise<number[]> => {
     const result = await pipe(text, { pooling: "mean", normalize: true });
@@ -185,117 +185,181 @@ export async function upsertOrderEmbedding(orderId: string): Promise<void> {
 
 // ─── Semantic Search ─────────────────────────────────────────────────────────
 
-export async function searchProducts(
-  query: string,
-  limit = 4,
-): Promise<
-  {
-    productId: string;
+type ProductSearchResult = {
+  productId: string;
+  title: string;
+  description: string | null;
+  price: string;
+  image: string;
+  category: string | null;
+  variants: Array<{
+    id: string;
+    colorName: string;
+    colorHex: string;
+    sizeName: string;
+    stock: number;
+    sku: string;
+  }>;
+  score: number;
+};
+
+function mapProductToResult(
+  product: {
+    id: string;
     title: string;
     description: string | null;
-    price: string;
+    price: { toString(): string };
     image: string;
-    category: string | null;
+    category: { name: string } | null;
     variants: Array<{
       id: string;
-      colorName: string;
-      colorHex: string;
-      sizeName: string;
+      color: { name: string; hexCode: string };
+      size: { name: string };
       stock: number;
       sku: string;
     }>;
-    score: number;
-  }[]
-> {
-  const queryVector = await embed(query);
+  },
+  score: number,
+): ProductSearchResult {
+  return {
+    productId: product.id,
+    title: product.title,
+    description: product.description ?? null,
+    price: product.price.toString(),
+    image: product.image,
+    category: product.category?.name ?? null,
+    variants: product.variants.map((v) => ({
+      id: v.id,
+      colorName: v.color.name,
+      colorHex: v.color.hexCode,
+      sizeName: v.size.name,
+      stock: v.stock,
+      sku: v.sku,
+    })),
+    score,
+  };
+}
 
-  // Fetch all product embeddings for cosine similarity ranking
-  const embeddings = await prisma.productEmbedding.findMany({
-    select: { productId: true, embedding: true },
-  });
+export async function searchProducts(
+  query: string,
+  limit = 4,
+): Promise<ProductSearchResult[]> {
+  const qLower = query.toLowerCase();
 
-  const rawScored = embeddings
-    .map((e) => ({
-      productId: e.productId,
-      score: cosineSimilarity(queryVector, e.embedding as number[]),
-    }))
-    .sort((a, b) => b.score - a.score);
+  // ── Price-sorted shortcut: bypass embeddings for cheapest/most-expensive ──
+  const wantsExpensive =
+    /\b(most expensive|highest price|priciest|costliest|highest priced)\b/i.test(
+      qLower,
+    );
+  const wantsCheap =
+    /\b(cheapest|most affordable|lowest price|least expensive|budget|cheapest product)\b/i.test(
+      qLower,
+    );
 
-  if (rawScored.length === 0) return [];
+  if (wantsExpensive || wantsCheap) {
+    const priceProducts = await prisma.product.findMany({
+      where: { deletedAt: null },
+      orderBy: { price: wantsExpensive ? "desc" : "asc" },
+      take: limit,
+      include: {
+        category: true,
+        variants: { include: { color: true, size: true } },
+      },
+    });
+    return priceProducts.map((p) => mapProductToResult(p, 1.0));
+  }
 
-  // Consider top candidates for hybrid re-ranking
-  const candidateIds = rawScored.slice(0, 15).map((s) => s.productId);
+  const stopWords = new Set<string>(SEARCH_STOP_WORDS);
+  const queryTerms = query
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length >= 2 && !stopWords.has(t));
+
+  // 1. Direct text search on active (non-deleted) products
+  const directMatches =
+    queryTerms.length > 0
+      ? await prisma.product.findMany({
+          where: {
+            deletedAt: null,
+            OR: queryTerms.flatMap((term) => [
+              { title: { contains: term, mode: "insensitive" } },
+              { description: { contains: term, mode: "insensitive" } },
+              { category: { name: { contains: term, mode: "insensitive" } } },
+            ]),
+          },
+          select: { id: true },
+          take: 15,
+        })
+      : [];
+
+  const directMatchIds = new Set(directMatches.map((m) => m.id));
+
+  // 2. Vector semantic search (768d — higher threshold than 384d)
+  let rawScored: Array<{ productId: string; score: number }> = [];
+  try {
+    const queryVector = await embed(query);
+    const embeddings = await prisma.productEmbedding.findMany({
+      where: { product: { deletedAt: null } },
+      select: { productId: true, embedding: true },
+    });
+
+    rawScored = embeddings
+      .map((e) => ({
+        productId: e.productId,
+        score: cosineSimilarity(queryVector, e.embedding as number[]),
+      }))
+      .filter((e) => e.score >= 0.35) // 768d vectors: tighter baseline
+      .sort((a, b) => b.score - a.score);
+  } catch (err) {
+    console.error("[searchProducts embedding error]:", err);
+  }
+
+  // Combine direct matches + top 10 vector candidates
+  const candidateIdSet = new Set<string>(directMatchIds);
+  for (const s of rawScored.slice(0, 10)) {
+    candidateIdSet.add(s.productId);
+  }
+
+  // No fallback to random products — if nothing matched, return empty
+  if (candidateIdSet.size === 0) return [];
+
   const products = await prisma.product.findMany({
-    where: {
-      id: { in: candidateIds },
-      deletedAt: null,
-    },
+    where: { id: { in: Array.from(candidateIdSet) }, deletedAt: null },
     include: {
       category: true,
       variants: { include: { color: true, size: true } },
     },
   });
 
-  // Extract query keywords (excluding common filler words)
-  const stopWords = new Set<string>(SEARCH_STOP_WORDS);
-  const queryTerms = query
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter((t) => t.length >= 3 && !stopWords.has(t));
+  const vectorScoreMap = new Map(rawScored.map((s) => [s.productId, s.score]));
 
-  const scored = rawScored
-    .slice(0, 15)
-    .map((s) => {
-      const product = products.find((p) => p.id === s.productId);
-      if (!product) return null;
-
-      let boost = 0;
+  const scored = products
+    .map((product) => {
+      const baseVectorScore = vectorScoreMap.get(product.id) ?? 0;
+      let textBoost = 0;
       const titleLower = product.title.toLowerCase();
-      const catLower = product.category?.name?.toLowerCase() || "";
-      const descLower = product.description?.toLowerCase() || "";
+      const catLower = product.category?.name?.toLowerCase() ?? "";
+      const descLower = product.description?.toLowerCase() ?? "";
 
       for (const term of queryTerms) {
         const wordRegex = new RegExp(`\\b${term}`, "i");
-        if (wordRegex.test(titleLower)) {
-          boost += 0.25;
-        } else if (wordRegex.test(catLower)) {
-          boost += 0.15;
-        } else if (wordRegex.test(descLower)) {
-          boost += 0.08;
-        }
+        if (wordRegex.test(titleLower)) textBoost += 0.4;
+        else if (titleLower.includes(term)) textBoost += 0.25;
+        if (wordRegex.test(catLower)) textBoost += 0.2;
+        if (wordRegex.test(descLower)) textBoost += 0.1;
       }
+      if (directMatchIds.has(product.id)) textBoost += 0.3;
 
-      const finalScore = s.score + boost;
-
-      return {
-        productId: product.id,
-        title: product.title,
-        description: product.description ?? null,
-        price: product.price.toString(),
-        image: product.image,
-        category: product.category?.name ?? null,
-        variants: product.variants.map((v) => ({
-          id: v.id,
-          colorName: v.color.name,
-          colorHex: v.color.hexCode,
-          sizeName: v.size.name,
-          stock: v.stock,
-          sku: v.sku,
-        })),
-        score: finalScore,
-      };
+      return mapProductToResult(product, baseVectorScore + textBoost);
     })
-    .filter((item): item is NonNullable<typeof item> => item !== null)
     .sort((a, b) => b.score - a.score);
 
   if (scored.length === 0) return [];
 
-  const topItem = scored[0];
-  if (!topItem) return [];
-
-  // Cut-off threshold: must be >= 0.32, and within 65% of top score
-  const threshold = Math.max(0.32, topItem.score * 0.65);
+  const topScore = scored[0].score;
+  // Must score >= 0.35 absolute AND >= 55% of top score
+  const threshold = Math.max(0.35, topScore * 0.55);
   return scored.filter((item) => item.score >= threshold).slice(0, limit);
 }
 

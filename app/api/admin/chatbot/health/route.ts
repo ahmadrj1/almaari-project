@@ -8,6 +8,8 @@ export async function GET() {
     return NextResponse.json({ online: false }, { status: 401 });
   }
 
-  const apiKeyPresent = Boolean(process.env.GROQ_API_KEY);
+  const apiKeyPresent = Boolean(
+    process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY,
+  );
   return NextResponse.json({ online: apiKeyPresent });
 }
