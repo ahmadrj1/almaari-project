@@ -53,6 +53,17 @@ export const PRODUCT_DESCRIPTION_MAX_LENGTH = 500;
 export const CHATBOT_NAME = "Almaari Assistant";
 export const CHATBOT_CONTEXT_PAIRS_LIMIT = 5;
 
+// LLM inference settings
+export const CHATBOT_TEMPERATURE = 0.3;
+export const CHATBOT_TOP_P = 0.85;
+export const CHATBOT_MAX_TOKENS = 750;
+export const ADMIN_CHATBOT_MAX_TOKENS = 1024;
+
+// Embedding / semantic search settings
+export const EMBEDDING_MODEL_TS = "Xenova/all-mpnet-base-v2";
+export const EMBEDDING_SIMILARITY_THRESHOLD = 0.35;
+export const EMBEDDING_TOP_CANDIDATES = 7;
+
 export const STORE_KNOWLEDGE = `STORE & PLATFORM POLICIES & KNOWLEDGE:
 - Remember Me / Sessions: When the "Remember me" checkbox is enabled, user stays logged in for 7 days. Otherwise, sessions last 24 hours.
 - Return, Exchange & Refund Policy: The store has NO return, exchange, or refund policy regarding placed orders.
