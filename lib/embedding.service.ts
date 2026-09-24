@@ -466,19 +466,28 @@ export async function searchUserOrders(
   }
 
   // 3. Direct query: Count or general recent orders inquiry
+  const isPreviousOrderInquiry =
+    /\b(previous orders?|past orders?|prior orders?|last orders?|what about my (previous|last|past|recent) orders?)\b/i.test(
+      qClean,
+    );
   const isGeneralInquiry =
-    /\b(where is my order|show my orders?|my orders?|recent orders?|latest orders?|last orders?|order status|track my order|orders? list|what did i buy|items i bought|how many orders?|order count|total orders?|order history)\b/i.test(
+    isPreviousOrderInquiry ||
+    /\b(where is my order|show my orders?|my orders?|recent orders?|latest orders?|order status|track my order|orders? list|what did i buy|items i bought|how many orders?|order count|total orders?|order history)\b/i.test(
       qClean,
     );
   if (isGeneralInquiry) {
+    const takeCount = isPreviousOrderInquiry ? 3 : Math.max(limit, 10);
     const recentOrders = await prisma.order.findMany({
-      where: { userId },
+      where: {
+        userId,
+        createdAt: { lte: new Date() },
+      },
       orderBy: { createdAt: "desc" },
       include: {
         address: true,
         items: { include: { product: true } },
       },
-      take: Math.max(limit, 10),
+      take: takeCount,
     });
 
     if (recentOrders.length > 0) {
