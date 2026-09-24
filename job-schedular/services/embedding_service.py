@@ -7,7 +7,7 @@ def get_embedder():
     global _embedder
     if _embedder is None:
         from fastembed import TextEmbedding
-        _embedder = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        _embedder = TextEmbedding(model_name="sentence-transformers/all-mpnet-base-v2")
     return _embedder
 
 
