@@ -3,7 +3,13 @@ import { auth } from "@/auth";
 import { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import Groq from "groq-sdk";
-import { CHATBOT_CONTEXT_PAIRS_LIMIT, STORE_KNOWLEDGE } from "@/lib/constants";
+import {
+  ADMIN_CHATBOT_MAX_TOKENS,
+  CHATBOT_CONTEXT_PAIRS_LIMIT,
+  CHATBOT_TEMPERATURE,
+  CHATBOT_TOP_P,
+  STORE_KNOWLEDGE,
+} from "@/lib/constants";
 
 const isGemini = Boolean(process.env.GEMINI_API_KEY);
 const groq = new Groq({
@@ -378,8 +384,9 @@ export async function POST(req: NextRequest) {
     const completion = await groq.chat.completions.create({
       model: MODEL,
       messages: groqMessages,
-      temperature: 0.2,
-      max_tokens: 1024,
+      temperature: CHATBOT_TEMPERATURE,
+      top_p: CHATBOT_TOP_P,
+      max_tokens: ADMIN_CHATBOT_MAX_TOKENS,
     });
 
     const reply =
