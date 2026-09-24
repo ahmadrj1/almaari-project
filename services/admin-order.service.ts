@@ -34,40 +34,50 @@ export class AdminOrderService {
         }
       : {};
 
-    const [orders, total, totalOrdersOverall, totalAmountRaw, totalUnitsRaw] =
-      await Promise.all([
-        prisma.order.findMany({
-          where,
-          orderBy: { createdAt: "desc" },
-          skip,
-          take: limit,
-          include: {
-            user: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-                phone: true,
-                role: true,
-              },
+    const [
+      orders,
+      total,
+      totalOrdersCount,
+      ongoingOrdersCount,
+      totalAmountRaw,
+      totalUnitsRaw,
+    ] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              phone: true,
+              role: true,
             },
-            items: true,
           },
-        }),
-        prisma.order.count({ where }),
-        prisma.order.count({ where: { status: { not: "CANCELLED" } } }),
-        prisma.order.aggregate({
-          where: { status: { not: "CANCELLED" } },
-          _sum: { total: true },
-        }),
-        prisma.orderItem.aggregate({
-          where: { order: { status: { not: "CANCELLED" } } },
-          _sum: { quantity: true },
-        }),
-      ]);
+          items: true,
+        },
+      }),
+      prisma.order.count({ where }),
+      prisma.order.count({ where: { status: { not: "CANCELLED" } } }),
+      prisma.order.count({
+        where: { status: { notIn: ["CANCELLED", "DELIVERED"] } },
+      }),
+      prisma.order.aggregate({
+        where: { status: { not: "CANCELLED" } },
+        _sum: { total: true },
+      }),
+      prisma.orderItem.aggregate({
+        where: { order: { status: { not: "CANCELLED" } } },
+        _sum: { quantity: true },
+      }),
+    ]);
 
     const stats = {
-      totalOrders: totalOrdersOverall,
+      totalOrders: totalOrdersCount,
+      totalOngoingOrders: ongoingOrdersCount,
       totalUnits: totalUnitsRaw._sum.quantity || 0,
       totalAmount: totalAmountRaw._sum.total || 0,
     };
