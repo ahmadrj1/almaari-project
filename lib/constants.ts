@@ -52,6 +52,7 @@ export const NEXT_SKU_DEBOUNCE_MS = 400;
 export const PRODUCT_DESCRIPTION_MAX_LENGTH = 500;
 export const CHATBOT_NAME = "Almaari Assistant";
 export const CHATBOT_CONTEXT_PAIRS_LIMIT = 5;
+export const CHATBOT_RATE_LIMIT_PER_MINUTE = 25;
 
 // LLM inference settings
 export const CHATBOT_TEMPERATURE = 0.3;
@@ -105,3 +106,26 @@ export const SEARCH_STOP_WORDS = [
   "look",
   "looking",
 ] as const;
+
+export const DEFAULT_COLOR_CODES: Record<string, string> = {
+  black: "BLK",
+  white: "WHT",
+  navy: "NVY",
+  olive: "OLV",
+  beige: "BGE",
+  green: "GRN",
+  blue: "BLU",
+  yellow: "YLW",
+  pink: "PNK",
+  cyan: "CYN",
+  orange: "ORG",
+  brown: "BRN",
+  "gray/silver": "GRY",
+  gray: "GRY",
+  silver: "SLV",
+  red: "RED",
+  purple: "PRP",
+  maroon: "MRN",
+  charcoal: "CHR",
+  gold: "GLD",
+};

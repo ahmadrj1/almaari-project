@@ -7,7 +7,7 @@ import {
 } from "@/lib/constants";
 import { AppError } from "@/lib/api-error";
 import { createNotification } from "@/lib/notifications";
-import { upsertOrderEmbedding } from "@/lib/embedding.service";
+import { upsertOrderEmbedding } from "@/services/embedding.service";
 
 export class OrderService {
   static async createOrder(

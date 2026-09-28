@@ -6,7 +6,7 @@ import { prisma } from "../lib/db";
 import {
   upsertProductEmbedding,
   upsertOrderEmbedding,
-} from "../lib/embedding.service";
+} from "../services/embedding.service";
 
 async function syncProducts() {
   const products = await prisma.product.findMany({

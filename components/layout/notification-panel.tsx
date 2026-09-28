@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
+
 import {
   ShoppingBag,
   Package,
@@ -46,6 +48,22 @@ export function NotificationPanel({
   loadMore: () => void;
   hasMore: boolean;
 }) {
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+
+  useEffect(() => {
+    if (!loading && loadingMoreRef.current) {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [loading]);
+
+  const handleLoadMore = () => {
+    if (loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    loadMore();
+  };
   const getStyle = (n: Notification) => {
     const titleLower = n.title.toLowerCase();
     const msgLower = n.message.toLowerCase();
@@ -121,7 +139,7 @@ export function NotificationPanel({
               target.clientHeight + 10 &&
             hasMore
           ) {
-            loadMore();
+            handleLoadMore();
           }
         }}
       >
@@ -182,6 +200,11 @@ export function NotificationPanel({
               </button>
             );
           })
+        )}
+        {loadingMore && (
+          <div className="flex items-center justify-center py-3">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+          </div>
         )}
       </div>
     </div>

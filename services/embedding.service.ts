@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import {
   EMBEDDING_MODEL_TS,
   EMBEDDING_SIMILARITY_THRESHOLD,
   EMBEDDING_TOP_CANDIDATES,
   SEARCH_STOP_WORDS,
-} from "./constants";
+} from "@/lib/constants";
 
 // Lazy-load the pipeline to avoid import issues in edge/server contexts
 let embedder: ((text: string) => Promise<number[]>) | null = null;
@@ -287,11 +288,32 @@ export async function searchProducts(
       ? await prisma.product.findMany({
           where: {
             deletedAt: null,
-            OR: queryTerms.flatMap((term) => [
-              { title: { contains: term, mode: "insensitive" } },
-              { description: { contains: term, mode: "insensitive" } },
-              { category: { name: { contains: term, mode: "insensitive" } } },
-            ]),
+            OR: queryTerms.flatMap((term) => {
+              const conditions: Prisma.ProductWhereInput[] = [
+                { title: { contains: term, mode: "insensitive" } },
+                { description: { contains: term, mode: "insensitive" } },
+                { category: { name: { contains: term, mode: "insensitive" } } },
+                {
+                  variants: {
+                    some: {
+                      color: { name: { contains: term, mode: "insensitive" } },
+                    },
+                  },
+                },
+                {
+                  variants: {
+                    some: {
+                      size: { name: { contains: term, mode: "insensitive" } },
+                    },
+                  },
+                },
+              ];
+              const num = parseFloat(term);
+              if (!isNaN(num)) {
+                conditions.push({ price: { equals: num } });
+              }
+              return conditions;
+            }),
           },
           select: { id: true },
           take: 15,
