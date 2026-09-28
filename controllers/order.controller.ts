@@ -79,4 +79,20 @@ export class OrderController {
       return handleApiError(error, "OrderController.retryPayment");
     }
   }
+
+  static async reorder(
+    _req: Request,
+    { params }: { params: Promise<{ id: string }> },
+  ) {
+    try {
+      const session = await auth();
+      if (!session?.user?.id) throw new AppError("Unauthorized", 401);
+
+      const { id } = await params;
+      const data = await OrderService.reorder(session.user.id, id);
+      return NextResponse.json(data);
+    } catch (error) {
+      return handleApiError(error, "OrderController.reorder");
+    }
+  }
 }

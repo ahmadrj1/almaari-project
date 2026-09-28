@@ -14,7 +14,6 @@ import {
   ProductImageUpload,
 } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
 import {
   MAX_UPLOAD_SIZE,
   NEXT_SKU_DEBOUNCE_MS,
@@ -28,26 +27,7 @@ import {
   resolveColorCode,
   resolveSizeCode,
 } from "@/lib/sku";
-
-const formSchema = z.object({
-  title: z.string().trim().min(1, "Title is required"),
-  description: z
-    .string()
-    .trim()
-    .min(1, "Description is required")
-    .max(
-      PRODUCT_DESCRIPTION_MAX_LENGTH,
-      `Description cannot exceed ${PRODUCT_DESCRIPTION_MAX_LENGTH} characters`,
-    ),
-  price: z
-    .string()
-    .trim()
-    .min(1, "Price is required")
-    .refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
-      message: "Price must be greater than 0",
-    }),
-  categoryId: z.string().min(1, "Category is required"),
-});
+import { productFormSchema as formSchema } from "@/lib/validations/product";
 
 export default function EditProductClient({
   params,
