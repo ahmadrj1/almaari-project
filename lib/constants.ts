@@ -52,6 +52,7 @@ export const NEXT_SKU_DEBOUNCE_MS = 400;
 export const PRODUCT_DESCRIPTION_MAX_LENGTH = 500;
 export const CHATBOT_NAME = "Almaari Assistant";
 export const CHATBOT_CONTEXT_PAIRS_LIMIT = 5;
+export const CHATBOT_RATE_LIMIT_PER_MINUTE = 25;
 
 // LLM inference settings
 export const CHATBOT_TEMPERATURE = 0.3;

@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import { Role } from "@prisma/client";
 import { handleApiError, AppError } from "@/lib/api-error";
 import { ChatbotService } from "@/services/chatbot.service";
+import { checkRateLimit } from "@/lib/rate-limiter";
+import { CHATBOT_RATE_LIMIT_PER_MINUTE } from "@/lib/constants";
 
 export class ChatbotController {
   static async chat(req: NextRequest) {
@@ -14,6 +16,25 @@ export class ChatbotController {
 
       const userId = session?.user?.id;
       const isGuest = !userId;
+
+      const clientIp =
+        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        req.headers.get("x-real-ip") ||
+        "guest";
+      const rateLimitKey = userId ? `user:${userId}` : `guest:${clientIp}`;
+
+      const { allowed } = checkRateLimit(
+        rateLimitKey,
+        CHATBOT_RATE_LIMIT_PER_MINUTE,
+        60 * 1000,
+      );
+
+      if (!allowed) {
+        throw new AppError(
+          "You have exceeded the rate limit of 25 requests per minute. Please wait a moment before trying again.",
+          429,
+        );
+      }
 
       const body = await req.json();
       const { message, sessionId, history } = body as {

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import {
   EMBEDDING_MODEL_TS,
   EMBEDDING_SIMILARITY_THRESHOLD,
@@ -287,11 +288,32 @@ export async function searchProducts(
       ? await prisma.product.findMany({
           where: {
             deletedAt: null,
-            OR: queryTerms.flatMap((term) => [
-              { title: { contains: term, mode: "insensitive" } },
-              { description: { contains: term, mode: "insensitive" } },
-              { category: { name: { contains: term, mode: "insensitive" } } },
-            ]),
+            OR: queryTerms.flatMap((term) => {
+              const conditions: Prisma.ProductWhereInput[] = [
+                { title: { contains: term, mode: "insensitive" } },
+                { description: { contains: term, mode: "insensitive" } },
+                { category: { name: { contains: term, mode: "insensitive" } } },
+                {
+                  variants: {
+                    some: {
+                      color: { name: { contains: term, mode: "insensitive" } },
+                    },
+                  },
+                },
+                {
+                  variants: {
+                    some: {
+                      size: { name: { contains: term, mode: "insensitive" } },
+                    },
+                  },
+                },
+              ];
+              const num = parseFloat(term);
+              if (!isNaN(num)) {
+                conditions.push({ price: { equals: num } });
+              }
+              return conditions;
+            }),
           },
           select: { id: true },
           take: 15,
