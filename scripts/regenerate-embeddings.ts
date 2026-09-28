@@ -10,7 +10,7 @@ import { prisma } from "../lib/db";
 import {
   upsertProductEmbedding,
   upsertOrderEmbedding,
-} from "../lib/embedding.service";
+} from "../services/embedding.service";
 
 async function main() {
   // 1. Delete all existing embeddings

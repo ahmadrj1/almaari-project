@@ -105,3 +105,26 @@ export const SEARCH_STOP_WORDS = [
   "look",
   "looking",
 ] as const;
+
+export const DEFAULT_COLOR_CODES: Record<string, string> = {
+  black: "BLK",
+  white: "WHT",
+  navy: "NVY",
+  olive: "OLV",
+  beige: "BGE",
+  green: "GRN",
+  blue: "BLU",
+  yellow: "YLW",
+  pink: "PNK",
+  cyan: "CYN",
+  orange: "ORG",
+  brown: "BRN",
+  "gray/silver": "GRY",
+  gray: "GRY",
+  silver: "SLV",
+  red: "RED",
+  purple: "PRP",
+  maroon: "MRN",
+  charcoal: "CHR",
+  gold: "GLD",
+};

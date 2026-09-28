@@ -10,7 +10,7 @@ import { extractTitlePrefix, generateVariantSku } from "@/lib/sku";
 import {
   upsertProductEmbedding,
   deleteProductEmbedding,
-} from "@/lib/embedding.service";
+} from "@/services/embedding.service";
 
 export class AdminProductService {
   static async getProducts({

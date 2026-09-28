@@ -3,7 +3,7 @@ import { OrderStatus, Prisma } from "@prisma/client";
 import { ADMIN_ORDERS_PER_PAGE_DEFAULT, STATUS_LEVELS } from "@/lib/constants";
 import { AppError } from "@/lib/api-error";
 import { createNotification } from "@/lib/notifications";
-import { upsertOrderEmbedding } from "@/lib/embedding.service";
+import { upsertOrderEmbedding } from "@/services/embedding.service";
 
 export class AdminOrderService {
   static async getOrders({
