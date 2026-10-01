@@ -28,6 +28,7 @@ import {
   resolveSizeCode,
 } from "@/lib/sku";
 import { productFormSchema as formSchema } from "@/lib/validations/product";
+import { uploadImageToCloudinaryClient } from "@/lib/upload-client";
 
 export default function NewProductClient() {
   const router = useRouter();
@@ -313,22 +314,9 @@ export default function NewProductClient() {
 
       for (const img of productImages) {
         if (img.file) {
-          const formData = new FormData();
-          formData.append("file", img.file);
-          formData.append("title", `${title}-${img.colorId || "default"}`);
-
-          const uploadRes = await fetch("/api/admin/upload", {
-            method: "POST",
-            body: formData,
-          });
-          const uploadData = await uploadRes.json();
-          if (!uploadRes.ok || !uploadData.success) {
-            throw new Error(
-              uploadData.error || uploadData.message || "Image upload failed",
-            );
-          }
+          const url = await uploadImageToCloudinaryClient(img.file);
           uploadedImages.push({
-            url: uploadData.imagePath,
+            url,
             colorId: img.colorId || null,
           });
         }

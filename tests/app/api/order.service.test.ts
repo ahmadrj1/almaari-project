@@ -119,9 +119,11 @@ describe("OrderService", () => {
       (prisma.$transaction as jest.Mock).mockImplementation(async (fn) => {
         // Simulate transaction: call fn with a tx mock
         const tx = {
-          $queryRaw: jest.fn().mockResolvedValue([{ stock: 10 }]),
+          productVariant: {
+            findUnique: jest.fn().mockResolvedValue({ stock: 10 }),
+            update: jest.fn(),
+          },
           order: { create: jest.fn().mockResolvedValue(mockOrder) },
-          productVariant: { update: jest.fn() },
           cartItem: { deleteMany: jest.fn() },
         };
         return fn(tx);
@@ -169,9 +171,11 @@ describe("OrderService", () => {
 
       (prisma.$transaction as jest.Mock).mockImplementation(async (fn) => {
         const tx = {
-          $queryRaw: jest.fn().mockResolvedValue([{ stock: 10 }]),
+          productVariant: {
+            findUnique: jest.fn().mockResolvedValue({ stock: 10 }),
+            update: jest.fn(),
+          },
           order: { create: jest.fn().mockResolvedValue(mockOrder) },
-          productVariant: { update: jest.fn() },
           cartItem: { deleteMany: jest.fn() },
         };
         return fn(tx);

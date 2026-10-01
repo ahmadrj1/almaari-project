@@ -1,69 +1,66 @@
 import uuid
-import json
+from datetime import datetime, timedelta
 from celery_app import celery_app
 from core.database import SessionLocal
-from sqlalchemy import text
-from datetime import datetime, timedelta
+from sqlalchemy import func
+from sqlalchemy.orm import joinedload
+from models import Order, ProductVariant, Color, Size, Notification
+
 
 @celery_app.task(name="tasks.order_tasks.cancel_stale_failed_orders_task", bind=True)
 def cancel_stale_failed_orders_task(self):
     db = SessionLocal()
     try:
         threshold_time = datetime.utcnow() - timedelta(hours=120)
-        
-        # Select target orders
-        select_query = text("""
-            SELECT id, "userId" FROM "Order"
-            WHERE "paymentStatus" = 'FAILED'
-              AND status != 'CANCELLED'
-              AND "updatedAt" <= :threshold_time
-        """)
-        stale_orders = db.execute(select_query, {"threshold_time": threshold_time}).fetchall()
-        
+
+        stale_orders = (
+            db.query(Order)
+            .options(joinedload(Order.items))
+            .filter(
+                Order.paymentStatus == "FAILED",
+                Order.status != "CANCELLED",
+                Order.updatedAt <= threshold_time,
+            )
+            .all()
+        )
+
         cancelled_count = 0
-        for row in stale_orders:
-            order_id = row.id
-            user_id = row.userId
-            
+        for order in stale_orders:
+            order_id = order.id
+            user_id = order.userId
+
             # Restock items in order
-            restock_query = text("""
-                UPDATE "ProductVariant"
-                SET stock = "ProductVariant".stock + oi.quantity
-                FROM "OrderItem" oi
-                JOIN "Color" c ON c.name = oi."colorName"
-                JOIN "Size" s ON s.name = oi."sizeName"
-                WHERE oi."orderId" = :order_id
-                  AND "ProductVariant"."productId" = oi."productId"
-                  AND "ProductVariant"."colorId" = c.id
-                  AND "ProductVariant"."sizeId" = s.id
-            """)
-            db.execute(restock_query, {"order_id": order_id})
+            for item in order.items:
+                color = db.query(Color).filter(func.lower(Color.name) == func.lower(item.colorName.strip())).first()
+                size = db.query(Size).filter(func.lower(Size.name) == func.lower(item.sizeName.strip())).first()
+                if color and size:
+                    variant = (
+                        db.query(ProductVariant)
+                        .filter(
+                            ProductVariant.productId == item.productId,
+                            ProductVariant.colorId == color.id,
+                            ProductVariant.sizeId == size.id,
+                        )
+                        .first()
+                    )
+                    if variant:
+                        variant.stock = variant.stock + item.quantity
 
-            update_query = text("""
-                UPDATE "Order"
-                SET status = 'CANCELLED', "updatedAt" = NOW()
-                WHERE id = :order_id
-            """)
-            db.execute(update_query, {"order_id": order_id})
+            order.status = "CANCELLED"
+            order.updatedAt = datetime.utcnow()
 
-            # Create in-app notification for user
+            notif_id = str(uuid.uuid4())
             if user_id:
-                notif_id = str(uuid.uuid4())
-                notif_query = text("""
-                    INSERT INTO "Notification" (id, "userId", type, title, message, "isRead", metadata, "createdAt")
-                    VALUES (:id, :user_id, :type, :title, :message, false, CAST(:metadata AS jsonb), NOW())
-                """)
-                db.execute(
-                    notif_query,
-                    {
-                        "id": notif_id,
-                        "user_id": user_id,
-                        "type": "ORDER_STATUS_UPDATED",
-                        "title": "Order Cancelled — Payment Failed",
-                        "message": f"All payment attempts failed for order #{order_id[:8]}. Stock has been restored and the order cancelled.",
-                        "metadata": json.dumps({"orderId": order_id, "status": "CANCELLED"}),
-                    },
+                notif = Notification(
+                    id=notif_id,
+                    userId=user_id,
+                    type="ORDER_STATUS_UPDATED",
+                    title="Order Cancelled — Payment Failed",
+                    message=f"All payment attempts failed for order #{order_id[:8]}. Stock has been restored and the order cancelled.",
+                    notif_metadata={"orderId": order_id, "status": "CANCELLED"},
+                    createdAt=datetime.utcnow(),
                 )
+                db.add(notif)
 
             db.commit()
             cancelled_count += 1
@@ -84,10 +81,9 @@ def cancel_stale_failed_orders_task(self):
                     },
                 })
 
-            # Dispatch notification email task for cancelled order
             from tasks.email_tasks import send_order_status_email_task
             send_order_status_email_task.delay(order_id=order_id)
-        
+
         print(f"[ORDER CLEANUP] Cancelled {cancelled_count} stale orders with FAILED payment status older than 120 hours.")
         return {"cancelled_count": cancelled_count, "processed_at": datetime.utcnow().isoformat()}
 
