@@ -12,6 +12,7 @@ import BulkProductCard, {
 } from "@/components/admin/BulkProductCard";
 import { resolvedImageStore } from "@/lib/resolved-image-store";
 import { extractTitlePrefix } from "@/lib/sku";
+import { uploadImageToCloudinaryClient } from "@/lib/upload-client";
 
 export default function BulkAddProductsView() {
   const router = useRouter();
@@ -264,18 +265,8 @@ export default function BulkAddProductsView() {
         const uploadedImageUrls: string[] = [];
         for (const img of data.productImages) {
           if (img.file) {
-            const formData = new FormData();
-            formData.append("file", img.file);
-            formData.append("title", `${data.title}-bulk`);
-
-            const uploadRes = await fetch("/api/admin/upload", {
-              method: "POST",
-              body: formData,
-            });
-            const uploadData = await uploadRes.json();
-            if (uploadData.success) {
-              uploadedImageUrls.push(uploadData.imagePath);
-            }
+            const uploadedUrl = await uploadImageToCloudinaryClient(img.file);
+            uploadedImageUrls.push(uploadedUrl);
             uploadedFilesCount++;
             setUploadProgress({
               total: totalFiles,

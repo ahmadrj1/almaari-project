@@ -23,4 +23,18 @@ export class UploadController {
       return handleApiError(error, "UploadController.uploadProductImage");
     }
   }
+
+  static async getUploadSignature() {
+    try {
+      const session = await auth();
+      if (session?.user?.role !== Role.ADMIN) {
+        throw new AppError("Unauthorized", 403);
+      }
+
+      const signatureData = UploadService.getUploadSignature();
+      return NextResponse.json({ success: true, data: signatureData });
+    } catch (error) {
+      return handleApiError(error, "UploadController.getUploadSignature");
+    }
+  }
 }

@@ -1,9 +1,19 @@
 import uuid
 import re
 import time
+from datetime import datetime, timedelta
 from celery_app import celery_app
 from core.database import SessionLocal
-from sqlalchemy import text
+from sqlalchemy import func
+from models import (
+    Product,
+    Category,
+    Color,
+    Size,
+    ProductVariant,
+    ProductImage,
+    Notification,
+)
 
 
 DEFAULT_COLOR_CODES = {
@@ -67,21 +77,15 @@ def process_bulk_products_task(self, products_data: list, action: str = "create"
                 category_id = None
                 category_name = prod.get("categoryName")
                 if category_name:
-                    cat_res = db.execute(
-                        text('SELECT id FROM "Category" WHERE LOWER(name) = LOWER(:name)'),
-                        {"name": category_name.strip()},
-                    ).fetchone()
-                    if cat_res:
-                        category_id = cat_res.id
+                    clean_cat = category_name.strip()
+                    cat = db.query(Category).filter(func.lower(Category.name) == func.lower(clean_cat)).first()
+                    if cat:
+                        category_id = cat.id
                     else:
-                        new_cat_id = str(uuid.uuid4())
-                        db.execute(
-                            text(
-                                'INSERT INTO "Category" (id, name, "createdAt", "updatedAt") VALUES (:id, :name, NOW(), NOW())'
-                            ),
-                            {"id": new_cat_id, "name": category_name.strip()},
-                        )
-                        category_id = new_cat_id
+                        new_cat = Category(id=str(uuid.uuid4()), name=clean_cat)
+                        db.add(new_cat)
+                        db.flush()
+                        category_id = new_cat.id
 
                 title = prod.get("title", "").strip()
                 title_prefix = extract_title_prefix(title)
@@ -90,54 +94,41 @@ def process_bulk_products_task(self, products_data: list, action: str = "create"
                 existing_product = None
 
                 if action == "update" or prod.get("isUpdate"):
-                    # Find by targetProductId or by matching SKU
                     if target_product_id:
-                        existing_product = db.execute(
-                            text('SELECT id, "titlePrefix", code, image FROM "Product" WHERE id = :id AND "deletedAt" IS NULL'),
-                            {"id": target_product_id},
-                        ).fetchone()
+                        existing_product = db.query(Product).filter(
+                            Product.id == target_product_id,
+                            Product.deletedAt.is_(None)
+                        ).first()
 
                     if not existing_product and prod.get("sku"):
                         sku_val = prod.get("sku", "").strip()
-                        # Check variant SKU
-                        var_match = db.execute(
-                            text('SELECT "productId" FROM "ProductVariant" WHERE sku = :sku'),
-                            {"sku": sku_val},
-                        ).fetchone()
+                        var_match = db.query(ProductVariant).filter(ProductVariant.sku == sku_val).first()
                         if var_match:
-                            existing_product = db.execute(
-                                text('SELECT id, "titlePrefix", code, image FROM "Product" WHERE id = :id AND "deletedAt" IS NULL'),
-                                {"id": var_match.productId},
-                            ).fetchone()
+                            existing_product = db.query(Product).filter(
+                                Product.id == var_match.productId,
+                                Product.deletedAt.is_(None)
+                            ).first()
 
                     if not existing_product and prod.get("sku"):
                         parts = prod.get("sku", "").strip().split("-")
                         if len(parts) >= 2:
-                            existing_product = db.execute(
-                                text('SELECT id, "titlePrefix", code, image FROM "Product" WHERE "titlePrefix" = :p AND code = :c AND "deletedAt" IS NULL'),
-                                {"p": parts[0].upper(), "c": parts[1]},
-                            ).fetchone()
+                            existing_product = db.query(Product).filter(
+                                Product.titlePrefix == parts[0].upper(),
+                                Product.code == parts[1],
+                                Product.deletedAt.is_(None)
+                            ).first()
 
                 if existing_product:
-                    # UPDATE EXISTING PRODUCT
                     product_id = existing_product.id
                     prod_title_prefix = existing_product.titlePrefix
                     prod_code = existing_product.code
 
-                    # If title prefix changed, assign new code with advisory lock
                     if title_prefix != prod_title_prefix:
-                        db.execute(
-                            text("SELECT pg_advisory_xact_lock(hashtext(:prefix))"),
-                            {"prefix": title_prefix},
-                        )
-                        code_res = db.execute(
-                            text('SELECT code FROM "Product" WHERE "titlePrefix" = :p'),
-                            {"p": title_prefix},
-                        ).fetchall()
+                        code_res = db.query(Product.code).filter(Product.titlePrefix == title_prefix).all()
                         max_c = 0
                         for row in code_res:
                             try:
-                                num = int(row.code)
+                                num = int(row[0])
                                 if num > max_c:
                                     max_c = num
                             except (ValueError, TypeError):
@@ -151,39 +142,20 @@ def process_bulk_products_task(self, products_data: list, action: str = "create"
                     else:
                         final_image = new_image or existing_product.image or ""
 
-                    db.execute(
-                        text("""
-                            UPDATE "Product"
-                            SET title = :title, "titlePrefix" = :titlePrefix, code = :code,
-                                description = :description, price = :price, image = :image,
-                                "categoryId" = :categoryId, "updatedAt" = NOW()
-                            WHERE id = :id
-                        """),
-                        {
-                            "id": product_id,
-                            "title": title,
-                            "titlePrefix": prod_title_prefix,
-                            "code": prod_code,
-                            "description": prod.get("description", ""),
-                            "price": float(prod.get("price")),
-                            "image": final_image,
-                            "categoryId": category_id,
-                        },
-                    )
+                    existing_product.title = title
+                    existing_product.titlePrefix = prod_title_prefix
+                    existing_product.code = prod_code
+                    existing_product.description = prod.get("description", "")
+                    existing_product.price = float(prod.get("price"))
+                    existing_product.image = final_image
+                    existing_product.categoryId = category_id
+                    existing_product.updatedAt = datetime.utcnow()
                 else:
-                    # CREATE NEW PRODUCT
-                    db.execute(
-                        text("SELECT pg_advisory_xact_lock(hashtext(:prefix))"),
-                        {"prefix": title_prefix},
-                    )
-                    code_res = db.execute(
-                        text('SELECT code FROM "Product" WHERE "titlePrefix" = :p'),
-                        {"p": title_prefix},
-                    ).fetchall()
+                    code_res = db.query(Product.code).filter(Product.titlePrefix == title_prefix).all()
                     max_c = 0
                     for row in code_res:
                         try:
-                            num = int(row.code)
+                            num = int(row[0])
                             if num > max_c:
                                 max_c = num
                         except (ValueError, TypeError):
@@ -192,22 +164,19 @@ def process_bulk_products_task(self, products_data: list, action: str = "create"
                     prod_title_prefix = title_prefix
 
                     product_id = str(uuid.uuid4())
-                    db.execute(
-                        text("""
-                            INSERT INTO "Product" (id, title, "titlePrefix", code, description, price, image, "categoryId", "createdAt", "updatedAt")
-                            VALUES (:id, :title, :titlePrefix, :code, :description, :price, :image, :categoryId, NOW(), NOW())
-                        """),
-                        {
-                            "id": product_id,
-                            "title": title,
-                            "titlePrefix": prod_title_prefix,
-                            "code": prod_code,
-                            "description": prod.get("description", ""),
-                            "price": float(prod.get("price")),
-                            "image": prod.get("image"),
-                            "categoryId": category_id,
-                        },
+                    new_product = Product(
+                        id=product_id,
+                        title=title,
+                        titlePrefix=prod_title_prefix,
+                        code=prod_code,
+                        description=prod.get("description", ""),
+                        price=float(prod.get("price")),
+                        image=prod.get("image") or "",
+                        categoryId=category_id,
+                        createdAt=datetime.utcnow(),
+                        updatedAt=datetime.utcnow(),
                     )
+                    db.add(new_product)
 
                 # Handle Variants
                 variants = prod.get("variants", [])
@@ -217,77 +186,55 @@ def process_bulk_products_task(self, products_data: list, action: str = "create"
                     size_name = var.get("sizeName", "Standard").strip()
                     stock = int(var.get("stock", 0))
 
-                    # Ensure Color & get 3-letter code
-                    col_res = db.execute(
-                        text('SELECT id, code FROM "Color" WHERE LOWER(name) = LOWER(:name)'),
-                        {"name": color_name},
-                    ).fetchone()
-                    if col_res:
-                        color_id = col_res.id
-                        color_code = col_res.code or resolve_color_code(color_name)
+                    col = db.query(Color).filter(func.lower(Color.name) == func.lower(color_name)).first()
+                    if col:
+                        color_id = col.id
+                        color_code = col.code or resolve_color_code(color_name)
                     else:
                         color_id = str(uuid.uuid4())
                         color_code = resolve_color_code(color_name)
-                        db.execute(
-                            text('INSERT INTO "Color" (id, name, code, "hexCode") VALUES (:id, :name, :code, :hexCode)'),
-                            {"id": color_id, "name": color_name, "code": color_code, "hexCode": hex_code},
-                        )
+                        new_col = Color(id=color_id, name=color_name, code=color_code, hexCode=hex_code)
+                        db.add(new_col)
+                        db.flush()
 
-                    # Ensure Size
-                    size_res = db.execute(
-                        text('SELECT id, name FROM "Size" WHERE LOWER(name) = LOWER(:name)'),
-                        {"name": size_name},
-                    ).fetchone()
-                    if size_res:
-                        size_id = size_res.id
-                        size_code = size_res.name.upper()
+                    sz = db.query(Size).filter(func.lower(Size.name) == func.lower(size_name)).first()
+                    if sz:
+                        size_id = sz.id
+                        size_code = sz.name.upper()
                     else:
                         size_id = str(uuid.uuid4())
                         size_code = size_name.upper()
-                        db.execute(
-                            text('INSERT INTO "Size" (id, name, "sortOrder") VALUES (:id, :name, 0)'),
-                            {"id": size_id, "name": size_name},
-                        )
+                        new_sz = Size(id=size_id, name=size_name, sortOrder=0)
+                        db.add(new_sz)
+                        db.flush()
 
-                    # Generate SKU: TITLE-CODE-SIZE-COLOR
                     variant_sku = f"{prod_title_prefix}-{prod_code}-{size_code}-{color_code}"
 
-                    # Upsert ProductVariant with SKU
-                    var_existing = db.execute(
-                        text('SELECT id FROM "ProductVariant" WHERE "productId" = :p AND "colorId" = :c AND "sizeId" = :s'),
-                        {"p": product_id, "c": color_id, "s": size_id},
-                    ).fetchone()
+                    var_existing = db.query(ProductVariant).filter(
+                        ProductVariant.productId == product_id,
+                        ProductVariant.colorId == color_id,
+                        ProductVariant.sizeId == size_id,
+                    ).first()
 
                     if var_existing:
-                        db.execute(
-                            text('UPDATE "ProductVariant" SET stock = stock + :stock, sku = :sku WHERE id = :id'),
-                            {"id": var_existing.id, "stock": stock, "sku": variant_sku},
-                        )
+                        var_existing.stock += stock
+                        var_existing.sku = variant_sku
                     else:
-                        variant_id = str(uuid.uuid4())
-                        db.execute(
-                            text("""
-                                INSERT INTO "ProductVariant" (id, "productId", "colorId", "sizeId", stock, sku)
-                                VALUES (:id, :productId, :colorId, :sizeId, :stock, :sku)
-                            """),
-                            {
-                                "id": variant_id,
-                                "productId": product_id,
-                                "colorId": color_id,
-                                "sizeId": size_id,
-                                "stock": stock,
-                                "sku": variant_sku,
-                            },
+                        new_var = ProductVariant(
+                            id=str(uuid.uuid4()),
+                            productId=product_id,
+                            colorId=color_id,
+                            sizeId=size_id,
+                            stock=stock,
+                            sku=variant_sku,
                         )
+                        db.add(new_var)
 
                 # Handle Product Images
                 images = prod.get("images", [])
                 if images:
                     if existing_product:
-                        db.execute(
-                            text('DELETE FROM "ProductImage" WHERE "productId" = :pid'),
-                            {"pid": product_id},
-                        )
+                        db.query(ProductImage).filter(ProductImage.productId == product_id).delete()
                     for img in images:
                         url = img.get("url")
                         if not url:
@@ -295,27 +242,19 @@ def process_bulk_products_task(self, products_data: list, action: str = "create"
                         img_color_id = None
                         img_color_name = img.get("colorName")
                         if img_color_name:
-                            col_res = db.execute(
-                                text('SELECT id FROM "Color" WHERE LOWER(name) = LOWER(:name)'),
-                                {"name": img_color_name.strip()},
-                            ).fetchone()
+                            col_res = db.query(Color).filter(func.lower(Color.name) == func.lower(img_color_name.strip())).first()
                             if col_res:
                                 img_color_id = col_res.id
 
                         img_id = str(uuid.uuid4())
-                        db.execute(
-                            text("""
-                                INSERT INTO "ProductImage" (id, "productId", "colorId", url, "sortOrder")
-                                VALUES (:id, :productId, :colorId, :url, :sortOrder)
-                            """),
-                            {
-                                "id": img_id,
-                                "productId": product_id,
-                                "colorId": img_color_id,
-                                "url": url,
-                                "sortOrder": int(img.get("sortOrder", 0)),
-                            },
+                        new_img = ProductImage(
+                            id=img_id,
+                            productId=product_id,
+                            colorId=img_color_id,
+                            url=url,
+                            sortOrder=int(img.get("sortOrder", 0)),
                         )
+                        db.add(new_img)
 
                 db.commit()
                 processed_count += 1
@@ -335,29 +274,28 @@ def process_bulk_products_task(self, products_data: list, action: str = "create"
 
         if processed_count > 0 and action == "create":
             try:
-                recent = db.execute(
-                    text("""
-                        SELECT id FROM "Notification"
-                        WHERE type = 'NEW_PRODUCT'
-                          AND message = 'New products have been added to the catalogue!'
-                          AND "createdAt" > NOW() - INTERVAL '2 minutes'
-                        LIMIT 1
-                    """)
-                ).fetchone()
+                two_minutes_ago = datetime.utcnow() - timedelta(minutes=2)
+                recent = (
+                    db.query(Notification)
+                    .filter(
+                        Notification.type == "NEW_PRODUCT",
+                        Notification.message == "New products have been added to the catalogue!",
+                        Notification.createdAt > two_minutes_ago,
+                    )
+                    .first()
+                )
                 if not recent:
                     notif_id = str(uuid.uuid4())
-                    db.execute(
-                        text("""
-                            INSERT INTO "Notification" (id, "userId", type, title, message, "isRead", "createdAt")
-                            VALUES (:id, NULL, :type, :title, :message, false, NOW())
-                        """),
-                        {
-                            "id": notif_id,
-                            "type": "NEW_PRODUCT",
-                            "title": "New Products Added!",
-                            "message": "New products have been added to the catalogue!",
-                        },
+                    new_notif = Notification(
+                        id=notif_id,
+                        userId=None,
+                        type="NEW_PRODUCT",
+                        title="New Products Added!",
+                        message="New products have been added to the catalogue!",
+                        isRead=False,
+                        createdAt=datetime.utcnow(),
                     )
+                    db.add(new_notif)
                     db.commit()
 
                     from services.notification_service import dispatch_socket_notification
