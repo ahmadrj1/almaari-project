@@ -62,4 +62,33 @@ export class UploadService {
 
     return result.secure_url;
   }
+
+  static getUploadSignature() {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      throw new AppError(
+        "Cloudinary is not configured. Please check environment variables.",
+        500,
+      );
+    }
+
+    const timestamp = Math.round(Date.now() / 1000);
+    const folder = "almaari/products";
+
+    const signature = cloudinary.utils.api_sign_request(
+      { folder, timestamp },
+      apiSecret,
+    );
+
+    return {
+      signature,
+      timestamp,
+      apiKey,
+      cloudName,
+      folder,
+    };
+  }
 }

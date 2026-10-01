@@ -94,11 +94,10 @@ export class CartService {
     const { productId, variantId, quantity } = cartItemSchema.parse(body);
 
     return prisma.$transaction(async (tx) => {
-      const [variant] = await tx.$queryRaw<
-        Array<{ id: string; stock: number; productId: string }>
-      >`
-        SELECT id, stock, "productId" FROM "ProductVariant" WHERE id = ${variantId} FOR UPDATE
-      `;
+      const variant = await tx.productVariant.findUnique({
+        where: { id: variantId },
+        select: { id: true, stock: true, productId: true },
+      });
 
       if (!variant || variant.productId !== productId) {
         throw new AppError("Variant not found", 404);

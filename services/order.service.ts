@@ -80,9 +80,10 @@ export class OrderService {
       // Do NOT decrement stock or delete cart items yet.
       const order = await prisma.$transaction(async (tx) => {
         for (const item of cartItems) {
-          const [variant] = await tx.$queryRaw<Array<{ stock: number }>>`
-            SELECT stock FROM "ProductVariant" WHERE id = ${item.variantId} FOR UPDATE
-          `;
+          const variant = await tx.productVariant.findUnique({
+            where: { id: item.variantId },
+            select: { stock: true },
+          });
           if (!variant || variant.stock < item.quantity) {
             throw new AppError(
               `Insufficient stock for "${item.product.title}"`,
@@ -198,9 +199,10 @@ export class OrderService {
       // CASH_ON_DELIVERY flow (unchanged stock decrement + delete cart)
       const order = await prisma.$transaction(async (tx) => {
         for (const item of cartItems) {
-          const [variant] = await tx.$queryRaw<Array<{ stock: number }>>`
-            SELECT stock FROM "ProductVariant" WHERE id = ${item.variantId} FOR UPDATE
-          `;
+          const variant = await tx.productVariant.findUnique({
+            where: { id: item.variantId },
+            select: { stock: true },
+          });
           if (!variant || variant.stock < item.quantity) {
             throw new AppError(
               `Insufficient stock for "${item.product.title}"`,
